@@ -26,24 +26,20 @@ export async function scanProject(options: ScannerOptions): Promise<ScannerResul
 
   // Détection framework (synchrone)
   const frameworkCandidate: unknown = detectFramework(projectPath)
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const framework: FrameworkDetectionResult = isFrameworkDetectionResult(frameworkCandidate)
     ? frameworkCandidate
     : { framework: null, confidence: 'low', indicators: [] }
 
   // Détection assets (asynchrone)
   const assetsCandidate: unknown = includeAssets ? await detectAssets(projectPath) : getEmptyAssets()
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const assets: AssetDetectionResult = isAssetDetectionResult(assetsCandidate) ? assetsCandidate : getEmptyAssets()
 
   // Détection architecture (asynchrone)
   const architectureCandidate: unknown = includeArchitecture ? await detectArchitecture(projectPath) : getEmptyArchitecture()
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const architecture: ArchitectureDetectionResult = isArchitectureDetectionResult(architectureCandidate)
     ? architectureCandidate
     : getEmptyArchitecture()
 
-  /* eslint-disable @typescript-eslint/no-unsafe-assignment */
   return {
     framework,
     assets,
@@ -51,7 +47,6 @@ export async function scanProject(options: ScannerOptions): Promise<ScannerResul
     timestamp: new Date().toISOString(),
     projectPath,
   }
-  /* eslint-enable @typescript-eslint/no-unsafe-assignment */
 }
 
 /**
