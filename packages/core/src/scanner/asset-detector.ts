@@ -45,32 +45,51 @@ export async function detectAssets(projectPath: string): Promise<AssetDetectionR
     apiRoutes: [],
   }
 
-  // Détection JS
-  const jsPatterns = JS_EXTENSIONS.map((ext) => `**/*${ext}`)
-  for (const pattern of jsPatterns) {
-    const files = await glob(pattern, {
+  // Détection JS (inclure fichiers à la racine et sous-dossiers)
+  const jsExtensionsStr = JS_EXTENSIONS.map((ext) => ext.slice(1)).join(',')
+  const jsPattern = `**/*.{${jsExtensionsStr}}`
+  const jsRootPattern = `*.{${jsExtensionsStr}}`
+
+  const [jsFiles, jsRootFiles] = await Promise.all([
+    glob(jsPattern, {
       cwd: projectPath,
       ignore: IGNORED_PATTERNS,
-      absolute: false,
+      absolute: true,
       nodir: true,
-    })
-    result.javascript.push(...files.map((f) => join(projectPath, f)))
-  }
-
-  // Détection CSS
-  const cssPatterns = CSS_EXTENSIONS.map((ext) => `**/*${ext}`)
-  for (const pattern of cssPatterns) {
-    const files = await glob(pattern, {
+    }),
+    glob(jsRootPattern, {
       cwd: projectPath,
       ignore: IGNORED_PATTERNS,
-      absolute: false,
+      absolute: true,
       nodir: true,
-    })
-    result.css.push(...files.map((f) => join(projectPath, f)))
-  }
+    }),
+  ])
 
-  // Détection images
-  const imagePatterns = IMAGE_EXTENSIONS.map((ext) => `**/*${ext}`)
+  const allJsFiles = new Set<string>([...jsFiles, ...jsRootFiles])
+  result.javascript.push(...allJsFiles)
+
+  // Détection CSS (inclure fichiers à la racine et sous-dossiers)
+  const cssExtensionsStr = CSS_EXTENSIONS.map((ext) => ext.slice(1)).join(',')
+  const cssPattern = `**/*.{${cssExtensionsStr}}`
+  const cssFiles = await glob(cssPattern, {
+    cwd: projectPath,
+    ignore: IGNORED_PATTERNS,
+    absolute: false,
+    nodir: true,
+  })
+  const cssRootPattern = `*.{${cssExtensionsStr}}`
+  const cssRootFiles = await glob(cssRootPattern, {
+    cwd: projectPath,
+    ignore: IGNORED_PATTERNS,
+    absolute: false,
+    nodir: true,
+  })
+  const allCssFiles = [...new Set([...cssFiles, ...cssRootFiles])]
+  result.css.push(...allCssFiles.map((f) => join(projectPath, f)))
+
+  // Détection images (inclure fichiers à la racine et sous-dossiers)
+  const imagePatterns = IMAGE_EXTENSIONS.flatMap((ext) => [`**/*${ext}`, `*${ext}`])
+  const allImageFiles = new Set<string>()
   for (const pattern of imagePatterns) {
     const files = await glob(pattern, {
       cwd: projectPath,
@@ -78,11 +97,13 @@ export async function detectAssets(projectPath: string): Promise<AssetDetectionR
       absolute: false,
       nodir: true,
     })
-    result.images.push(...files.map((f) => join(projectPath, f)))
+    files.forEach((f) => allImageFiles.add(f))
   }
+  result.images.push(...Array.from(allImageFiles).map((f) => join(projectPath, f)))
 
-  // Détection fonts
-  const fontPatterns = FONT_EXTENSIONS.map((ext) => `**/*${ext}`)
+  // Détection fonts (inclure fichiers à la racine et sous-dossiers)
+  const fontPatterns = FONT_EXTENSIONS.flatMap((ext) => [`**/*${ext}`, `*${ext}`])
+  const allFontFiles = new Set<string>()
   for (const pattern of fontPatterns) {
     const files = await glob(pattern, {
       cwd: projectPath,
@@ -90,8 +111,9 @@ export async function detectAssets(projectPath: string): Promise<AssetDetectionR
       absolute: false,
       nodir: true,
     })
-    result.fonts.push(...files.map((f) => join(projectPath, f)))
+    files.forEach((f) => allFontFiles.add(f))
   }
+  result.fonts.push(...Array.from(allFontFiles).map((f) => join(projectPath, f)))
 
   // Détection routes API (via fichiers de config ou patterns)
   // Note: Cette détection est basique, peut être améliorée selon les frameworks

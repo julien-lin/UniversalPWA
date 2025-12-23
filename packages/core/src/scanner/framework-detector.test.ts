@@ -1,15 +1,19 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { mkdirSync, writeFileSync, rmSync } from 'fs'
+import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
 import { join } from 'path'
 import { detectFramework, type Framework } from './framework-detector'
 
-const TEST_DIR = join(process.cwd(), '.test-tmp')
+const TEST_DIR = join(process.cwd(), '.test-tmp-framework-detector')
 
 describe('framework-detector', () => {
   beforeEach(() => {
-    // Cleanup
-    if (require('fs').existsSync(TEST_DIR)) {
-      rmSync(TEST_DIR, { recursive: true, force: true })
+    // Cleanup - utiliser try/catch pour gérer les erreurs de suppression
+    try {
+      if (existsSync(TEST_DIR)) {
+        rmSync(TEST_DIR, { recursive: true, force: true })
+      }
+    } catch {
+      // Ignore errors during cleanup
     }
     mkdirSync(TEST_DIR, { recursive: true })
   })
