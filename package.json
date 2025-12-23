@@ -27,6 +27,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
     "@testing-library/user-event": "^14.6.1",
+    "@universal-pwa/core": "workspace:^",
     "@universal-pwa/templates": "workspace:^",
     "jotai": "^2.16.0",
     "vitest": "^2.1.4",
