@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
+import { mkdirSync, rmSync, existsSync } from 'fs'
 import { join } from 'path'
 import {
   generateIcons,
@@ -9,7 +9,6 @@ import {
   generateAppleTouchIcon,
   STANDARD_ICON_SIZES,
   STANDARD_SPLASH_SIZES,
-  type IconGeneratorOptions,
 } from './icon-generator'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-icon-generator')

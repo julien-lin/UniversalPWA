@@ -111,8 +111,9 @@ export async function generateIcons(options: IconGeneratorOptions): Promise<Icon
         type: format === 'png' ? 'image/png' : 'image/webp',
         purpose: size.width >= 192 && size.width <= 512 ? 'any' : undefined,
       })
-    } catch (error) {
-      throw new Error(`Failed to generate icon ${size.name}: ${error}`)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      throw new Error(`Failed to generate icon ${size.name}: ${message}`)
     }
   }
 
@@ -140,8 +141,9 @@ export async function generateIcons(options: IconGeneratorOptions): Promise<Icon
         sizes: `${size.width}x${size.height}`,
         type: format === 'png' ? 'image/png' : 'image/webp',
       })
-    } catch (error) {
-      throw new Error(`Failed to generate splash screen ${size.name}: ${error}`)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      throw new Error(`Failed to generate splash screen ${size.name}: ${message}`)
     }
   }
 
@@ -209,8 +211,9 @@ export async function generateFavicon(sourceImage: string, outputDir: string): P
       .toFile(faviconPath)
 
     return faviconPath
-  } catch (error) {
-    throw new Error(`Failed to generate favicon: ${error}`)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    throw new Error(`Failed to generate favicon: ${message}`)
   }
 }
 
@@ -235,8 +238,9 @@ export async function generateAppleTouchIcon(sourceImage: string, outputDir: str
       .toFile(appleIconPath)
 
     return appleIconPath
-  } catch (error) {
-    throw new Error(`Failed to generate apple-touch-icon: ${error}`)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    throw new Error(`Failed to generate apple-touch-icon: ${message}`)
   }
 }
 
