@@ -25,23 +25,19 @@ export async function scanProject(options: ScannerOptions): Promise<ScannerResul
   const { projectPath, includeAssets = true, includeArchitecture = true } = options
 
   // Détection framework (synchrone)
-  const frameworkCandidate: unknown = (detectFramework as (p: string) => FrameworkDetectionResult)(projectPath)
+  const frameworkCandidate: unknown = detectFramework(projectPath)
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const framework: FrameworkDetectionResult = isFrameworkDetectionResult(frameworkCandidate)
     ? frameworkCandidate
     : { framework: null, confidence: 'low', indicators: [] }
 
   // Détection assets (asynchrone)
-  const assetsCandidate: unknown = includeAssets
-    ? await (detectAssets as (p: string) => Promise<AssetDetectionResult>)(projectPath)
-    : getEmptyAssets()
+  const assetsCandidate: unknown = includeAssets ? await detectAssets(projectPath) : getEmptyAssets()
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const assets: AssetDetectionResult = isAssetDetectionResult(assetsCandidate) ? assetsCandidate : getEmptyAssets()
 
   // Détection architecture (asynchrone)
-  const architectureCandidate: unknown = includeArchitecture
-    ? await (detectArchitecture as (p: string) => Promise<ArchitectureDetectionResult>)(projectPath)
-    : getEmptyArchitecture()
+  const architectureCandidate: unknown = includeArchitecture ? await detectArchitecture(projectPath) : getEmptyArchitecture()
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const architecture: ArchitectureDetectionResult = isArchitectureDetectionResult(architectureCandidate)
     ? architectureCandidate

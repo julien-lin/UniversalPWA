@@ -220,6 +220,14 @@ describe('framework-detector', () => {
 
       expect(result.framework).toBeNull()
     })
+
+    it('should handle invalid composer.json gracefully', () => {
+      writeFileSync(join(TEST_DIR, 'composer.json'), 'invalid json')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBeNull()
+    })
   })
 })
 

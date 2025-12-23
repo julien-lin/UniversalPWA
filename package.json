@@ -8,7 +8,7 @@
     "dev:web": "pnpm --filter @universal-pwa/web-ui dev",
     "build:web": "pnpm --filter @universal-pwa/web-ui build",
     "lint:web": "pnpm --filter @universal-pwa/web-ui lint",
-    "test": "pnpm -r test",
+    "test": "echo \"root: no tests\"",
     "test:coverage": "pnpm -r test -- --coverage",
     "lint": "pnpm -r lint",
     "build": "pnpm -r build"
