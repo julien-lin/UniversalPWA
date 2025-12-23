@@ -39,6 +39,8 @@ dist-ssr
 coverage
 .nyc_output
 .test-tmp
+.test-tmp-*
+.test-debug
 
 # pnpm
 .pnpm-store

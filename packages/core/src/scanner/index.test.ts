@@ -1,0 +1,207 @@
+import { describe, it, expect, beforeEach } from 'vitest'
+import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
+import { join } from 'path'
+import { scanProject, generateReport, validateProjectPath, type ScannerResult } from './index'
+
+const TEST_DIR = join(process.cwd(), '.test-tmp-scanner')
+
+describe('scanner orchestrator', () => {
+  beforeEach(() => {
+    try {
+      if (existsSync(TEST_DIR)) {
+        rmSync(TEST_DIR, { recursive: true, force: true })
+      }
+    } catch {
+      // Ignore errors during cleanup
+    }
+    mkdirSync(TEST_DIR, { recursive: true })
+  })
+
+  describe('scanProject', () => {
+    it('should scan WordPress project', async () => {
+      writeFileSync(join(TEST_DIR, 'wp-config.php'), '<?php')
+      mkdirSync(join(TEST_DIR, 'wp-content'), { recursive: true })
+      writeFileSync(join(TEST_DIR, 'index.html'), '<html><body></body></html>')
+
+      const result = await scanProject({ projectPath: TEST_DIR })
+
+      expect(result.framework.framework).toBe('wordpress')
+      expect(result.framework.confidence).toBe('high')
+      expect(result.assets).toBeDefined()
+      expect(result.architecture).toBeDefined()
+      expect(result.timestamp).toBeDefined()
+      expect(result.projectPath).toBe(TEST_DIR)
+    })
+
+    it('should scan Symfony project', async () => {
+      writeFileSync(
+        join(TEST_DIR, 'composer.json'),
+        JSON.stringify({
+          require: {
+            'symfony/symfony': '^6.0',
+          },
+        }),
+      )
+      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
+      writeFileSync(join(TEST_DIR, 'public', 'index.php'), '<?php')
+
+      const result = await scanProject({ projectPath: TEST_DIR })
+
+      expect(result.framework.framework).toBe('symfony')
+      expect(result.framework.confidence).toBe('high')
+      expect(result.assets).toBeDefined()
+      expect(result.architecture).toBeDefined()
+    })
+
+    it('should scan React project', async () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            react: '^18.0.0',
+          },
+        }),
+      )
+      writeFileSync(join(TEST_DIR, 'index.html'), '<html><body><div id="root"></div></body></html>')
+      mkdirSync(join(TEST_DIR, 'src'), { recursive: true })
+      writeFileSync(join(TEST_DIR, 'src', 'App.jsx'), 'export const App = () => null')
+
+      const result = await scanProject({ projectPath: TEST_DIR })
+
+      expect(result.framework.framework).toBe('react')
+      expect(result.framework.confidence).toBe('high')
+      expect(result.assets.javascript.length).toBeGreaterThan(0)
+      expect(result.architecture.architecture).toBe('spa')
+    })
+
+    it('should scan Next.js project', async () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            next: '^15.0.0',
+          },
+        }),
+      )
+      mkdirSync(join(TEST_DIR, '.next'), { recursive: true })
+
+      const result = await scanProject({ projectPath: TEST_DIR })
+
+      expect(result.framework.framework).toBe('nextjs')
+      expect(result.framework.confidence).toBe('high')
+      expect(result.architecture.architecture).toBe('ssr')
+      expect(result.architecture.buildTool).toBeDefined()
+    })
+
+    it('should scan static project', async () => {
+      writeFileSync(join(TEST_DIR, 'index.html'), '<html><body><h1>Hello</h1></body></html>')
+      writeFileSync(join(TEST_DIR, 'styles.css'), 'body { margin: 0; }')
+
+      const result = await scanProject({ projectPath: TEST_DIR })
+
+      expect(result.framework.framework).toBe('static')
+      expect(result.framework.confidence).toBe('medium')
+      expect(result.assets.css.length).toBeGreaterThan(0)
+      expect(result.architecture.architecture).toBe('static')
+    })
+
+    it('should handle options to exclude assets', async () => {
+      writeFileSync(join(TEST_DIR, 'index.html'), '<html><body></body></html>')
+
+      const result = await scanProject({ projectPath: TEST_DIR, includeAssets: false })
+
+      expect(result.assets.javascript).toEqual([])
+      expect(result.assets.css).toEqual([])
+      expect(result.architecture).toBeDefined()
+    })
+
+    it('should handle options to exclude architecture', async () => {
+      writeFileSync(join(TEST_DIR, 'index.html'), '<html><body></body></html>')
+
+      const result = await scanProject({ projectPath: TEST_DIR, includeArchitecture: false })
+
+      expect(result.assets).toBeDefined()
+      expect(result.architecture.architecture).toBe('static')
+      expect(result.architecture.indicators).toEqual([])
+    })
+
+    it('should handle empty project', async () => {
+      const result = await scanProject({ projectPath: TEST_DIR })
+
+      expect(result.framework.framework).toBeNull()
+      expect(result.framework.confidence).toBe('low')
+      expect(result.assets.javascript).toEqual([])
+      expect(result.architecture.architecture).toBe('static')
+    })
+  })
+
+  describe('generateReport', () => {
+    it('should generate valid JSON report', () => {
+      const result: ScannerResult = {
+        framework: {
+          framework: 'react',
+          confidence: 'high',
+          indicators: ['package.json: react'],
+        },
+        assets: {
+          javascript: ['/path/to/app.js'],
+          css: [],
+          images: [],
+          fonts: [],
+          apiRoutes: [],
+        },
+        architecture: {
+          architecture: 'spa',
+          buildTool: 'vite',
+          confidence: 'high',
+          indicators: ['HTML: SPA patterns detected'],
+        },
+        timestamp: '2024-01-01T00:00:00.000Z',
+        projectPath: '/test',
+      }
+
+      const report = generateReport(result)
+      const parsed = JSON.parse(report)
+
+      expect(parsed.framework.framework).toBe('react')
+      expect(parsed.assets.javascript).toHaveLength(1)
+      expect(parsed.architecture.architecture).toBe('spa')
+      expect(parsed.timestamp).toBe('2024-01-01T00:00:00.000Z')
+    })
+  })
+
+  describe('validateProjectPath', () => {
+    it('should validate existing path', () => {
+      expect(validateProjectPath(TEST_DIR)).toBe(true)
+    })
+
+    it('should invalidate non-existing path', () => {
+      expect(validateProjectPath(join(TEST_DIR, 'non-existent'))).toBe(false)
+    })
+  })
+
+  describe('Error handling', () => {
+    it('should handle invalid project path gracefully', async () => {
+      const invalidPath = join(TEST_DIR, 'non-existent')
+
+      // Le scan devrait quand même fonctionner mais retourner des résultats vides
+      const result = await scanProject({ projectPath: invalidPath })
+
+      expect(result.framework.framework).toBeNull()
+      expect(result.assets.javascript).toEqual([])
+    })
+
+    it('should handle corrupted package.json', async () => {
+      writeFileSync(join(TEST_DIR, 'package.json'), 'invalid json')
+      writeFileSync(join(TEST_DIR, 'index.html'), '<html><body></body></html>')
+
+      const result = await scanProject({ projectPath: TEST_DIR })
+
+      // Le scanner devrait gérer l'erreur et continuer
+      expect(result.framework).toBeDefined()
+      expect(result.assets).toBeDefined()
+      expect(result.architecture).toBeDefined()
+    })
+  })
+})
+
