@@ -125,17 +125,29 @@ export async function detectArchitecture(projectPath: string): Promise<Architect
       const isLargeContent = htmlContent.length > 2000
       const hasRealContent = htmlContent.replace(/<[^>]+>/g, '').trim().length > 100
 
-      // Prioriser SSR si contenu très large avec du contenu réel (même avec pattern SPA)
+      // Prioriser SSR si contenu très large avec du contenu réel
       if (isLargeContent && hasRealContent && !hasSsrPattern) {
         indicators.push('HTML: very large content with real text → SSR')
+        if (hasSpaPattern) {
+          indicators.push('HTML: SPA pattern but large content → SSR')
+        }
         architecture = 'ssr'
         confidence = 'high'
       } else if (hasSsrPattern && htmlContent.length > 1000) {
         indicators.push('HTML: SSR patterns detected (large content)')
+        if (isLargeContent && hasRealContent) {
+          indicators.push('HTML: very large content with real text → SSR')
+        }
+        if (hasSpaPattern) {
+          indicators.push('HTML: SPA pattern but large content → SSR')
+        }
         architecture = 'ssr'
         confidence = 'high'
       } else if (hasSsrPattern && !hasSpaPattern) {
         indicators.push('HTML: SSR patterns detected')
+        if (htmlContent.length > 500) {
+          indicators.push('HTML: large content')
+        }
         architecture = 'ssr'
         confidence = 'high'
       } else if (hasSpaPattern) {

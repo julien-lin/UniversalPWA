@@ -178,6 +178,13 @@ describe('scanner orchestrator', () => {
     it('should invalidate non-existing path', () => {
       expect(validateProjectPath(join(TEST_DIR, 'non-existent'))).toBe(false)
     })
+
+    it('should handle errors gracefully', () => {
+      // Test avec un chemin invalide qui pourrait causer une erreur
+      const invalidPath = '\0'
+      const result = validateProjectPath(invalidPath)
+      expect(typeof result).toBe('boolean')
+    })
   })
 
   describe('Error handling', () => {

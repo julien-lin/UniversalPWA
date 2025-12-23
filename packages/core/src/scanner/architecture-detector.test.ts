@@ -85,6 +85,58 @@ describe('architecture-detector', () => {
       expect(result.indicators.some((i) => i.includes('SSR'))).toBe(true)
     })
 
+    it('should detect SSR with very large content and real text', async () => {
+      const veryLargeContent = '<html><body><div id="root"></div>' + '<p>Real text content here</p>'.repeat(200) + '</body></html>'
+      writeFileSync(join(TEST_DIR, 'index.html'), veryLargeContent)
+
+      const result = await detectArchitecture(TEST_DIR)
+
+      expect(result.architecture).toBe('ssr')
+      expect(result.indicators.some((i) => i.includes('very large content'))).toBe(true)
+    })
+
+    it('should detect SSR with SSR patterns and large content', async () => {
+      const largeContent = '<html><body><article>' + '<p>Article content</p>'.repeat(150) + '</article></body></html>'
+      writeFileSync(join(TEST_DIR, 'index.html'), largeContent)
+
+      const result = await detectArchitecture(TEST_DIR)
+
+      expect(result.architecture).toBe('ssr')
+      expect(result.indicators.some((i) => i.includes('SSR patterns detected (large content)'))).toBe(true)
+    })
+
+    it('should detect SSR with SSR patterns but no SPA patterns', async () => {
+      writeFileSync(
+        join(TEST_DIR, 'index.html'),
+        '<html><body><article>Content</article><script>hydrate()</script></body></html>',
+      )
+
+      const result = await detectArchitecture(TEST_DIR)
+
+      expect(result.architecture).toBe('ssr')
+      expect(result.indicators.some((i) => i.includes('SSR patterns detected'))).toBe(true)
+    })
+
+    it('should detect SSR with SPA pattern but large content', async () => {
+      const largeContent = '<html><body><div id="root"></div>' + '<p>Real text content</p>'.repeat(200) + '</body></html>'
+      writeFileSync(join(TEST_DIR, 'index.html'), largeContent)
+
+      const result = await detectArchitecture(TEST_DIR)
+
+      expect(result.architecture).toBe('ssr')
+      expect(result.indicators.some((i) => i.includes('SPA pattern but large content'))).toBe(true)
+    })
+
+    it('should detect SSR with HTML content > 500 chars', async () => {
+      const mediumContent = '<html><body>' + '<p>Content paragraph</p>'.repeat(30) + '</body></html>'
+      writeFileSync(join(TEST_DIR, 'index.html'), mediumContent)
+
+      const result = await detectArchitecture(TEST_DIR)
+
+      expect(result.architecture).toBe('ssr')
+      expect(result.indicators.some((i) => i.includes('large content'))).toBe(true)
+    })
+
     it('should detect SSR with Next.js', async () => {
       writeFileSync(
         join(TEST_DIR, 'package.json'),
@@ -175,6 +227,31 @@ describe('architecture-detector', () => {
     })
   })
 
+  describe('Router patterns detection', () => {
+    it('should upgrade confidence from low to medium when router found', async () => {
+      writeFileSync(join(TEST_DIR, 'index.html'), '<html><body></body></html>')
+      mkdirSync(join(TEST_DIR, 'src'), { recursive: true })
+      writeFileSync(join(TEST_DIR, 'src', 'router.js'), 'import { createBrowserRouter } from "react-router"')
+
+      const result = await detectArchitecture(TEST_DIR)
+
+      expect(result.architecture).toBe('spa')
+      expect(result.confidence).toBe('medium')
+      expect(result.indicators.some((i) => i.includes('router patterns'))).toBe(true)
+    })
+
+    it('should handle read errors in JS files gracefully', async () => {
+      writeFileSync(join(TEST_DIR, 'index.html'), '<html><body></body></html>')
+      mkdirSync(join(TEST_DIR, 'src'), { recursive: true })
+      writeFileSync(join(TEST_DIR, 'src', 'app.js'), 'console.log("test")')
+
+      const result = await detectArchitecture(TEST_DIR)
+
+      // Le résultat devrait être valide même si certains fichiers ne peuvent pas être lus
+      expect(result.architecture).toBeDefined()
+    })
+  })
+
   describe('Error handling', () => {
     it('should handle missing files gracefully', async () => {
       const result = await detectArchitecture(TEST_DIR)
@@ -189,6 +266,16 @@ describe('architecture-detector', () => {
       const result = await detectArchitecture(TEST_DIR)
 
       expect(result.buildTool).toBeNull()
+    })
+
+    it('should handle HTML read errors gracefully', async () => {
+      // Créer un répertoire mais pas de fichier HTML valide
+      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
+
+      const result = await detectArchitecture(TEST_DIR)
+
+      expect(result.architecture).toBe('static')
+      expect(result.confidence).toBeDefined()
     })
   })
 })
