@@ -83,11 +83,11 @@ export function checkHttps(url: string, allowHttpLocalhost = true): HttpsCheckRe
 export function detectProjectUrl(projectPath: string): string | null {
   // Vérifier les fichiers de configuration courants
   const configFiles = [
-    { file: 'package.json', key: 'homepage' },
-    { file: 'package.json', key: 'url' },
+    { file: 'package.json', key: 'homepage' as const },
+    { file: 'package.json', key: 'url' as const },
     { file: '.env', pattern: /^.*URL.*=(.+)$/i },
     { file: '.env.local', pattern: /^.*URL.*=(.+)$/i },
-    { file: 'vercel.json', key: 'url' },
+    { file: 'vercel.json', key: 'url' as const },
     { file: 'netlify.toml', pattern: /^.*url.*=.*["'](.+)["']/i },
     { file: 'next.config.js', pattern: /baseUrl.*["'](.+)["']/ },
     { file: 'next.config.ts', pattern: /baseUrl.*["'](.+)["']/ },
@@ -98,32 +98,31 @@ export function detectProjectUrl(projectPath: string): string | null {
 
     if (existsSync(filePath)) {
       try {
-        if (config.file.endsWith('.json')) {
+        if (config.file.endsWith('.json') && config.key) {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           const parsed = JSON.parse(readFileSync(filePath, 'utf-8'))
           const content = parsed as Record<string, unknown>
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           const value = content[config.key]
           if (value && typeof value === 'string') {
             return value
           }
-        } else if (config.file.endsWith('.toml')) {
+        } else if (config.file.endsWith('.toml') && config.pattern) {
           const content = readFileSync(filePath, 'utf-8')
-          const match = content.match(config.pattern)
+          const match = config.pattern ? content.match(config.pattern) : null
           if (match && match[1]) {
             return match[1]
           }
-        } else if (config.file.endsWith('.js') || config.file.endsWith('.ts')) {
+        } else if ((config.file.endsWith('.js') || config.file.endsWith('.ts')) && config.pattern) {
           const content = readFileSync(filePath, 'utf-8')
-          const match = content.match(config.pattern)
+          const match = config.pattern ? content.match(config.pattern) : null
           if (match && match[1]) {
             return match[1]
           }
-        } else if (config.file.startsWith('.env')) {
+        } else if (config.file.startsWith('.env') && config.pattern) {
           const content = readFileSync(filePath, 'utf-8')
           const lines = content.split('\n')
           for (const line of lines) {
-            const match = line.match(config.pattern)
+            const match = config.pattern ? line.match(config.pattern) : null
             if (match && match[1]) {
               return match[1].trim()
             }
