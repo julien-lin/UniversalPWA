@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "baseUrl": ".",
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "isolatedModules": true,
+    "types": [],
+    "paths": {
+      "@universal-pwa/core": ["packages/core/src"],
+      "@universal-pwa/cli": ["packages/cli/src"],
+      "@universal-pwa/templates": ["packages/templates/src"]
+    }
+  }
+}
+

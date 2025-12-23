@@ -1,0 +1,23 @@
+{
+  "name": "universal-pwa",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "pnpm@9.12.0",
+  "scripts": {
+    "dev:web": "pnpm --filter @universal-pwa/web-ui dev",
+    "build:web": "pnpm --filter @universal-pwa/web-ui build",
+    "lint:web": "pnpm --filter @universal-pwa/web-ui lint",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "build": "pnpm -r build"
+  },
+  "dependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
+    "@testing-library/user-event": "^14.6.1",
+    "jotai": "^2.16.0",
+    "vitest": "^2.1.4",
+    "zustand": "^5.0.9"
+  }
+}
