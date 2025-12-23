@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync, rmSync } from 'fs'
 import { join } from 'path'
 import { detectAssets } from './asset-detector'
 
-const TEST_DIR = join(process.cwd(), '.test-tmp')
+const TEST_DIR = join(process.cwd(), '.test-tmp-asset-detector')
 
 describe('asset-detector', () => {
   beforeEach(() => {
