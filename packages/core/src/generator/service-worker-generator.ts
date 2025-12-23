@@ -1,18 +1,12 @@
 import { injectManifest, generateSW } from 'workbox-build'
-import type {
-  InjectManifestOptions,
-  InjectManifestResult,
-  GenerateSWOptions,
-  GenerateSWResult,
-  ManifestEntry,
-} from 'workbox-build'
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return */
 import { writeFileSync, mkdirSync, existsSync } from 'fs'
 import { join } from 'path'
 import { getServiceWorkerTemplate, determineTemplateType, type ServiceWorkerTemplateType } from '@universal-pwa/templates'
-import type { Architecture } from '../scanner/architecture-detector'
+import type { Architecture } from '../scanner/architecture-detector.js'
 // Utiliser string pour éviter les problèmes de type lint dans cette unité
 // import type { Framework } from '../scanner/framework-detector'
+
+type StrategyName = 'CacheFirst' | 'NetworkFirst' | 'NetworkOnly' | 'StaleWhileRevalidate' | 'CacheOnly'
 
 export interface ServiceWorkerGeneratorOptions {
   projectPath: string
@@ -80,7 +74,7 @@ export async function generateServiceWorker(
   const swDestPath = join(outputDir, swDest)
 
   // Configuration Workbox (injectManifest accepte seulement globDirectory, globPatterns, swDest, swSrc, injectionPoint)
-  const workboxConfig: InjectManifestOptions = {
+  const workboxConfig: Parameters<typeof injectManifest>[0] = {
     globDirectory: globDirectory ?? projectPath,
     globPatterns,
     swDest: swDestPath,
@@ -96,7 +90,7 @@ export async function generateServiceWorker(
 
   try {
     // Utiliser injectManifest pour injecter le precache manifest dans le template
-    const result: InjectManifestResult = await injectManifest(workboxConfig)
+    const result = await injectManifest(workboxConfig)
 
     // Nettoyer le fichier source temporaire
     try {
@@ -151,7 +145,7 @@ export async function generateSimpleServiceWorker(
   const swDestPath = join(outputDir, swDest)
 
   // Configuration Workbox
-  const workboxConfig: GenerateSWOptions = {
+  const workboxConfig: Parameters<typeof generateSW>[0] = {
     globDirectory: globDirectory ?? projectPath,
     globPatterns,
     swDest: swDestPath,
@@ -164,33 +158,34 @@ export async function generateSimpleServiceWorker(
   // Ajouter runtime caching si spécifié
   if (runtimeCaching && runtimeCaching.length > 0) {
     workboxConfig.runtimeCaching = runtimeCaching.map((cache) => {
-      const handlerMap: Record<string, string> = {
+      const handlerMap: Record<string, StrategyName> = {
         NetworkFirst: 'NetworkFirst',
         CacheFirst: 'CacheFirst',
         StaleWhileRevalidate: 'StaleWhileRevalidate',
         NetworkOnly: 'NetworkOnly',
         CacheOnly: 'CacheOnly',
       }
+      const handler = handlerMap[cache.handler] ?? cache.handler
       return {
         urlPattern: typeof cache.urlPattern === 'string' ? new RegExp(cache.urlPattern) : cache.urlPattern,
-        handler: handlerMap[cache.handler] ?? cache.handler,
+        handler: handler,
         options: cache.options
           ? {
-              cacheName: cache.options.cacheName,
-              expiration: cache.options.expiration
-                ? {
-                    maxEntries: cache.options.expiration.maxEntries,
-                    maxAgeSeconds: cache.options.expiration.maxAgeSeconds,
-                  }
-                : undefined,
-            }
+            cacheName: cache.options.cacheName,
+            expiration: cache.options.expiration
+              ? {
+                maxEntries: cache.options.expiration.maxEntries,
+                maxAgeSeconds: cache.options.expiration.maxAgeSeconds,
+              }
+              : undefined,
+          }
           : undefined,
       }
     })
   }
 
   try {
-    const result: GenerateSWResult = await generateSW(workboxConfig)
+    const result = await generateSW(workboxConfig)
 
     return {
       swPath: swDestPath,
@@ -198,7 +193,9 @@ export async function generateSimpleServiceWorker(
       size: result.size,
       warnings: result.warnings ?? [],
       filePaths:
-        result.manifestEntries?.map((entry: string | ManifestEntry) => (typeof entry === 'string' ? entry : entry.url)) ?? [],
+        ((result as { manifestEntries?: Array<string | { url: string }> }).manifestEntries ?? []).map((entry) =>
+          typeof entry === 'string' ? entry : entry.url,
+        ),
     }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
