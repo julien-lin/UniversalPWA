@@ -4,7 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "echo \"Démos : tests via Playwright/Lighthouse\""
+    "test": "playwright test",
+    "test:lighthouse": "lighthouse http://localhost:3000 --only-categories=pwa --output=json --output-path=./lighthouse-report.json",
+    "test:ui": "playwright test --ui"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "lighthouse": "^12.0.0",
+    "playwright": "^1.48.0",
+    "serve": "^14.2.5"
   }
 }
-

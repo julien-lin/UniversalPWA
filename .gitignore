@@ -41,6 +41,10 @@ coverage
 .test-tmp
 .test-tmp-*
 .test-debug
+test-results/
+playwright-report/
+playwright/.cache/
+lighthouse-report.json
 
 # pnpm
 .pnpm-store
