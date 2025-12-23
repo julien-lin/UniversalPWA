@@ -1,7 +1,7 @@
 import { existsSync } from 'fs'
-import { detectFramework, type FrameworkDetectionResult } from './framework-detector'
-import { detectAssets, type AssetDetectionResult } from './asset-detector'
-import { detectArchitecture, type ArchitectureDetectionResult } from './architecture-detector'
+import { detectFramework, type FrameworkDetectionResult } from './framework-detector.js'
+import { detectAssets, type AssetDetectionResult } from './asset-detector.js'
+import { detectArchitecture, type ArchitectureDetectionResult } from './architecture-detector.js'
 
 export interface ScannerResult {
   framework: FrameworkDetectionResult
@@ -130,11 +130,11 @@ function getEmptyArchitecture(): ArchitectureDetectionResult {
 }
 
 // Ré-exporter les types et fonctions pour faciliter l'utilisation
-export type { FrameworkDetectionResult, Framework } from './framework-detector'
-export type { AssetDetectionResult } from './asset-detector'
-export type { ArchitectureDetectionResult, Architecture, BuildTool } from './architecture-detector'
+export type { FrameworkDetectionResult, Framework } from './framework-detector.js'
+export type { AssetDetectionResult } from './asset-detector.js'
+export type { ArchitectureDetectionResult, Architecture, BuildTool } from './architecture-detector.js'
 
-export { detectFramework } from './framework-detector'
-export { detectAssets } from './asset-detector'
-export { detectArchitecture } from './architecture-detector'
+export { detectFramework } from './framework-detector.js'
+export { detectAssets } from './asset-detector.js'
+export { detectArchitecture } from './architecture-detector.js'
 
