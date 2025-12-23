@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
 import { join } from 'path'
-import { detectFramework, type Framework } from './framework-detector'
+import { detectFramework } from './framework-detector'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-framework-detector')
 

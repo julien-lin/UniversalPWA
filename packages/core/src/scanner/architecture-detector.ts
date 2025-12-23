@@ -26,29 +26,32 @@ export async function detectArchitecture(projectPath: string): Promise<Architect
   const packageJsonPath = join(projectPath, 'package.json')
   if (existsSync(packageJsonPath)) {
     try {
-      const packageContent = JSON.parse(readFileSync(packageJsonPath, 'utf-8'))
+      const packageContent = JSON.parse(readFileSync(packageJsonPath, 'utf-8')) as {
+        dependencies?: Record<string, string>
+        devDependencies?: Record<string, string>
+      }
       const dependencies = {
-        ...packageContent.dependencies,
-        ...packageContent.devDependencies,
+        ...(packageContent.dependencies ?? {}),
+        ...(packageContent.devDependencies ?? {}),
       }
 
-      if (dependencies.vite || packageContent.devDependencies?.vite) {
+      if (dependencies.vite || packageContent.devDependencies?.['vite']) {
         indicators.push('package.json: vite')
         buildTool = 'vite'
         confidence = 'high'
-      } else if (dependencies.webpack || packageContent.devDependencies?.webpack) {
+      } else if (dependencies.webpack || packageContent.devDependencies?.['webpack']) {
         indicators.push('package.json: webpack')
         buildTool = 'webpack'
         confidence = 'high'
-      } else if (dependencies.rollup || packageContent.devDependencies?.rollup) {
+      } else if (dependencies.rollup || packageContent.devDependencies?.['rollup']) {
         indicators.push('package.json: rollup')
         buildTool = 'rollup'
         confidence = 'high'
-      } else if (dependencies.esbuild || packageContent.devDependencies?.esbuild) {
+      } else if (dependencies.esbuild || packageContent.devDependencies?.['esbuild']) {
         indicators.push('package.json: esbuild')
         buildTool = 'esbuild'
         confidence = 'high'
-      } else if (dependencies.parcel || packageContent.devDependencies?.parcel) {
+      } else if (dependencies.parcel || packageContent.devDependencies?.['parcel']) {
         indicators.push('package.json: parcel')
         buildTool = 'parcel'
         confidence = 'high'
@@ -59,11 +62,11 @@ export async function detectArchitecture(projectPath: string): Promise<Architect
       }
 
       // Détection Next.js/Nuxt (SSR par défaut) - Prioritaire
-      if (dependencies.next || packageContent.dependencies?.next || packageContent.devDependencies?.next) {
+      if (dependencies.next || packageContent.dependencies?.['next'] || packageContent.devDependencies?.['next']) {
         architecture = 'ssr'
         confidence = 'high'
         indicators.push('Next.js detected → SSR')
-      } else if (dependencies.nuxt || packageContent.dependencies?.nuxt || packageContent.devDependencies?.nuxt) {
+      } else if (dependencies.nuxt || packageContent.dependencies?.['nuxt'] || packageContent.devDependencies?.['nuxt']) {
         architecture = 'ssr'
         confidence = 'high'
         indicators.push('Nuxt detected → SSR')

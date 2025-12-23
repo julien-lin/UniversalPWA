@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { mkdirSync, writeFileSync, rmSync } from 'fs'
+import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
 import { join } from 'path'
 import { detectAssets } from './asset-detector'
 
@@ -7,7 +7,7 @@ const TEST_DIR = join(process.cwd(), '.test-tmp-asset-detector')
 
 describe('asset-detector', () => {
   beforeEach(() => {
-    if (require('fs').existsSync(TEST_DIR)) {
+    if (existsSync(TEST_DIR)) {
       rmSync(TEST_DIR, { recursive: true, force: true })
     }
     mkdirSync(TEST_DIR, { recursive: true })
@@ -129,7 +129,7 @@ describe('asset-detector', () => {
 
       expect(result.javascript.length).toBeGreaterThan(0)
       result.javascript.forEach((file) => {
-        expect(require('fs').existsSync(file)).toBe(true)
+        expect(existsSync(file)).toBe(true)
       })
     })
   })

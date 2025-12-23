@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { mkdirSync, writeFileSync, rmSync } from 'fs'
+import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
 import { join } from 'path'
-import { detectArchitecture, type Architecture } from './architecture-detector'
+import { detectArchitecture } from './architecture-detector'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-architecture-detector')
 
 describe('architecture-detector', () => {
   beforeEach(() => {
-    if (require('fs').existsSync(TEST_DIR)) {
+    if (existsSync(TEST_DIR)) {
       rmSync(TEST_DIR, { recursive: true, force: true })
     }
     mkdirSync(TEST_DIR, { recursive: true })
