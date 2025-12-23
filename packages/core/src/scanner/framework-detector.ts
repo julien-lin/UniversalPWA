@@ -41,10 +41,13 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
   const composerPath = join(projectPath, 'composer.json')
   if (existsSync(composerPath)) {
     try {
-      const composerContent = JSON.parse(readFileSync(composerPath, 'utf-8'))
+      const composerContent = JSON.parse(readFileSync(composerPath, 'utf-8')) as {
+        require?: Record<string, string>
+        'require-dev'?: Record<string, string>
+      }
       const dependencies = {
-        ...composerContent.require,
-        ...composerContent['require-dev'],
+        ...(composerContent.require ?? {}),
+        ...(composerContent['require-dev'] ?? {}),
       }
 
       if (dependencies['symfony/symfony'] || dependencies['symfony/framework-bundle']) {
@@ -76,10 +79,13 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
   const packageJsonPath = join(projectPath, 'package.json')
   if (existsSync(packageJsonPath)) {
     try {
-      const packageContent = JSON.parse(readFileSync(packageJsonPath, 'utf-8'))
+      const packageContent = JSON.parse(readFileSync(packageJsonPath, 'utf-8')) as {
+        dependencies?: Record<string, string>
+        devDependencies?: Record<string, string>
+      }
       const dependencies = {
-        ...packageContent.dependencies,
-        ...packageContent.devDependencies,
+        ...(packageContent.dependencies ?? {}),
+        ...(packageContent.devDependencies ?? {}),
       }
 
       // Next.js
