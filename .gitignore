@@ -38,8 +38,11 @@ dist-ssr
 # Testing
 coverage
 .nyc_output
+.test-tmp
 
 # pnpm
 .pnpm-store
 
 DOCUMENTATION/
+
+.cursorrules
