@@ -64,13 +64,13 @@ program
   }) => {
     try {
       const projectPath = options.projectPath ?? process.cwd()
-      
+
       // Si aucune option n'est fournie, utiliser le mode interactif
-      const hasOptions = options.name || options.shortName || options.iconSource || 
-                        options.themeColor || options.backgroundColor || options.skipIcons !== undefined
-      
+      const hasOptions = options.name || options.shortName || options.iconSource ||
+        options.themeColor || options.backgroundColor || options.skipIcons !== undefined
+
       let finalOptions = { ...options }
-      
+
       if (!hasOptions) {
         // Mode interactif : scanner d'abord pour détecter le framework
         console.log(chalk.blue('🔍 Scanning project...'))
@@ -79,26 +79,27 @@ program
           includeAssets: false,
           includeArchitecture: false,
         })
-        
+
         // Afficher les résultats du scan
         console.log(chalk.green(`✓ Framework detected: ${scanResult.framework.framework ?? 'Unknown'}`))
         console.log(chalk.green(`✓ Architecture: ${scanResult.architecture.architecture}`))
-        
+
         // Lancer les prompts
         const promptAnswers = await promptInitOptions(projectPath, scanResult.framework.framework)
-        
+
         // Fusionner les réponses des prompts avec les options
+        // S'assurer que toutes les valeurs sont correctement définies
         finalOptions = {
           ...options,
-          name: promptAnswers.name,
-          shortName: promptAnswers.shortName,
-          iconSource: promptAnswers.iconSource || undefined,
-          themeColor: promptAnswers.themeColor || undefined,
-          backgroundColor: promptAnswers.backgroundColor || undefined,
+          name: promptAnswers.name?.trim() || 'My PWA',
+          shortName: promptAnswers.shortName?.trim() || promptAnswers.name?.trim().substring(0, 12) || 'PWA',
+          iconSource: (promptAnswers.iconSource && promptAnswers.iconSource.trim().length > 0) ? promptAnswers.iconSource.trim() : undefined,
+          themeColor: (promptAnswers.themeColor && promptAnswers.themeColor.trim().length > 0) ? promptAnswers.themeColor.trim() : undefined,
+          backgroundColor: (promptAnswers.backgroundColor && promptAnswers.backgroundColor.trim().length > 0) ? promptAnswers.backgroundColor.trim() : undefined,
           skipIcons: promptAnswers.skipIcons,
         }
       }
-      
+
       const result = await initCommand({
         projectPath: finalOptions.projectPath,
         name: finalOptions.name,
@@ -151,7 +152,7 @@ program
   .action(async (options: { projectPath?: string }) => {
     try {
       console.log(chalk.blue('🔍 Scanning project...'))
-      
+
       const result = await scanProject({
         projectPath: options.projectPath ?? process.cwd(),
         includeAssets: true,
