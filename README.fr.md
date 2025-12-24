@@ -295,6 +295,22 @@ Pour les projets Vite/React, les fichiers dans `public/` sont servis à la racin
 - **Package Manager** : pnpm 9.12+
 - **Prompts CLI** : Inquirer 12.0+
 
+## 💝 Sponsoring
+
+Si UniversalPWA vous est utile, envisagez de sponsoriser le projet pour aider à le maintenir et l'améliorer.
+
+**[⭐ Sponsoriser sur GitHub](https://github.com/sponsors/julien-lin)**
+
+Votre soutien aide à :
+- 🚀 Maintenir et améliorer les fonctionnalités principales
+- 🐛 Corriger les bugs plus rapidement
+- ✨ Ajouter de nouvelles fonctionnalités et intégrations
+- 📚 Améliorer la documentation
+- 🎯 Supporter plus de frameworks et plateformes
+- 🔒 Assurer la pérennité du projet
+
+**Merci à tous nos sponsors ! 🙏**
+
 ## 📄 Licence
 
 MIT

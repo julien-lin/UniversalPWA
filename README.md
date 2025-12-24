@@ -10,6 +10,8 @@
 
 Democratize PWAs for SMEs/artisans/solo developers, targeting 10k installs/year via GitHub + marketplaces.
 
+**⭐ Love UniversalPWA? [Consider sponsoring the project](https://github.com/sponsors/julien-lin) to help it grow!**
+
 ## ✨ Features
 
 - 🔍 **Auto Scan & Detection** : Automatic framework detection (WordPress, Shopify, Symfony, Laravel, React, Vue, Angular, Next.js, Nuxt, static HTML)
@@ -292,6 +294,22 @@ For Vite/React projects, files in `public/` are served at the root. The CLI auto
 - **Web UI** : React 19 + Tailwind CSS 4
 - **Package Manager** : pnpm 9.12+
 - **CLI Prompts** : Inquirer 12.0+
+
+## 💝 Sponsoring
+
+If UniversalPWA is useful to you, please consider sponsoring the project to help maintain and improve it.
+
+**[⭐ Sponsor on GitHub](https://github.com/sponsors/julien-lin)**
+
+Your support helps:
+- 🚀 Maintain and improve the core features
+- 🐛 Fix bugs faster
+- ✨ Add new features and integrations
+- 📚 Improve documentation
+- 🎯 Support more frameworks and platforms
+- 🔒 Ensure long-term sustainability
+
+**Thank you to all our sponsors! 🙏**
 
 ## 📄 License
 
