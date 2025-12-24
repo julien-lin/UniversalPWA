@@ -2,16 +2,26 @@
 
 import { Command } from 'commander'
 import chalk from 'chalk'
+import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
 import { initCommand } from './commands/init.js'
 import { previewCommand } from './commands/preview.js'
 import { scanProject } from '@julien-lin/universal-pwa-core'
+
+// Lire la version depuis package.json
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+const packageJsonPath = join(__dirname, '../package.json')
+const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'))
+const version = packageJson.version || '0.0.0'
 
 const program = new Command()
 
 program
   .name('universal-pwa')
   .description('Transform any web project into a PWA with one click')
-  .version('0.0.0')
+  .version(version)
 
 // Commande init
 program
