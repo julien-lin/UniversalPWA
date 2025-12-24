@@ -116,7 +116,10 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     console.log(chalk.blue('📝 Generating manifest.json...'))
     
     const appName = name ?? (result.framework ? `${result.framework} App` : 'My PWA')
-    const appShortName = shortName ?? appName.substring(0, 12)
+    // S'assurer que shortName est toujours défini et valide (max 12 caractères)
+    const appShortName = (shortName && shortName.length > 0 && shortName.length <= 12)
+      ? shortName
+      : appName.substring(0, 12)
 
     // Générer les icônes si une source est fournie
     let iconPaths: string[] = []
@@ -135,7 +138,16 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
           iconPaths = iconResult.icons.map((icon) => icon.src)
           result.iconsGenerated = iconResult.icons.length
           
+          // Vérifier si apple-touch-icon.png a été généré
+          const appleTouchIconPath = join(finalOutputDir, 'apple-touch-icon.png')
+          if (existsSync(appleTouchIconPath)) {
+            iconPaths.push('/apple-touch-icon.png')
+          }
+          
           console.log(chalk.green(`✓ Generated ${result.iconsGenerated} icons`))
+          if (existsSync(appleTouchIconPath)) {
+            console.log(chalk.green(`✓ Generated apple-touch-icon.png`))
+          }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error)
           result.errors.push(`Failed to generate icons: ${errorMessage}`)
@@ -146,8 +158,10 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
       }
     }
 
-    // Mettre à jour le manifest avec les icônes
+    // Générer le manifest (avec ou sans icônes)
+    let manifestPath: string | undefined
     if (iconPaths.length > 0) {
+      // Manifest avec icônes générées
       const manifestWithIcons = generateManifest({
         name: appName,
         shortName: appShortName,
@@ -163,12 +177,36 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
         })),
       })
       
-      const manifestPath = generateAndWriteManifest(manifestWithIcons, finalOutputDir)
+      manifestPath = generateAndWriteManifest(manifestWithIcons, finalOutputDir)
       result.manifestPath = manifestPath
+      console.log(chalk.green(`✓ Manifest generated: ${manifestPath}`))
     } else {
-      // Si pas d'icônes, créer une icône placeholder ou utiliser une icône par défaut
-      result.warnings.push('No icons provided. Manifest requires at least one icon. Please provide an icon source with --icon-source')
-      console.log(chalk.yellow('⚠ Manifest not generated: icons are required'))
+      // Manifest minimal sans icônes (utiliser une icône placeholder)
+      // Note: Le manifest requiert au moins une icône selon le schéma Zod
+      // On crée un manifest avec une icône placeholder qui devra être remplacée
+      result.warnings.push('No icons provided. Manifest generated with placeholder icon. Please provide an icon source with --icon-source for production.')
+      console.log(chalk.yellow('⚠ Generating manifest with placeholder icon'))
+      
+      // Créer un manifest avec une icône placeholder
+      // appShortName est déjà validé plus haut
+      const manifestMinimal = generateManifest({
+        name: appName,
+        shortName: appShortName,
+        startUrl: '/',
+        scope: '/',
+        display: 'standalone',
+        themeColor: themeColor ?? '#ffffff',
+        backgroundColor: backgroundColor ?? '#000000',
+        icons: [{
+          src: '/icon-192x192.png', // Placeholder - l'utilisateur devra ajouter une vraie icône
+          sizes: '192x192',
+          type: 'image/png',
+        }],
+      })
+      
+      manifestPath = generateAndWriteManifest(manifestMinimal, finalOutputDir)
+      result.manifestPath = manifestPath
+      console.log(chalk.green(`✓ Manifest generated: ${manifestPath}`))
     }
 
     // Générer le service worker
@@ -212,23 +250,41 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
           // Limiter à 10 fichiers pour éviter de surcharger
           try {
             // Normaliser les chemins de manière sécurisée
-            const normalizePathForInjection = (fullPath: string | undefined, basePath: string, fallback: string): string => {
+            // Pour Vite/React, les fichiers de public/ sont servis à la racine
+            const normalizePathForInjection = (fullPath: string | undefined, basePath: string, outputDir: string, fallback: string): string => {
               if (!fullPath) return fallback
               try {
+                // Si le chemin est dans outputDir (ex: public/), on doit le servir à la racine
                 const rel = relativePath(fullPath, basePath)
-                return rel.startsWith('/') ? rel : `/${rel}`
+                let normalized = rel.startsWith('/') ? rel : `/${rel}`
+                
+                // Pour Vite/React, si le fichier est dans public/, enlever public/ du chemin
+                // Ex: /public/sw.js -> /sw.js
+                // Ex: /public/manifest.json -> /manifest.json
+                const outputDirName = outputDir.replace(basePath, '').replace(/^\/+|\/+$/g, '')
+                if (outputDirName && normalized.startsWith(`/${outputDirName}/`)) {
+                  normalized = normalized.replace(`/${outputDirName}/`, '/')
+                }
+                
+                return normalized
               } catch {
                 return fallback
               }
             }
             
+            // Déterminer le chemin apple-touch-icon
+            const appleTouchIconFullPath = join(finalOutputDir, 'apple-touch-icon.png')
+            const appleTouchIconExists = existsSync(appleTouchIconFullPath)
+            
             const injectionResult = injectMetaTagsInFile(htmlFile, {
-              manifestPath: normalizePathForInjection(result.manifestPath, result.projectPath, '/manifest.json'),
+              manifestPath: normalizePathForInjection(result.manifestPath, result.projectPath, finalOutputDir, '/manifest.json'),
               themeColor: themeColor ?? '#ffffff',
               backgroundColor: backgroundColor ?? '#000000',
-              appleTouchIcon: iconPaths.find((p) => p.includes('180')) ?? '/apple-touch-icon.png',
+              appleTouchIcon: appleTouchIconExists 
+                ? normalizePathForInjection(appleTouchIconFullPath, result.projectPath, finalOutputDir, '/apple-touch-icon.png')
+                : '/apple-touch-icon.png', // Placeholder si non généré
               appleMobileWebAppCapable: true,
-              serviceWorkerPath: normalizePathForInjection(result.serviceWorkerPath, result.projectPath, '/sw.js'),
+              serviceWorkerPath: normalizePathForInjection(result.serviceWorkerPath, result.projectPath, finalOutputDir, '/sw.js'),
             })
             
             if (injectionResult.injected.length > 0) {

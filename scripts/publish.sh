@@ -22,6 +22,13 @@ fi
 
 echo -e "${GREEN}✓ Connecté à NPM en tant que: $(npm whoami)${NC}\n"
 
+# Demander l'OTP si nécessaire (pour 2FA)
+OTP=""
+if npm whoami &> /dev/null; then
+  echo -e "${YELLOW}💡 Si vous avez activé l'authentification à deux facteurs (2FA), vous devrez fournir un OTP${NC}"
+  read -p "Code OTP (laissez vide si pas de 2FA): " OTP
+fi
+
 # Build tous les packages
 echo -e "${BLUE}📦 Build des packages...${NC}"
 pnpm build
@@ -37,38 +44,44 @@ pnpm test
 # Déterminer quel package publier
 PACKAGE=${1:-all}
 
+# Construire la commande de publication avec OTP si fourni
+PUBLISH_CMD="pnpm publish --access public --no-git-checks"
+if [ -n "$OTP" ]; then
+  PUBLISH_CMD="$PUBLISH_CMD --otp=$OTP"
+fi
+
 case $PACKAGE in
   templates)
     echo -e "${BLUE}📤 Publication de @julien-lin/universal-pwa-templates...${NC}"
     cd packages/templates
-    pnpm publish --access public --no-git-checks
+    $PUBLISH_CMD
     ;;
   core)
     echo -e "${BLUE}📤 Publication de @julien-lin/universal-pwa-core...${NC}"
     cd packages/core
-    pnpm publish --access public --no-git-checks
+    $PUBLISH_CMD
     ;;
   cli)
     echo -e "${BLUE}📤 Publication de @julien-lin/universal-pwa-cli...${NC}"
     cd packages/cli
-    pnpm publish --access public --no-git-checks
+    $PUBLISH_CMD
     ;;
   all)
     echo -e "${BLUE}📤 Publication de tous les packages (dans l'ordre)...${NC}\n"
     
     echo -e "${GREEN}1/3: @julien-lin/universal-pwa-templates${NC}"
     cd packages/templates
-    pnpm publish --access public --no-git-checks
+    $PUBLISH_CMD
     cd ../..
     
     echo -e "${GREEN}2/3: @julien-lin/universal-pwa-core${NC}"
     cd packages/core
-    pnpm publish --access public --no-git-checks
+    $PUBLISH_CMD
     cd ../..
     
     echo -e "${GREEN}3/3: @julien-lin/universal-pwa-cli${NC}"
     cd packages/cli
-    pnpm publish --access public --no-git-checks
+    $PUBLISH_CMD
     cd ../..
     ;;
   *)
