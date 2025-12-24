@@ -163,5 +163,5 @@ pnpm lint
 ## Links
 
 - **Homepage**: https://github.com/julien-lin/UniversalPWA
-- **Issues**: https://github.com/julien-lin/UniversalPWA/issues
+- **Support**: For issues and questions, please use [GitHub Discussions](https://github.com/julien-lin/UniversalPWA/discussions)
 - **Sponsor**: https://github.com/sponsors/julien-lin
