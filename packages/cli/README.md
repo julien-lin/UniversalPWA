@@ -1,6 +1,11 @@
 # @julien-lin/universal-pwa-cli
 
-Interface en ligne de commande pour UniversalPWA.
+[![GitHub Sponsors](https://img.shields.io/github/sponsors/julien-lin?logo=github&style=flat-square&label=Sponsors)](https://github.com/sponsors/julien-lin)
+[![npm version](https://img.shields.io/npm/v/@julien-lin/universal-pwa-cli?logo=npm&style=flat-square)](https://www.npmjs.com/package/@julien-lin/universal-pwa-cli)
+
+Command-line interface for UniversalPWA - Transform any web project into a Progressive Web App (PWA) with one click.
+
+**🇫🇷 [Documentation en français](https://github.com/julien-lin/UniversalPWA/blob/main/README.fr.md)**
 
 ## Installation
 
@@ -8,83 +13,125 @@ Interface en ligne de commande pour UniversalPWA.
 npm install -g @julien-lin/universal-pwa-cli
 ```
 
-## Utilisation
+Or with pnpm:
 
-### Commande `init`
+```bash
+pnpm add -g @julien-lin/universal-pwa-cli
+```
 
-Initialise une PWA dans votre projet.
+## Usage
+
+### `init` Command
+
+Initialize a PWA in your project.
+
+#### Interactive Mode (Recommended)
+
+Simply run without arguments to launch interactive prompts:
+
+```bash
+universal-pwa init
+```
+
+The CLI will guide you through:
+- App name (auto-detected from `package.json`)
+- Short name (max 12 characters)
+- Icon source path (auto-detected from common locations)
+- Theme and background colors
+- Icon generation options
+
+#### Command Line Mode
 
 ```bash
 universal-pwa init [options]
 ```
 
-**Options :**
+**Options:**
 
-- `-p, --project-path <path>` : Chemin du projet (défaut: répertoire courant)
-- `-n, --name <name>` : Nom de l'application
-- `-s, --short-name <shortName>` : Nom court (max 12 caractères)
-- `-i, --icon-source <path>` : Image source pour les icônes
-- `-t, --theme-color <color>` : Couleur du thème (hex, ex: `#2c3e50`)
-- `-b, --background-color <color>` : Couleur de fond (hex)
-- `--skip-icons` : Ignorer la génération d'icônes
-- `--skip-service-worker` : Ignorer la génération du service worker
-- `--skip-injection` : Ignorer l'injection des meta-tags
-- `-o, --output-dir <dir>` : Répertoire de sortie (défaut: `public`)
+- `-p, --project-path <path>` : Project path (default: current directory)
+- `-n, --name <name>` : Application name
+- `-s, --short-name <shortName>` : Short name (max 12 characters)
+- `-i, --icon-source <path>` : Source image for icons
+- `-t, --theme-color <color>` : Theme color (hex, e.g., `#2c3e50`)
+- `-b, --background-color <color>` : Background color (hex)
+- `--skip-icons` : Skip icon generation
+- `--skip-service-worker` : Skip service worker generation
+- `--skip-injection` : Skip meta-tags injection
+- `-o, --output-dir <dir>` : Output directory (default: `public`)
 
-**Exemple :**
+**Example:**
 
 ```bash
 universal-pwa init \
-  --name "Mon Application" \
-  --short-name "MonApp" \
+  --name "My Application" \
+  --short-name "MyApp" \
   --icon-source ./logo.png \
   --theme-color "#2c3e50"
 ```
 
-### Commande `scan`
+### `scan` Command
 
-Scanne un projet et détecte le framework, l'architecture et les assets.
+Scan a project and detect framework, architecture, and assets.
 
 ```bash
 universal-pwa scan [options]
 ```
 
-**Options :**
+**Options:**
 
-- `-p, --project-path <path>` : Chemin du projet (défaut: répertoire courant)
+- `-p, --project-path <path>` : Project path (default: current directory)
 
-**Exemple :**
+**Example:**
 
 ```bash
 universal-pwa scan
 ```
 
-### Commande `preview`
+Output:
+- Detected framework (React, Vue, WordPress, etc.)
+- Architecture (SPA, SSR, static)
+- Build tool
+- Assets found (JS, CSS, images, fonts)
 
-Prévisualise la configuration PWA d'un projet.
+### `preview` Command
+
+Preview the PWA configuration of a project.
 
 ```bash
 universal-pwa preview [options]
 ```
 
-**Options :**
+**Options:**
 
-- `-p, --project-path <path>` : Chemin du projet (défaut: répertoire courant)
-- `--port <port>` : Port du serveur (défaut: `3000`)
-- `--open` : Ouvrir dans le navigateur
+- `-p, --project-path <path>` : Project path (default: current directory)
+- `--port <port>` : Server port (default: `3000`)
+- `--open` : Open in browser
 
-**Exemple :**
+**Example:**
 
 ```bash
 universal-pwa preview --port 8080
 ```
 
-## API Programmatique
+## Generated Files
 
-Vous pouvez également utiliser le CLI comme module :
+After running `universal-pwa init`, the following files are generated:
+
+- `manifest.json` - PWA manifest file
+- `sw.js` - Service Worker (Workbox)
+- `sw-src.js` - Service Worker source (for customization)
+- `icon-*.png` - PWA icons in multiple sizes (72x72 to 512x512)
+- `apple-touch-icon.png` - Apple Touch Icon (180x180)
+- `splash-*.png` - Splash screens for iOS
+
+Meta tags are automatically injected into your HTML files.
+
+## Programmatic API
+
+You can also use the CLI as a module:
 
 ```typescript
-import { initCommand } from '@universal-pwa/cli'
+import { initCommand } from '@julien-lin/universal-pwa-cli'
 
 const result = await initCommand({
   projectPath: './my-project',
@@ -93,10 +140,14 @@ const result = await initCommand({
 })
 ```
 
-## Développement
+## 💝 Sponsoring
+
+If UniversalPWA is useful to you, please consider [sponsoring the project](https://github.com/sponsors/julien-lin) to help maintain and improve it.
+
+## Development
 
 ```bash
-# Installer les dépendances
+# Install dependencies
 pnpm install
 
 # Build
@@ -108,3 +159,9 @@ pnpm test
 # Lint
 pnpm lint
 ```
+
+## Links
+
+- **Homepage**: https://github.com/julien-lin/UniversalPWA
+- **Issues**: https://github.com/julien-lin/UniversalPWA/issues
+- **Sponsor**: https://github.com/sponsors/julien-lin
