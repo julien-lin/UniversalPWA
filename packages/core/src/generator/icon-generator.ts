@@ -147,6 +147,25 @@ export async function generateIcons(options: IconGeneratorOptions): Promise<Icon
     }
   }
 
+  // Générer apple-touch-icon.png (180x180) si format PNG
+  if (format === 'png') {
+    try {
+      const appleIconPath = join(outputDir, 'apple-touch-icon.png')
+      await image.clone()
+        .resize(180, 180, {
+          fit: 'cover',
+          position: 'center',
+        })
+        .png({ quality, compressionLevel: 9 })
+        .toFile(appleIconPath)
+      generatedFiles.push(appleIconPath)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      // Ne pas faire échouer la génération si apple-touch-icon échoue
+      console.warn(`Warning: Failed to generate apple-touch-icon: ${message}`)
+    }
+  }
+
   return {
     icons,
     splashScreens,
