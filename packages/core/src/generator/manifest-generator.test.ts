@@ -174,8 +174,9 @@ describe('manifest-generator', () => {
 
       const manifest = generateManifest(options)
       // La validation tronque automatiquement à 12 caractères
+      // "This is too long" -> trim() -> substring(0, 12) -> "This is too " -> trim() final -> "This is too" (10 chars)
       expect(manifest.short_name.length).toBeLessThanOrEqual(12)
-      expect(manifest.short_name).toBe('This is too ')
+      expect(manifest.short_name).toBe('This is too')
     })
 
     it('should handle different display modes', () => {
