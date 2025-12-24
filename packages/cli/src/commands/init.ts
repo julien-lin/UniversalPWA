@@ -116,10 +116,19 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     console.log(chalk.blue('📝 Generating manifest.json...'))
     
     const appName = name ?? (result.framework ? `${result.framework} App` : 'My PWA')
-    // S'assurer que shortName est toujours défini et valide (max 12 caractères)
-    const appShortName = (shortName && shortName.length > 0 && shortName.length <= 12)
-      ? shortName
-      : appName.substring(0, 12)
+    // S'assurer que shortName est toujours défini et valide (max 12 caractères, non vide)
+    let appShortName: string
+    if (shortName && shortName.length > 0 && shortName.length <= 12) {
+      appShortName = shortName
+    } else {
+      // Utiliser appName comme fallback, s'assurer qu'il n'est pas vide
+      const fallbackName = appName && appName.length > 0 ? appName : 'My PWA'
+      appShortName = fallbackName.substring(0, 12)
+    }
+    // Garantir que appShortName n'est jamais vide
+    if (!appShortName || appShortName.length === 0) {
+      appShortName = 'PWA'
+    }
 
     // Générer les icônes si une source est fournie
     let iconPaths: string[] = []
