@@ -5,7 +5,7 @@
 
 Service worker templates for UniversalPWA, adapted to different architectures (static, SPA, SSR) and framework variants (Next.js/Nuxt, WordPress, Laravel, Symfony).
 
-**🇫🇷 [Documentation en français](https://github.com/julien-lin/UniversalPWA/blob/main/README.fr.md)**
+**🇫🇷 [Documentation en français](./README.fr.md)**
 
 ## Installation
 
