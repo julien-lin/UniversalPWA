@@ -175,10 +175,22 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     }
 
     // Générer le manifest (avec ou sans icônes)
-    // Validation finale de appShortName avant utilisation
-    const finalShortName = appShortName && typeof appShortName === 'string' && appShortName.trim().length > 0
-      ? appShortName.trim().substring(0, 12)
-      : (appName && appName.length > 0 ? appName.substring(0, 12) : 'PWA')
+    // Validation finale de appShortName avant utilisation - garantir qu'il est toujours une string valide
+    let finalShortName: string = 'PWA' // Valeur par défaut
+    
+    if (appShortName && typeof appShortName === 'string' && appShortName.trim().length > 0) {
+      finalShortName = appShortName.trim().substring(0, 12)
+    } else if (appName && typeof appName === 'string' && appName.length > 0) {
+      finalShortName = appName.substring(0, 12)
+    }
+    
+    // Garantir que finalShortName n'est jamais vide ou undefined
+    if (!finalShortName || finalShortName.trim().length === 0) {
+      finalShortName = 'PWA'
+    }
+    
+    // Double vérification : s'assurer que c'est bien une string
+    finalShortName = String(finalShortName).trim().substring(0, 12) || 'PWA'
     
     let manifestPath: string | undefined
     if (iconPaths.length > 0) {
@@ -209,6 +221,7 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
       console.log(chalk.yellow('⚠ Generating manifest with placeholder icon'))
       
       // Créer un manifest avec une icône placeholder
+      // finalShortName est déjà validé ci-dessus
       const manifestMinimal = generateManifest({
         name: appName,
         shortName: finalShortName,
