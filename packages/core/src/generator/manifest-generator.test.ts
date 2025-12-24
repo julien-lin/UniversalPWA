@@ -160,7 +160,7 @@ describe('manifest-generator', () => {
       expect(() => generateManifest(options)).toThrow()
     })
 
-    it('should throw error for short_name > 12 characters', () => {
+    it('should truncate short_name > 12 characters to 12 characters', () => {
       const options: ManifestGeneratorOptions = {
         name: 'Test App',
         shortName: 'This is too long',
@@ -172,7 +172,10 @@ describe('manifest-generator', () => {
         ],
       }
 
-      expect(() => generateManifest(options)).toThrow()
+      const manifest = generateManifest(options)
+      // La validation tronque automatiquement à 12 caractères
+      expect(manifest.short_name.length).toBeLessThanOrEqual(12)
+      expect(manifest.short_name).toBe('This is too ')
     })
 
     it('should handle different display modes', () => {
