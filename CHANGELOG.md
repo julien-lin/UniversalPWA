@@ -7,6 +7,15 @@ et ce projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+## [1.2.2] - 2024-12-24
+
+### Fixed
+- **CLI**: Correction du bug où `short_name` devenait `undefined` lors de l'initialisation interactive
+- **CLI**: Ajout de validations défensives pour s'assurer que toutes les réponses des prompts sont correctement définies
+- **CLI**: Amélioration de la gestion des valeurs par défaut pour `name` et `shortName`
+
+## [1.2.1] - 2024-12-XX
+
 ### Added
 - Phase 0 : Setup monorepo avec pnpm workspaces
 - Phase 1 : Scanner & Détection Auto (framework, assets, architecture)
