@@ -17,7 +17,7 @@ export function Features() {
           {t.features.items.map((feature, index) => (
             <div
               key={index}
-              className="p-8 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-blue-200"
+              className="p-8 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-teal-200"
             >
               <div className="text-5xl mb-4">{feature.icon}</div>
               <h3 className="text-2xl font-bold text-gray-900 mb-3">{feature.title}</h3>
@@ -28,16 +28,16 @@ export function Features() {
 
         {/* CTA Section */}
         <div className="mt-16 text-center">
-          <div className="inline-block p-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl text-white">
+          <div className="inline-block p-8 bg-teal-600 rounded-2xl text-white">
             <h2 className="text-2xl font-bold mb-4">Ready to Get Started?</h2>
-            <p className="mb-6 text-blue-100">
+            <p className="mb-6 text-teal-100">
               Transform your web project into a PWA in minutes
             </p>
             <a
               href="https://www.npmjs.com/package/@julien-lin/universal-pwa-cli"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center px-6 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors"
+              className="inline-flex items-center px-6 py-3 bg-white text-teal-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors"
             >
               Install Now
             </a>

@@ -25,10 +25,10 @@ export function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-indigo-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">U</span>
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <span className="text-xl font-bold bg-gradient-to-r from-teal-600 to-indigo-700 bg-clip-text text-transparent">
               UniversalPWA
             </span>
           </Link>
@@ -39,8 +39,8 @@ export function Header() {
               to="/"
               className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 isActive('/')
-                  ? 'text-blue-600 bg-blue-50'
-                  : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                  ? 'text-teal-600 bg-teal-50'
+                  : 'text-gray-700 hover:text-teal-600 hover:bg-gray-50'
               }`}
             >
               {t.nav.home}
@@ -49,8 +49,8 @@ export function Header() {
               to="/features"
               className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 isActive('/features')
-                  ? 'text-blue-600 bg-blue-50'
-                  : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                  ? 'text-teal-600 bg-teal-50'
+                  : 'text-gray-700 hover:text-teal-600 hover:bg-gray-50'
               }`}
             >
               {t.nav.features}
@@ -59,8 +59,8 @@ export function Header() {
               to="/sponsors"
               className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 isActive('/sponsors')
-                  ? 'text-blue-600 bg-blue-50'
-                  : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                  ? 'text-teal-600 bg-teal-50'
+                  : 'text-gray-700 hover:text-teal-600 hover:bg-gray-50'
               }`}
             >
               {t.nav.sponsors}
@@ -82,8 +82,8 @@ export function Header() {
                   onClick={() => setLanguage(lang.code)}
                   className={`px-2 py-1 rounded text-sm font-medium transition-colors ${
                     language === lang.code
-                      ? 'text-blue-600 bg-blue-50'
-                      : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+                      ? 'text-teal-600 bg-teal-50'
+                      : 'text-gray-600 hover:text-teal-600 hover:bg-gray-50'
                   }`}
                 >
                   {lang.label}
@@ -109,8 +109,8 @@ export function Header() {
               onClick={() => setMobileMenuOpen(false)}
               className={`block px-3 py-2 rounded-md text-base font-medium ${
                 isActive('/')
-                  ? 'text-blue-600 bg-blue-50'
-                  : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                  ? 'text-teal-600 bg-teal-50'
+                  : 'text-gray-700 hover:text-teal-600 hover:bg-gray-50'
               }`}
             >
               {t.nav.home}
@@ -120,8 +120,8 @@ export function Header() {
               onClick={() => setMobileMenuOpen(false)}
               className={`block px-3 py-2 rounded-md text-base font-medium ${
                 isActive('/features')
-                  ? 'text-blue-600 bg-blue-50'
-                  : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                  ? 'text-teal-600 bg-teal-50'
+                  : 'text-gray-700 hover:text-teal-600 hover:bg-gray-50'
               }`}
             >
               {t.nav.features}
@@ -131,8 +131,8 @@ export function Header() {
               onClick={() => setMobileMenuOpen(false)}
               className={`block px-3 py-2 rounded-md text-base font-medium ${
                 isActive('/sponsors')
-                  ? 'text-blue-600 bg-blue-50'
-                  : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                  ? 'text-teal-600 bg-teal-50'
+                  : 'text-gray-700 hover:text-teal-600 hover:bg-gray-50'
               }`}
             >
               {t.nav.sponsors}
@@ -141,7 +141,7 @@ export function Header() {
               href="https://github.com/julien-lin/UniversalPWA"
               target="_blank"
               rel="noopener noreferrer"
-              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-teal-600 hover:bg-gray-50"
             >
               GitHub
             </a>
@@ -155,8 +155,8 @@ export function Header() {
                   }}
                   className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                     language === lang.code
-                      ? 'text-blue-600 bg-blue-50'
-                      : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+                      ? 'text-teal-600 bg-teal-50'
+                      : 'text-gray-600 hover:text-teal-600 hover:bg-gray-50'
                   }`}
                 >
                   {lang.label}
