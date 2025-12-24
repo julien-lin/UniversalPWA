@@ -117,18 +117,25 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     
     const appName = name ?? (result.framework ? `${result.framework} App` : 'My PWA')
     // S'assurer que shortName est toujours défini et valide (max 12 caractères, non vide)
+    // Normaliser shortName (peut être undefined, string vide, ou valide)
+    const normalizedShortName = shortName && typeof shortName === 'string' && shortName.trim().length > 0
+      ? shortName.trim()
+      : undefined
+    
     let appShortName: string
-    if (shortName && shortName.length > 0 && shortName.length <= 12) {
-      appShortName = shortName
+    if (normalizedShortName && normalizedShortName.length > 0 && normalizedShortName.length <= 12) {
+      appShortName = normalizedShortName
     } else {
       // Utiliser appName comme fallback, s'assurer qu'il n'est pas vide
       const fallbackName = appName && appName.length > 0 ? appName : 'My PWA'
       appShortName = fallbackName.substring(0, 12)
     }
-    // Garantir que appShortName n'est jamais vide
-    if (!appShortName || appShortName.length === 0) {
+    // Garantir que appShortName n'est jamais vide ou undefined
+    if (!appShortName || appShortName.trim().length === 0) {
       appShortName = 'PWA'
     }
+    // S'assurer que appShortName est bien une string (pas undefined)
+    appShortName = String(appShortName)
 
     // Générer les icônes si une source est fournie
     let iconPaths: string[] = []
@@ -168,12 +175,17 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     }
 
     // Générer le manifest (avec ou sans icônes)
+    // Validation finale de appShortName avant utilisation
+    const finalShortName = appShortName && typeof appShortName === 'string' && appShortName.trim().length > 0
+      ? appShortName.trim().substring(0, 12)
+      : (appName && appName.length > 0 ? appName.substring(0, 12) : 'PWA')
+    
     let manifestPath: string | undefined
     if (iconPaths.length > 0) {
       // Manifest avec icônes générées
       const manifestWithIcons = generateManifest({
         name: appName,
-        shortName: appShortName,
+        shortName: finalShortName,
         startUrl: '/',
         scope: '/',
         display: 'standalone',
@@ -197,10 +209,9 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
       console.log(chalk.yellow('⚠ Generating manifest with placeholder icon'))
       
       // Créer un manifest avec une icône placeholder
-      // appShortName est déjà validé plus haut
       const manifestMinimal = generateManifest({
         name: appName,
-        shortName: appShortName,
+        shortName: finalShortName,
         startUrl: '/',
         scope: '/',
         display: 'standalone',
