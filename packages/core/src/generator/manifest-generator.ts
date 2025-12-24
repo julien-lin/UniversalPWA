@@ -62,9 +62,26 @@ export interface ManifestGeneratorOptions {
  * Génère un manifest.json pour PWA
  */
 export function generateManifest(options: ManifestGeneratorOptions): Manifest {
+  // Validation et normalisation de shortName - garantir qu'il est toujours une string valide
+  let shortName: string = 'PWA' // Valeur par défaut
+  
+  if (options.shortName && typeof options.shortName === 'string' && options.shortName.trim().length > 0) {
+    shortName = options.shortName.trim().substring(0, 12)
+  } else if (options.name && typeof options.name === 'string' && options.name.length > 0) {
+    shortName = options.name.substring(0, 12)
+  }
+  
+  // Garantir que shortName n'est jamais vide
+  if (!shortName || shortName.trim().length === 0) {
+    shortName = 'PWA'
+  }
+  
+  // Conversion explicite en string et limitation à 12 caractères
+  shortName = String(shortName).trim().substring(0, 12) || 'PWA'
+  
   const manifest: Manifest = {
     name: options.name,
-    short_name: options.shortName,
+    short_name: shortName,
     start_url: options.startUrl ?? '/',
     scope: options.scope ?? '/',
     display: options.display ?? 'standalone',
