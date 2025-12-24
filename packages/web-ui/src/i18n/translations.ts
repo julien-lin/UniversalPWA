@@ -29,6 +29,16 @@ export interface Translations {
     cta: string
     benefits: string[]
   }
+  whatIsPWA: {
+    title: string
+    subtitle: string
+    definition: string
+    benefits: Array<{
+      title: string
+      description: string
+      icon: string
+    }>
+  }
   footer: {
     description: string
     links: {
@@ -88,6 +98,43 @@ export const translations: Record<Language, Translations> = {
           title: 'Production Ready',
           description: 'Generates optimized service workers with Workbox and validates all PWA requirements.',
           icon: '🚀',
+        },
+      ],
+    },
+    whatIsPWA: {
+      title: 'What is a PWA?',
+      subtitle: 'Understanding Progressive Web Apps',
+      definition: 'A Progressive Web App (PWA) is a web application that uses modern web capabilities to provide a native app-like experience. PWAs combine the best of web and mobile apps, offering fast loading, offline functionality, and the ability to install on devices.',
+      benefits: [
+        {
+          title: 'Installable',
+          description: 'Users can install PWAs directly from their browser, no app store required. They appear on the home screen just like native apps.',
+          icon: '📱',
+        },
+        {
+          title: 'Offline Support',
+          description: 'PWAs work offline or on slow networks thanks to service workers. Content is cached and available even without internet.',
+          icon: '🌐',
+        },
+        {
+          title: 'Fast & Responsive',
+          description: 'PWAs load instantly and respond quickly to user interactions, providing a smooth experience on any device.',
+          icon: '⚡',
+        },
+        {
+          title: 'Cross-Platform',
+          description: 'One PWA works across all platforms - iOS, Android, Windows, macOS, and Linux. No need to build separate apps.',
+          icon: '🔄',
+        },
+        {
+          title: 'Secure',
+          description: 'PWAs require HTTPS, ensuring all data is encrypted and secure. Users can trust your application.',
+          icon: '🔒',
+        },
+        {
+          title: 'Always Up-to-Date',
+          description: 'PWAs automatically update in the background. Users always have the latest version without manual updates.',
+          icon: '🔄',
         },
       ],
     },
@@ -164,6 +211,43 @@ export const translations: Record<Language, Translations> = {
         },
       ],
     },
+    whatIsPWA: {
+      title: 'Qu\'est-ce qu\'une PWA?',
+      subtitle: 'Comprendre les Progressive Web Apps',
+      definition: 'Une Progressive Web App (PWA) est une application web qui utilise les capacités modernes du web pour offrir une expérience similaire à une application native. Les PWA combinent le meilleur du web et des applications mobiles, offrant un chargement rapide, des fonctionnalités hors ligne et la possibilité de s\'installer sur les appareils.',
+      benefits: [
+        {
+          title: 'Installable',
+          description: 'Les utilisateurs peuvent installer les PWA directement depuis leur navigateur, sans magasin d\'applications. Elles apparaissent sur l\'écran d\'accueil comme les applications natives.',
+          icon: '📱',
+        },
+        {
+          title: 'Support Hors Ligne',
+          description: 'Les PWA fonctionnent hors ligne ou sur des réseaux lents grâce aux service workers. Le contenu est mis en cache et disponible même sans internet.',
+          icon: '🌐',
+        },
+        {
+          title: 'Rapide & Réactive',
+          description: 'Les PWA se chargent instantanément et répondent rapidement aux interactions utilisateur, offrant une expérience fluide sur n\'importe quel appareil.',
+          icon: '⚡',
+        },
+        {
+          title: 'Multi-Plateforme',
+          description: 'Une seule PWA fonctionne sur toutes les plateformes - iOS, Android, Windows, macOS et Linux. Pas besoin de créer des applications séparées.',
+          icon: '🔄',
+        },
+        {
+          title: 'Sécurisée',
+          description: 'Les PWA nécessitent HTTPS, garantissant que toutes les données sont cryptées et sécurisées. Les utilisateurs peuvent faire confiance à votre application.',
+          icon: '🔒',
+        },
+        {
+          title: 'Toujours à Jour',
+          description: 'Les PWA se mettent à jour automatiquement en arrière-plan. Les utilisateurs ont toujours la dernière version sans mises à jour manuelles.',
+          icon: '🔄',
+        },
+      ],
+    },
     sponsors: {
       title: 'Soutenez UniversalPWA',
       subtitle: 'Aidez-nous à construire l\'avenir des Progressive Web Apps',
@@ -234,6 +318,43 @@ export const translations: Record<Language, Translations> = {
           title: 'Listo para Producción',
           description: 'Genera service workers optimizados con Workbox y valida todos los requisitos PWA.',
           icon: '🚀',
+        },
+      ],
+    },
+    whatIsPWA: {
+      title: '¿Qué es una PWA?',
+      subtitle: 'Entendiendo las Progressive Web Apps',
+      definition: 'Una Progressive Web App (PWA) es una aplicación web que utiliza capacidades modernas de la web para proporcionar una experiencia similar a una aplicación nativa. Las PWA combinan lo mejor de la web y las aplicaciones móviles, ofreciendo carga rápida, funcionalidad offline y la capacidad de instalarse en dispositivos.',
+      benefits: [
+        {
+          title: 'Instalable',
+          description: 'Los usuarios pueden instalar PWAs directamente desde su navegador, sin necesidad de tienda de aplicaciones. Aparecen en la pantalla de inicio como aplicaciones nativas.',
+          icon: '📱',
+        },
+        {
+          title: 'Soporte Offline',
+          description: 'Las PWAs funcionan offline o en redes lentas gracias a los service workers. El contenido se almacena en caché y está disponible incluso sin internet.',
+          icon: '🌐',
+        },
+        {
+          title: 'Rápida y Responsiva',
+          description: 'Las PWAs se cargan instantáneamente y responden rápidamente a las interacciones del usuario, proporcionando una experiencia fluida en cualquier dispositivo.',
+          icon: '⚡',
+        },
+        {
+          title: 'Multiplataforma',
+          description: 'Una sola PWA funciona en todas las plataformas - iOS, Android, Windows, macOS y Linux. No es necesario crear aplicaciones separadas.',
+          icon: '🔄',
+        },
+        {
+          title: 'Segura',
+          description: 'Las PWAs requieren HTTPS, asegurando que todos los datos estén encriptados y seguros. Los usuarios pueden confiar en tu aplicación.',
+          icon: '🔒',
+        },
+        {
+          title: 'Siempre Actualizada',
+          description: 'Las PWAs se actualizan automáticamente en segundo plano. Los usuarios siempre tienen la última versión sin actualizaciones manuales.',
+          icon: '🔄',
         },
       ],
     },
