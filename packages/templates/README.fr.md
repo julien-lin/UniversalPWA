@@ -51,6 +51,6 @@ Si UniversalPWA vous est utile, envisagez de [sponsoriser le projet](https://git
 ## Liens
 
 - **Page d'accueil** : https://github.com/julien-lin/UniversalPWA
-- **Issues** : https://github.com/julien-lin/UniversalPWA/issues
+- **Support** : Pour les problèmes et questions, utilisez [GitHub Discussions](https://github.com/julien-lin/UniversalPWA/discussions)
 - **Sponsor** : https://github.com/sponsors/julien-lin
 
