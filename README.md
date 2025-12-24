@@ -1,22 +1,24 @@
 # UniversalPWA
 
-> Bibliothèque universelle (CLI + lib NPM/Composer) transformant n'importe quel projet web existant en Progressive Web App (PWA) en un clic, sans refonte du code source.
+> Universal library (CLI + NPM/Composer lib) that transforms any existing web project into a Progressive Web App (PWA) with one click, without refactoring the source code.
 
-## 🎯 Objectif
+## 🎯 Goal
 
-Démocratiser les PWA pour PME/artisans/développeurs solo, viser 10k installs/an via GitHub + marketplaces.
+Democratize PWAs for SMEs/artisans/solo developers, targeting 10k installs/year via GitHub + marketplaces.
 
-## ✨ Fonctionnalités
+## ✨ Features
 
-- 🔍 **Scan & Détection Auto** : Détection automatique du framework (WordPress, Shopify, Symfony, Laravel, React, Vue, Angular, Next.js, Nuxt, HTML statique)
-- ⚡ **Génération One-Click** : Manifest.json + Service Worker optimisé + injection meta-tags
-- 🎨 **Customisation No-Code** : Éditeur web pour personnaliser couleurs, icônes, stratégies de cache (à venir)
-- 📊 **Analytics & Monitoring** : Dashboard gratuit avec métriques PWA (à venir)
-- 🚀 **Déploiement** : Support Vercel/Netlify/Cloudflare + GitHub Actions
+- 🔍 **Auto Scan & Detection** : Automatic framework detection (WordPress, Shopify, Symfony, Laravel, React, Vue, Angular, Next.js, Nuxt, static HTML)
+- ⚡ **One-Click Generation** : Manifest.json + optimized Service Worker + meta-tags injection
+- 💬 **Interactive Mode** : User-friendly prompts with smart defaults and validation
+- 🎨 **Icon Generation** : Automatic generation of PWA icons in multiple sizes + Apple Touch Icon
+- 🎨 **No-Code Customization** : Web editor to customize colors, icons, cache strategies (coming soon)
+- 📊 **Analytics & Monitoring** : Free dashboard with PWA metrics (coming soon)
+- 🚀 **Deployment** : Support for Vercel/Netlify/Cloudflare + GitHub Actions
 
 ## 🚀 Installation
 
-### Via NPM (recommandé)
+### Via NPM (recommended)
 
 ```bash
 npm install -g @julien-lin/universal-pwa-cli
@@ -28,121 +30,189 @@ npm install -g @julien-lin/universal-pwa-cli
 pnpm add -g @julien-lin/universal-pwa-cli
 ```
 
-### Utilisation directe avec npx
+### Direct usage with npx
 
 ```bash
 npx @julien-lin/universal-pwa-cli init
 ```
 
-## 📖 Utilisation
+## 📖 Usage
 
-### Initialiser une PWA dans votre projet
+### Initialize a PWA in your project
+
+#### Interactive Mode (Recommended)
+
+Simply run `universal-pwa init` without any arguments to launch the interactive mode:
 
 ```bash
-# Dans le répertoire de votre projet
+# In your project directory
 universal-pwa init
+```
 
-# Avec options
+The CLI will:
+1. 🔍 Scan your project to detect the framework
+2. 📋 Prompt you with questions:
+   - App name (auto-detected from `package.json`)
+   - Short name (max 12 characters, auto-generated from app name)
+   - Icon source path (auto-detected from common locations)
+   - Theme color (default: `#ffffff`)
+   - Background color (default: `#000000`)
+   - Whether to generate icons
+
+All prompts include smart defaults and validation!
+
+#### Command Line Mode
+
+You can also provide all options directly:
+
+```bash
 universal-pwa init \
-  --name "Mon Application" \
-  --short-name "MonApp" \
+  --name "My Application" \
+  --short-name "MyApp" \
   --icon-source ./logo.png \
   --theme-color "#2c3e50" \
   --background-color "#ffffff"
 ```
 
-### Scanner un projet
+### Scan a project
 
 ```bash
 universal-pwa scan
 ```
 
-### Prévisualiser la configuration PWA
+This will display:
+- Detected framework
+- Architecture (SPA, SSR, static)
+- Build tool
+- Assets found (JS, CSS, images, fonts)
+
+### Preview PWA configuration
 
 ```bash
 universal-pwa preview
 ```
 
-## 🎯 Exemples par Framework
+This checks:
+- Presence of `manifest.json`
+- Service Worker availability
+- HTTPS compliance
+- PWA setup status
 
-### Site Statique (HTML/CSS/JS)
+## 🎯 Examples by Framework
+
+### Static Site (HTML/CSS/JS)
 
 ```bash
-cd mon-site-statique
+cd my-static-site
 universal-pwa init --icon-source ./icon.png
 ```
 
 ### React / Vue / Angular
 
 ```bash
-cd mon-projet-react
+cd my-react-project
+# Interactive mode (recommended)
+universal-pwa init
+
+# Or with options
 universal-pwa init --icon-source ./src/assets/logo.png
 ```
 
 ### Next.js / Nuxt
 
 ```bash
-cd mon-projet-nextjs
+cd my-nextjs-project
 universal-pwa init --icon-source ./public/logo.png
 ```
 
 ### WordPress
 
 ```bash
-cd mon-theme-wordpress
+cd my-wordpress-theme
 universal-pwa init --icon-source ./assets/icon.png --output-dir ./public
 ```
 
 ### Symfony / Laravel
 
 ```bash
-cd mon-projet-symfony
+cd my-symfony-project
 universal-pwa init --icon-source ./public/logo.png --output-dir ./public
 ```
 
 ## ⚙️ Configuration
 
-### Options de la commande `init`
+### `init` Command Options
 
-| Option | Description | Défaut |
-|--------|-------------|--------|
-| `-p, --project-path <path>` | Chemin du projet | `.` (répertoire courant) |
-| `-n, --name <name>` | Nom de l'application | Détecté depuis package.json |
-| `-s, --short-name <shortName>` | Nom court (max 12 caractères) | Dérivé du nom |
-| `-i, --icon-source <path>` | Image source pour les icônes | Requis |
-| `-t, --theme-color <color>` | Couleur du thème (hex) | `#ffffff` |
-| `-b, --background-color <color>` | Couleur de fond (hex) | `#000000` |
-| `--skip-icons` | Ignorer la génération d'icônes | `false` |
-| `--skip-service-worker` | Ignorer la génération du SW | `false` |
-| `--skip-injection` | Ignorer l'injection meta-tags | `false` |
-| `-o, --output-dir <dir>` | Répertoire de sortie | `public` |
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-p, --project-path <path>` | Project path | `.` (current directory) |
+| `-n, --name <name>` | Application name | Detected from `package.json` |
+| `-s, --short-name <shortName>` | Short name (max 12 chars) | Derived from name |
+| `-i, --icon-source <path>` | Source image for icons | Auto-detected if available |
+| `-t, --theme-color <color>` | Theme color (hex) | `#ffffff` |
+| `-b, --background-color <color>` | Background color (hex) | `#000000` |
+| `--skip-icons` | Skip icon generation | `false` |
+| `--skip-service-worker` | Skip service worker generation | `false` |
+| `--skip-injection` | Skip meta-tags injection | `false` |
+| `-o, --output-dir <dir>` | Output directory | `public` |
 
-## 📦 Structure
+### Interactive Mode Features
 
-Monorepo pnpm avec les packages suivants :
+When using interactive mode (`universal-pwa init` without arguments):
 
-- `@julien-lin/universal-pwa-core` : Moteur de scan, génération et injection
-- `@julien-lin/universal-pwa-cli` : Interface en ligne de commande
-- `@julien-lin/universal-pwa-templates` : Templates de service workers par framework
-- `@julien-lin/universal-pwa-web-ui` : Interface web no-code (React 19 + Vite + Tailwind 4)
-- `@julien-lin/universal-pwa-sdk-php` : SDK PHP/Composer pour intégration Symfony/Laravel
-- `packages/demos` : Projets de démonstration
+- ✅ **Smart Defaults** : Automatically detects project name from `package.json`
+- ✅ **Icon Detection** : Searches for icons in common locations (`public/`, `src/assets/`, etc.)
+- ✅ **Framework Detection** : Uses detected framework to suggest appropriate defaults
+- ✅ **Real-time Validation** : Validates inputs as you type (colors, paths, character limits)
+- ✅ **User-friendly** : Clear prompts with helpful descriptions
 
-## 🛠️ Développement
+## 📦 Generated Files
 
-### Installation des dépendances
+After running `universal-pwa init`, the following files are generated:
+
+### In `public/` (or specified output directory):
+
+- `manifest.json` - PWA manifest file
+- `sw.js` - Service Worker (Workbox)
+- `sw-src.js` - Service Worker source (for customization)
+- `icon-*.png` - PWA icons in multiple sizes (72x72 to 512x512)
+- `apple-touch-icon.png` - Apple Touch Icon (180x180)
+- `splash-*.png` - Splash screens for iOS
+
+### In your HTML files:
+
+- Meta tags injected in `<head>`:
+  - `<link rel="manifest" href="/manifest.json">`
+  - `<meta name="theme-color" content="...">`
+  - `<link rel="apple-touch-icon" href="/apple-touch-icon.png">`
+  - Service Worker registration script
+
+## 📦 Project Structure
+
+Monorepo using pnpm with the following packages:
+
+- `@julien-lin/universal-pwa-core` : Core engine for scanning, generation, and injection
+- `@julien-lin/universal-pwa-cli` : Command-line interface
+- `@julien-lin/universal-pwa-templates` : Service worker templates by framework
+- `@julien-lin/universal-pwa-web-ui` : No-code web interface (React 19 + Vite + Tailwind 4)
+- `@julien-lin/universal-pwa-sdk-php` : PHP/Composer SDK for Symfony/Laravel integration
+- `packages/demos` : Demo projects
+
+## 🛠️ Development
+
+### Install dependencies
 
 ```bash
 pnpm install
 ```
 
-### Développement web UI
+### Web UI development
 
 ```bash
 pnpm dev:web
 ```
 
-### Build tous les packages
+### Build all packages
 
 ```bash
 pnpm build
@@ -151,13 +221,13 @@ pnpm build
 ### Tests
 
 ```bash
-# Tous les tests
+# All tests
 pnpm test
 
-# Tests avec coverage
+# Tests with coverage
 pnpm test:coverage
 
-# Tests d'une package spécifique
+# Tests for a specific package
 pnpm --filter @julien-lin/universal-pwa-core test
 ```
 
@@ -169,66 +239,72 @@ pnpm lint
 
 ## 📚 Documentation
 
-Voir le dossier `DOCUMENTATION/` pour :
-- [Cahier des charges](./DOCUMENTATION/cahier-des-charges.md)
-- [Stack technique](./DOCUMENTATION/stack-technique.md)
-- [Prompt initial](./DOCUMENTATION/prompt.md)
-- [TODO MVP](./DOCUMENTATION/TODO-MVP.md)
+See the `DOCUMENTATION/` folder for:
+- [Technical Stack](./DOCUMENTATION/stack-technique.md)
+- [Initial Prompt](./DOCUMENTATION/prompt.md)
+- [MVP TODO](./DOCUMENTATION/TODO-MVP.md)
+- [Publishing Guide](./DOCUMENTATION/PUBLISH.md)
 
 ## 🔧 Troubleshooting
 
-### Erreur : "Icon source not found"
+### Error: "Icon source not found"
 
-Assurez-vous que le chemin vers l'image source est correct et que le fichier existe.
+Make sure the path to the source image is correct and the file exists.
 
 ```bash
-# Vérifier que l'icône existe
+# Check that the icon exists
 ls -la ./icon.png
 
-# Utiliser un chemin absolu si nécessaire
-universal-pwa init --icon-source /chemin/absolu/icon.png
+# Use an absolute path if necessary
+universal-pwa init --icon-source /absolute/path/icon.png
 ```
 
-### Erreur : "Manifest requires at least one icon"
+### Error: "Manifest requires at least one icon"
 
-Le manifest PWA nécessite au moins une icône. Fournissez une image source avec `--icon-source`.
+The PWA manifest requires at least one icon. Provide a source image with `--icon-source`, or use interactive mode which will help you find one.
 
-### Service Worker non enregistré
+### Service Worker not registering
 
-Vérifiez que :
-1. Le service worker a été généré (`sw.js` dans le répertoire de sortie)
-2. Le script d'enregistrement a été injecté dans votre HTML
-3. Vous servez le site via HTTPS (ou localhost pour le développement)
+Check that:
+1. The service worker was generated (`sw.js` in the output directory)
+2. The registration script was injected in your HTML
+3. You're serving the site via HTTPS (or localhost for development)
 
-### HTTPS requis en production
+### HTTPS required in production
 
-Les PWA nécessitent HTTPS en production. Pour le développement local, HTTP sur localhost est accepté.
+PWAs require HTTPS in production. For local development, HTTP on localhost is accepted.
 
-## 🛠️ Stack Technique
+### Path issues with Vite/React
+
+For Vite/React projects, files in `public/` are served at the root. The CLI automatically handles this by normalizing paths (e.g., `/public/sw.js` → `/sw.js`).
+
+## 🛠️ Tech Stack
 
 - **Runtime** : Node.js 20+
-- **Langage** : TypeScript 5.9+
+- **Language** : TypeScript 5.9+
 - **Build** : Vite 7+ (web-ui), tsup 8+ (core/cli/templates)
 - **PWA** : Workbox 7.4+
 - **Images** : Sharp 0.34+
 - **Web UI** : React 19 + Tailwind CSS 4
 - **Package Manager** : pnpm 9.12+
+- **CLI Prompts** : Inquirer 12.0+
 
-## 📄 Licence
+## 📄 License
 
 MIT
 
 ## 🗺️ Roadmap
 
-- **MVP** : Scan + génération basique ✅
-- **v1.1** : Plugins auto Shopify/WooCommerce
-- **v1.2** : Push notifications (OneSignal/FCM)
-- **v2.0** : Éditeur drag-drop + hébergement SW
+- **MVP** : Scan + basic generation ✅
+- **v1.1** : Auto plugins for Shopify/WooCommerce
+- **v1.2** : Push notifications (OneSignal/FCM) ✅
+- **v1.2.2** : Interactive mode with prompts ✅
+- **v2.0** : Drag-drop editor + SW hosting
 
-## 🤝 Contribution
+## 🤝 Contributing
 
-Les contributions sont les bienvenues ! Voir [CONTRIBUTING.md](./CONTRIBUTING.md) pour les guidelines.
+Contributions are welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
 ## 📝 Changelog
 
-Voir [CHANGELOG.md](./CHANGELOG.md) pour l'historique des versions.
+See [CHANGELOG.md](./CHANGELOG.md) for version history.
