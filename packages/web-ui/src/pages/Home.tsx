@@ -11,6 +11,13 @@ export function Home() {
       <section className="relative bg-gradient-to-br from-teal-50 via-white to-indigo-50 py-20 lg:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
+            <div className="flex justify-center mb-8">
+              <img
+                src="/logo.png"
+                alt="UniversalPWA Logo"
+                className="h-24 w-24 md:h-32 md:w-32 object-contain drop-shadow-lg"
+              />
+            </div>
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
               {t.hero.title}
             </h1>
@@ -74,6 +81,39 @@ export function Home() {
               <h3 className="text-xl font-semibold text-gray-900 mb-2">3. Deploy</h3>
               <p className="text-gray-600">Your PWA is ready to deploy!</p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* What is PWA Section */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              {t.whatIsPWA.title}
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              {t.whatIsPWA.subtitle}
+            </p>
+          </div>
+
+          <div className="mb-12 max-w-4xl mx-auto">
+            <p className="text-lg text-gray-700 leading-relaxed text-center mb-8">
+              {t.whatIsPWA.definition}
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+            {t.whatIsPWA.benefits.map((benefit, index) => (
+              <div
+                key={index}
+                className="p-6 bg-gradient-to-br from-gray-50 to-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 hover:border-teal-200"
+              >
+                <div className="text-4xl mb-4">{benefit.icon}</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-3">{benefit.title}</h3>
+                <p className="text-gray-600 leading-relaxed">{benefit.description}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
