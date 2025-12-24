@@ -13,8 +13,20 @@ import { scanProject } from '@julien-lin/universal-pwa-core'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const packageJsonPath = join(__dirname, '../package.json')
-const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'))
-const version = packageJson.version || '0.0.0'
+
+interface PackageJson {
+  version?: string
+}
+
+let version = '0.0.0'
+try {
+  const packageJsonContent = readFileSync(packageJsonPath, 'utf-8')
+  const packageJson = JSON.parse(packageJsonContent) as PackageJson
+  version = packageJson.version || '0.0.0'
+} catch {
+  // Si on ne peut pas lire le package.json, utiliser la version par défaut
+  version = '0.0.0'
+}
 
 const program = new Command()
 
