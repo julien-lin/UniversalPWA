@@ -1,7 +1,7 @@
 import { injectManifest, generateSW } from 'workbox-build'
 import { writeFileSync, mkdirSync, existsSync } from 'fs'
 import { join } from 'path'
-import { getServiceWorkerTemplate, determineTemplateType, type ServiceWorkerTemplateType } from '@universal-pwa/templates'
+import { getServiceWorkerTemplate, determineTemplateType, type ServiceWorkerTemplateType } from '@julien-lin/universal-pwa-templates'
 import type { Architecture } from '../scanner/architecture-detector.js'
 // Utiliser string pour éviter les problèmes de type lint dans cette unité
 // import type { Framework } from '../scanner/framework-detector'

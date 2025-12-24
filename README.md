@@ -19,19 +19,19 @@ Démocratiser les PWA pour PME/artisans/développeurs solo, viser 10k installs/a
 ### Via NPM (recommandé)
 
 ```bash
-npm install -g @universal-pwa/cli
+npm install -g @julien-lin/universal-pwa-cli
 ```
 
 ### Via pnpm
 
 ```bash
-pnpm add -g @universal-pwa/cli
+pnpm add -g @julien-lin/universal-pwa-cli
 ```
 
 ### Utilisation directe avec npx
 
 ```bash
-npx @universal-pwa/cli init
+npx @julien-lin/universal-pwa-cli init
 ```
 
 ## 📖 Utilisation
@@ -121,11 +121,11 @@ universal-pwa init --icon-source ./public/logo.png --output-dir ./public
 
 Monorepo pnpm avec les packages suivants :
 
-- `@universal-pwa/core` : Moteur de scan, génération et injection
-- `@universal-pwa/cli` : Interface en ligne de commande
-- `@universal-pwa/templates` : Templates de service workers par framework
-- `@universal-pwa/web-ui` : Interface web no-code (React 19 + Vite + Tailwind 4)
-- `@universal-pwa/sdk-php` : SDK PHP/Composer pour intégration Symfony/Laravel
+- `@julien-lin/universal-pwa-core` : Moteur de scan, génération et injection
+- `@julien-lin/universal-pwa-cli` : Interface en ligne de commande
+- `@julien-lin/universal-pwa-templates` : Templates de service workers par framework
+- `@julien-lin/universal-pwa-web-ui` : Interface web no-code (React 19 + Vite + Tailwind 4)
+- `@julien-lin/universal-pwa-sdk-php` : SDK PHP/Composer pour intégration Symfony/Laravel
 - `packages/demos` : Projets de démonstration
 
 ## 🛠️ Développement
@@ -158,7 +158,7 @@ pnpm test
 pnpm test:coverage
 
 # Tests d'une package spécifique
-pnpm --filter @universal-pwa/core test
+pnpm --filter @julien-lin/universal-pwa-core test
 ```
 
 ### Lint

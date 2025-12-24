@@ -1,6 +1,19 @@
 {
-  "name": "@universal-pwa/templates",
-  "version": "0.0.0",
+  "name": "@julien-lin/universal-pwa-templates",
+  "version": "1.1.0",
+  "description": "Templates de service workers pour UniversalPWA",
+  "keywords": ["pwa", "progressive-web-app", "workbox", "service-worker", "templates"],
+  "author": "julien-lin",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/julien-lin/UniversalPWA.git",
+    "directory": "packages/templates"
+  },
+  "homepage": "https://github.com/julien-lin/UniversalPWA#readme",
+  "bugs": {
+    "url": "https://github.com/julien-lin/UniversalPWA/issues"
+  },
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -19,7 +32,7 @@
     "dev": "tsx src/index.ts",
     "build": "tsup src/index.ts --dts --format esm,cjs",
     "lint": "eslint src --ext .ts",
-    "test": "vitest"
+    "test": "vitest run"
   },
   "dependencies": {
     "zod": "^4.2.1"

@@ -154,6 +154,98 @@ describe('meta-injector', () => {
       expect(modifiedHtml).toContain('navigator.serviceWorker.register')
       expect(result.injected.length).toBeGreaterThan(5)
     })
+
+    describe('Security: XSS prevention', () => {
+      it('should escape service worker path to prevent XSS injection', () => {
+        const html = '<html><head><title>Test</title></head><body></body></html>'
+        const maliciousPath = "/sw.js'; alert('XSS'); //"
+        const options: MetaInjectorOptions = {
+          serviceWorkerPath: maliciousPath,
+        }
+
+        const { html: modifiedHtml } = injectMetaTags(html, options)
+
+        // Le chemin doit être échappé avec JSON.stringify
+        expect(modifiedHtml).toContain('navigator.serviceWorker.register')
+        // JSON.stringify échappe la chaîne, donc elle doit être entre guillemets JSON
+        // Vérifier que le chemin est correctement échappé (utilise JSON.stringify)
+        const match = modifiedHtml.match(/navigator\.serviceWorker\.register\(([^)]+)\)/)
+        expect(match).not.toBeNull()
+        if (match) {
+          // Le chemin doit être une chaîne JSON valide (échappée)
+          const pathValue = match[1]
+          // JSON.stringify ajoute des guillemets et échappe les caractères spéciaux
+          // Le chemin doit contenir le chemin malveillant mais échappé
+          expect(pathValue).toContain("sw.js")
+          // Le point important : le chemin est entre guillemets JSON, donc le code malveillant ne peut pas s'exécuter
+          // Vérifier que c'est une chaîne JSON (commence par un guillemet)
+          expect(pathValue.trim()).toMatch(/^["']/)
+        }
+      })
+
+      it('should escape service worker path with backslashes', () => {
+        const html = '<html><head><title>Test</title></head><body></body></html>'
+        const pathWithBackslash = '/sw\\test.js'
+        const options: MetaInjectorOptions = {
+          serviceWorkerPath: pathWithBackslash,
+        }
+
+        const { html: modifiedHtml } = injectMetaTags(html, options)
+
+        // Le backslash doit être échappé
+        expect(modifiedHtml).toContain('navigator.serviceWorker.register')
+        // JSON.stringify échappe les backslashes, donc on devrait voir \\ dans le HTML
+        const match = modifiedHtml.match(/navigator\.serviceWorker\.register\(([^)]+)\)/)
+        expect(match).not.toBeNull()
+        if (match) {
+          // Le chemin doit être échappé (les backslashes sont doublés)
+          expect(match[1]).toContain('\\\\')
+        }
+      })
+
+      it('should escape service worker path with newlines', () => {
+        const html = '<html><head><title>Test</title></head><body></body></html>'
+        const pathWithNewline = '/sw.js\nalert("XSS")'
+        const options: MetaInjectorOptions = {
+          serviceWorkerPath: pathWithNewline,
+        }
+
+        const { html: modifiedHtml } = injectMetaTags(html, options)
+
+        // Les newlines doivent être échappés
+        expect(modifiedHtml).toContain('navigator.serviceWorker.register')
+        // JSON.stringify échappe les newlines en \n, donc on ne doit pas voir de newline littéral
+        // Le HTML ne doit pas contenir de newline littéral dans le script (sauf dans les guillemets JSON)
+        const match = modifiedHtml.match(/navigator\.serviceWorker\.register\(([^)]+)\)/)
+        expect(match).not.toBeNull()
+        if (match) {
+          // Le chemin doit être échappé (les newlines sont échappés en \n)
+          expect(match[1]).toContain('\\n')
+        }
+      })
+
+      it('should escape service worker path with quotes', () => {
+        const html = '<html><head><title>Test</title></head><body></body></html>'
+        const pathWithQuotes = "/sw'; alert('XSS'); //.js"
+        const options: MetaInjectorOptions = {
+          serviceWorkerPath: pathWithQuotes,
+        }
+
+        const { html: modifiedHtml } = injectMetaTags(html, options)
+
+        // Les guillemets doivent être échappés
+        expect(modifiedHtml).toContain('navigator.serviceWorker.register')
+        // JSON.stringify échappe les guillemets, donc le chemin doit être entre guillemets JSON
+        const match = modifiedHtml.match(/navigator\.serviceWorker\.register\(([^)]+)\)/)
+        expect(match).not.toBeNull()
+        if (match) {
+          // Le chemin doit être une chaîne JSON valide (échappée)
+          const pathValue = match[1]
+          // Vérifier que c'est une chaîne JSON (commence et se termine par des guillemets)
+          expect(pathValue).toMatch(/^["'].*["']$/)
+        }
+      })
+    })
   })
 
   describe('injectMetaTagsInFile', () => {

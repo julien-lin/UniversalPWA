@@ -4,7 +4,7 @@ import { Command } from 'commander'
 import chalk from 'chalk'
 import { initCommand } from './commands/init.js'
 import { previewCommand } from './commands/preview.js'
-import { scanProject } from '@universal-pwa/core'
+import { scanProject } from '@julien-lin/universal-pwa-core'
 
 const program = new Command()
 

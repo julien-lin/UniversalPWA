@@ -1,11 +1,11 @@
-# @universal-pwa/core
+# @julien-lin/universal-pwa-core
 
 Moteur de scan, génération et injection pour UniversalPWA.
 
 ## Installation
 
 ```bash
-npm install @universal-pwa/core
+npm install @julien-lin/universal-pwa-core
 ```
 
 ## Utilisation
@@ -13,7 +13,7 @@ npm install @universal-pwa/core
 ### Scanner un projet
 
 ```typescript
-import { scanProject } from '@universal-pwa/core'
+import { scanProject } from '@julien-lin/universal-pwa-core'
 
 const result = await scanProject({
   projectPath: './my-project',
@@ -28,7 +28,7 @@ console.log(result.architecture.architecture) // 'spa', 'ssr', 'static'
 ### Générer un manifest
 
 ```typescript
-import { generateManifest, writeManifest } from '@universal-pwa/core'
+import { generateManifest, writeManifest } from '@julien-lin/universal-pwa-core'
 
 const manifest = generateManifest({
   name: 'My App',
@@ -53,7 +53,7 @@ writeManifest(manifest, './public')
 ### Générer des icônes
 
 ```typescript
-import { generateIcons } from '@universal-pwa/core'
+import { generateIcons } from '@julien-lin/universal-pwa-core'
 
 const result = await generateIcons({
   sourceImage: './logo.png',
@@ -67,7 +67,7 @@ console.log(result.splashScreens) // Array of ManifestSplashScreen
 ### Générer un service worker
 
 ```typescript
-import { generateServiceWorker } from '@universal-pwa/core'
+import { generateServiceWorker } from '@julien-lin/universal-pwa-core'
 
 const result = await generateServiceWorker({
   projectPath: './my-project',
@@ -84,7 +84,7 @@ console.log(result.swPath) // Chemin du service worker généré
 ### Injecter des meta-tags
 
 ```typescript
-import { injectMetaTagsInFile } from '@universal-pwa/core'
+import { injectMetaTagsInFile } from '@julien-lin/universal-pwa-core'
 
 const result = injectMetaTagsInFile('./index.html', {
   manifestPath: '/manifest.json',
@@ -131,7 +131,7 @@ import type {
   Manifest,
   ManifestIcon,
   ServiceWorkerGenerationResult,
-} from '@universal-pwa/core'
+} from '@julien-lin/universal-pwa-core'
 ```
 
 ## Développement

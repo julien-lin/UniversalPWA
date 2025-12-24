@@ -13,7 +13,7 @@ Ce package contient des projets de démonstration pour tester UniversalPWA sur d
 
 ```bash
 cd demo-static
-pnpm --filter @universal-pwa/cli exec universal-pwa init \
+pnpm --filter @julien-lin/universal-pwa-cli exec universal-pwa init \
   --name "Demo Static" \
   --short-name "Demo" \
   --icon-source ./icon.png \

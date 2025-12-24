@@ -1,5 +1,5 @@
 {
-  "name": "@universal-pwa/sdk-php",
+  "name": "@julien-lin/universal-pwa-sdk-php",
   "version": "0.0.0",
   "private": true,
   "type": "module",

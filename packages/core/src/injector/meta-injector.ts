@@ -135,11 +135,14 @@ export function injectMetaTags(htmlContent: string, options: MetaInjectorOptions
   if (options.serviceWorkerPath) {
     const swPath = options.serviceWorkerPath.startsWith('/') ? options.serviceWorkerPath : `/${options.serviceWorkerPath}`
     if (!htmlContent.includes('navigator.serviceWorker')) {
+      // Échapper le chemin pour éviter l'injection XSS
+      const escapedSwPath = escapeJavaScriptString(swPath)
+      
       // Injecter le script de registration du service worker
       const swScript = `\n<script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('${swPath}')
+    navigator.serviceWorker.register(${escapedSwPath})
       .then((registration) => console.log('SW registered:', registration))
       .catch((error) => console.error('SW registration failed:', error));
   });
@@ -214,6 +217,16 @@ function updateMetaContent(metaElement: Element, newContent: string): void {
   } else {
     metaElement.attribs = { content: newContent }
   }
+}
+
+/**
+ * Échappe une chaîne pour l'injection sécurisée dans du JavaScript
+ * Convertit la chaîne en une chaîne JavaScript échappée
+ */
+function escapeJavaScriptString(str: string): string {
+  // Utiliser JSON.stringify pour échapper correctement tous les caractères spéciaux
+  // Cela gère les guillemets, backslashes, newlines, etc.
+  return JSON.stringify(str)
 }
 
 /**

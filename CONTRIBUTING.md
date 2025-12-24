@@ -57,7 +57,7 @@ pnpm test
 pnpm test:coverage
 
 # Tests d'un package spécifique
-pnpm --filter @universal-pwa/core test
+pnpm --filter @julien-lin/universal-pwa-core test
 ```
 
 ### Écrire des tests
@@ -74,7 +74,7 @@ pnpm --filter @universal-pwa/core test
 pnpm lint
 
 # Linter un package spécifique
-pnpm --filter @universal-pwa/core lint
+pnpm --filter @julien-lin/universal-pwa-core lint
 ```
 
 ## 📦 Structure du Monorepo
