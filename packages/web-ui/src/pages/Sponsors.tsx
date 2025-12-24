@@ -26,7 +26,7 @@ export function Sponsors() {
           <div className="space-y-4 mb-8">
             {t.sponsors.benefits.map((benefit, index) => (
               <div key={index} className="flex items-start space-x-3">
-                <FiCheck className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" />
+                <FiCheck className="w-6 h-6 text-emerald-600 flex-shrink-0 mt-0.5" />
                 <p className="text-gray-700">{benefit}</p>
               </div>
             ))}
@@ -38,7 +38,7 @@ export function Sponsors() {
               href="https://github.com/sponsors/julien-lin"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+              className="inline-flex items-center px-8 py-4 bg-teal-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl hover:bg-teal-500 transform hover:-translate-y-0.5 transition-all duration-200"
             >
               <FiGithub className="mr-2" />
               {t.sponsors.cta}
@@ -59,7 +59,7 @@ export function Sponsors() {
               href="https://github.com/sponsors/julien-lin"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center text-blue-600 hover:text-blue-700 font-semibold"
+              className="inline-flex items-center text-teal-600 hover:text-teal-700 font-semibold"
             >
               <FiGithub className="mr-2" />
               View on GitHub Sponsors
@@ -75,7 +75,7 @@ export function Sponsors() {
               href="https://github.com/julien-lin/UniversalPWA/discussions"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-700 font-semibold"
+              className="text-teal-600 hover:text-teal-700 font-semibold"
             >
               GitHub Discussions
             </a>
