@@ -36,7 +36,8 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "README.fr.md"
   ],
   "scripts": {
     "dev": "tsx src/index.ts",

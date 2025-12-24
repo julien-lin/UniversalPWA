@@ -5,7 +5,7 @@
 
 Command-line interface for UniversalPWA - Transform any web project into a Progressive Web App (PWA) with one click.
 
-**🇫🇷 [Documentation en français](https://github.com/julien-lin/UniversalPWA/blob/main/README.fr.md)**
+**🇫🇷 [Documentation en français](./README.fr.md)**
 
 ## Installation
 

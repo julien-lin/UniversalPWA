@@ -3,9 +3,7 @@
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/julien-lin?logo=github&style=flat-square&label=Sponsors)](https://github.com/sponsors/julien-lin)
 [![npm version](https://img.shields.io/npm/v/@julien-lin/universal-pwa-core?logo=npm&style=flat-square)](https://www.npmjs.com/package/@julien-lin/universal-pwa-core)
 
-Core engine for scanning, generation, and injection for UniversalPWA.
-
-**🇫🇷 [Documentation en français](./README.fr.md)**
+Moteur de scan, génération et injection pour UniversalPWA.
 
 ## Installation
 
@@ -13,15 +11,15 @@ Core engine for scanning, generation, and injection for UniversalPWA.
 npm install @julien-lin/universal-pwa-core
 ```
 
-Or with pnpm:
+Ou avec pnpm :
 
 ```bash
 pnpm add @julien-lin/universal-pwa-core
 ```
 
-## Usage
+## Utilisation
 
-### Scan a Project
+### Scanner un projet
 
 ```typescript
 import { scanProject } from '@julien-lin/universal-pwa-core'
@@ -34,10 +32,10 @@ const result = await scanProject({
 
 console.log(result.framework.framework) // 'react', 'wordpress', etc.
 console.log(result.architecture.architecture) // 'spa', 'ssr', 'static'
-console.log(result.assets.javascript.length) // Number of JS files
+console.log(result.assets.javascript.length) // Nombre de fichiers JS
 ```
 
-### Generate a Manifest
+### Générer un manifest
 
 ```typescript
 import { generateManifest, writeManifest } from '@julien-lin/universal-pwa-core'
@@ -62,7 +60,7 @@ const manifest = generateManifest({
 writeManifest(manifest, './public')
 ```
 
-### Generate Icons
+### Générer des icônes
 
 ```typescript
 import { generateIcons } from '@julien-lin/universal-pwa-core'
@@ -72,17 +70,17 @@ const result = await generateIcons({
   outputDir: './public/icons',
 })
 
-console.log(result.icons) // Array of ManifestIcon
-console.log(result.splashScreens) // Array of ManifestSplashScreen
-console.log(result.generatedFiles) // Array of generated file paths
+console.log(result.icons) // Tableau de ManifestIcon
+console.log(result.splashScreens) // Tableau de ManifestSplashScreen
+console.log(result.generatedFiles) // Tableau des chemins de fichiers générés
 ```
 
-The function automatically generates:
-- PWA icons in multiple sizes (72x72 to 512x512)
+La fonction génère automatiquement :
+- Icônes PWA en multiples tailles (72x72 à 512x512)
 - Apple Touch Icon (180x180)
-- Splash screens for iOS
+- Splash screens pour iOS
 
-### Generate a Service Worker
+### Générer un service worker
 
 ```typescript
 import { generateServiceWorker } from '@julien-lin/universal-pwa-core'
@@ -96,11 +94,11 @@ const result = await generateServiceWorker({
   globPatterns: ['**/*.{html,js,css,png,jpg,svg}'],
 })
 
-console.log(result.swPath) // Path to generated service worker
-console.log(result.count) // Number of files pre-cached
+console.log(result.swPath) // Chemin vers le service worker généré
+console.log(result.count) // Nombre de fichiers pré-cachés
 ```
 
-### Inject Meta Tags
+### Injecter des meta tags
 
 ```typescript
 import { injectMetaTagsInFile } from '@julien-lin/universal-pwa-core'
@@ -114,34 +112,34 @@ const result = injectMetaTagsInFile('./index.html', {
   appleMobileWebAppCapable: true,
 })
 
-console.log(result.injected) // Tags injected
-console.log(result.skipped) // Tags already present
+console.log(result.injected) // Tags injectés
+console.log(result.skipped) // Tags déjà présents
 ```
 
-## API Reference
+## Référence API
 
 ### Scanner
 
-- `scanProject(options)` : Scan a project and return a complete report
-- `detectFramework(projectPath)` : Detect the framework used
-- `detectAssets(projectPath)` : Detect assets (JS, CSS, images, fonts)
-- `detectArchitecture(projectPath)` : Detect architecture (SPA, SSR, static)
+- `scanProject(options)` : Scanne un projet et retourne un rapport complet
+- `detectFramework(projectPath)` : Détecte le framework utilisé
+- `detectAssets(projectPath)` : Détecte les assets (JS, CSS, images, polices)
+- `detectArchitecture(projectPath)` : Détecte l'architecture (SPA, SSR, static)
 
-### Generator
+### Générateur
 
-- `generateManifest(options)` : Generate a manifest.json
-- `writeManifest(manifest, outputDir)` : Write manifest to a file
-- `generateAndWriteManifest(options, outputDir)` : Generate and write manifest in one call
-- `generateIcons(options)` : Generate PWA icons from a source image
-- `generateServiceWorker(options)` : Generate a service worker with Workbox
-- `checkProjectHttps(options)` : Check project HTTPS status
+- `generateManifest(options)` : Génère un manifest.json
+- `writeManifest(manifest, outputDir)` : Écrit le manifest dans un fichier
+- `generateAndWriteManifest(options, outputDir)` : Génère et écrit le manifest en une seule fois
+- `generateIcons(options)` : Génère les icônes PWA à partir d'une image source
+- `generateServiceWorker(options)` : Génère un service worker avec Workbox
+- `checkProjectHttps(options)` : Vérifie le statut HTTPS d'un projet
 
-### Injector
+### Injecteur
 
-- `parseHTML(htmlContent)` : Parse HTML content
-- `parseHTMLFile(filePath)` : Parse an HTML file
-- `injectMetaTags(htmlContent, options)` : Inject PWA meta-tags
-- `injectMetaTagsInFile(filePath, options)` : Inject meta-tags in a file
+- `parseHTML(htmlContent)` : Parse du contenu HTML
+- `parseHTMLFile(filePath)` : Parse un fichier HTML
+- `injectMetaTags(htmlContent, options)` : Injecte des meta-tags PWA
+- `injectMetaTagsInFile(filePath, options)` : Injecte des meta-tags dans un fichier
 
 ## Types
 
@@ -159,12 +157,12 @@ import type {
 
 ## 💝 Sponsoring
 
-If UniversalPWA is useful to you, please consider [sponsoring the project](https://github.com/sponsors/julien-lin) to help maintain and improve it.
+Si UniversalPWA vous est utile, envisagez de [sponsoriser le projet](https://github.com/sponsors/julien-lin) pour aider à le maintenir et l'améliorer.
 
-## Development
+## Développement
 
 ```bash
-# Install dependencies
+# Installer les dépendances
 pnpm install
 
 # Build
@@ -177,8 +175,9 @@ pnpm test
 pnpm lint
 ```
 
-## Links
+## Liens
 
-- **Homepage**: https://github.com/julien-lin/UniversalPWA
-- **Issues**: https://github.com/julien-lin/UniversalPWA/issues
-- **Sponsor**: https://github.com/sponsors/julien-lin
+- **Page d'accueil** : https://github.com/julien-lin/UniversalPWA
+- **Issues** : https://github.com/julien-lin/UniversalPWA/issues
+- **Sponsor** : https://github.com/sponsors/julien-lin
+
