@@ -1,5 +1,9 @@
 # UniversalPWA
 
+[![GitHub Sponsors](https://img.shields.io/github/sponsors/julien-lin?logo=github&style=flat-square&label=Sponsors)](https://github.com/sponsors/julien-lin)
+[![npm version](https://img.shields.io/npm/v/@julien-lin/universal-pwa-cli?logo=npm&style=flat-square)](https://www.npmjs.com/package/@julien-lin/universal-pwa-cli)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+
 > Universal library (CLI + NPM/Composer lib) that transforms any existing web project into a Progressive Web App (PWA) with one click, without refactoring the source code.
 
 ## 🎯 Goal
