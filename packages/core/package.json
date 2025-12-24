@@ -1,6 +1,6 @@
 {
   "name": "@julien-lin/universal-pwa-core",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Moteur de scan, génération et injection pour UniversalPWA",
   "keywords": ["pwa", "progressive-web-app", "workbox", "service-worker", "manifest"],
   "author": "julien-lin",

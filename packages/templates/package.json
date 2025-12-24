@@ -1,6 +1,6 @@
 {
   "name": "@julien-lin/universal-pwa-templates",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Templates de service workers pour UniversalPWA",
   "keywords": ["pwa", "progressive-web-app", "workbox", "service-worker", "templates"],
   "author": "julien-lin",
