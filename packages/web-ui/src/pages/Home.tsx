@@ -1,0 +1,116 @@
+import { Link } from 'react-router-dom'
+import { FiArrowRight, FiZap, FiCode, FiDownload } from 'react-icons/fi'
+import { useTranslation } from '../hooks/useTranslation'
+
+export function Home() {
+  const t = useTranslation()
+
+  return (
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50 py-20 lg:py-32">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
+              {t.hero.title}
+            </h1>
+            <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
+              {t.hero.subtitle}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <a
+                href="https://www.npmjs.com/package/@julien-lin/universal-pwa-cli"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+              >
+                <FiDownload className="mr-2" />
+                {t.hero.cta}
+              </a>
+              <Link
+                to="/features"
+                className="inline-flex items-center justify-center px-8 py-3 bg-white text-gray-700 font-semibold rounded-lg border-2 border-gray-200 hover:border-blue-500 hover:text-blue-600 transition-all duration-200"
+              >
+                {t.hero.ctaSecondary}
+                <FiArrowRight className="ml-2" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Quick Start Section */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Get Started in 3 Steps
+            </h2>
+            <p className="text-xl text-gray-600">Install, initialize, and deploy</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center p-6 rounded-lg bg-gray-50">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FiDownload className="w-8 h-8 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">1. Install</h3>
+              <code className="block bg-gray-900 text-green-400 p-3 rounded text-sm">
+                npm install -g @julien-lin/universal-pwa-cli
+              </code>
+            </div>
+            <div className="text-center p-6 rounded-lg bg-gray-50">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FiZap className="w-8 h-8 text-purple-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">2. Initialize</h3>
+              <code className="block bg-gray-900 text-green-400 p-3 rounded text-sm">
+                universal-pwa init
+              </code>
+            </div>
+            <div className="text-center p-6 rounded-lg bg-gray-50">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FiCode className="w-8 h-8 text-green-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">3. Deploy</h3>
+              <p className="text-gray-600">Your PWA is ready to deploy!</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Preview */}
+      <section className="py-16 bg-gradient-to-br from-gray-50 to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              {t.features.title}
+            </h2>
+            <p className="text-xl text-gray-600">{t.features.subtitle}</p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {t.features.items.slice(0, 3).map((feature, index) => (
+              <div
+                key={index}
+                className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border border-gray-100"
+              >
+                <div className="text-4xl mb-4">{feature.icon}</div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                <p className="text-gray-600">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+          <div className="text-center mt-8">
+            <Link
+              to="/features"
+              className="inline-flex items-center text-blue-600 hover:text-blue-700 font-semibold"
+            >
+              View All Features
+              <FiArrowRight className="ml-2" />
+            </Link>
+          </div>
+        </div>
+      </section>
+    </div>
+  )
+}
+
