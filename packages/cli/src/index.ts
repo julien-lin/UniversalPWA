@@ -8,6 +8,7 @@ import { dirname, join } from 'path'
 import { initCommand } from './commands/init.js'
 import { previewCommand } from './commands/preview.js'
 import { scanProject } from '@julien-lin/universal-pwa-core'
+import { promptInitOptions } from './prompts.js'
 
 // Lire la version depuis package.json
 const __filename = fileURLToPath(import.meta.url)
@@ -62,17 +63,53 @@ program
     outputDir?: string
   }) => {
     try {
+      const projectPath = options.projectPath ?? process.cwd()
+      
+      // Si aucune option n'est fournie, utiliser le mode interactif
+      const hasOptions = options.name || options.shortName || options.iconSource || 
+                        options.themeColor || options.backgroundColor || options.skipIcons !== undefined
+      
+      let finalOptions = { ...options }
+      
+      if (!hasOptions) {
+        // Mode interactif : scanner d'abord pour détecter le framework
+        console.log(chalk.blue('🔍 Scanning project...'))
+        const scanResult = await scanProject({
+          projectPath,
+          includeAssets: false,
+          includeArchitecture: false,
+        })
+        
+        // Afficher les résultats du scan
+        console.log(chalk.green(`✓ Framework detected: ${scanResult.framework.framework ?? 'Unknown'}`))
+        console.log(chalk.green(`✓ Architecture: ${scanResult.architecture.architecture}`))
+        
+        // Lancer les prompts
+        const promptAnswers = await promptInitOptions(projectPath, scanResult.framework.framework)
+        
+        // Fusionner les réponses des prompts avec les options
+        finalOptions = {
+          ...options,
+          name: promptAnswers.name,
+          shortName: promptAnswers.shortName,
+          iconSource: promptAnswers.iconSource || undefined,
+          themeColor: promptAnswers.themeColor || undefined,
+          backgroundColor: promptAnswers.backgroundColor || undefined,
+          skipIcons: promptAnswers.skipIcons,
+        }
+      }
+      
       const result = await initCommand({
-        projectPath: options.projectPath,
-        name: options.name,
-        shortName: options.shortName,
-        iconSource: options.iconSource,
-        themeColor: options.themeColor,
-        backgroundColor: options.backgroundColor,
-        skipIcons: options.skipIcons,
-        skipServiceWorker: options.skipServiceWorker,
-        skipInjection: options.skipInjection,
-        outputDir: options.outputDir,
+        projectPath: finalOptions.projectPath,
+        name: finalOptions.name,
+        shortName: finalOptions.shortName,
+        iconSource: finalOptions.iconSource,
+        themeColor: finalOptions.themeColor,
+        backgroundColor: finalOptions.backgroundColor,
+        skipIcons: finalOptions.skipIcons,
+        skipServiceWorker: finalOptions.skipServiceWorker,
+        skipInjection: finalOptions.skipInjection,
+        outputDir: finalOptions.outputDir,
       })
       process.exit(result.success ? 0 : 1)
     } catch (error) {
