@@ -1,11 +1,11 @@
-# @universal-pwa/cli
+# @julien-lin/universal-pwa-cli
 
 Interface en ligne de commande pour UniversalPWA.
 
 ## Installation
 
 ```bash
-npm install -g @universal-pwa/cli
+npm install -g @julien-lin/universal-pwa-cli
 ```
 
 ## Utilisation

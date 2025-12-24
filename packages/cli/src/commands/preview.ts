@@ -1,7 +1,7 @@
 import chalk from 'chalk'
 import { existsSync } from 'fs'
 import { join, resolve } from 'path'
-import { checkProjectHttps } from '@universal-pwa/core'
+import { checkProjectHttps } from '@julien-lin/universal-pwa-core'
 
 export interface PreviewOptions {
   projectPath?: string

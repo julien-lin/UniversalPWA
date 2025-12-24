@@ -1,6 +1,19 @@
 {
-  "name": "@universal-pwa/core",
-  "version": "0.0.0",
+  "name": "@julien-lin/universal-pwa-core",
+  "version": "1.1.0",
+  "description": "Moteur de scan, génération et injection pour UniversalPWA",
+  "keywords": ["pwa", "progressive-web-app", "workbox", "service-worker", "manifest"],
+  "author": "julien-lin",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/julien-lin/UniversalPWA.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/julien-lin/UniversalPWA#readme",
+  "bugs": {
+    "url": "https://github.com/julien-lin/UniversalPWA/issues"
+  },
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -19,10 +32,10 @@
     "dev": "tsx src/index.ts",
     "build": "tsup src/index.ts --dts --format esm,cjs",
     "lint": "eslint src --ext .ts",
-    "test": "vitest"
+    "test": "vitest run"
   },
   "dependencies": {
-    "@universal-pwa/templates": "workspace:^",
+    "@julien-lin/universal-pwa-templates": "workspace:^",
     "dom-serializer": "^2.0.0",
     "domhandler": "^5.0.3",
     "fs-extra": "^11.3.3",

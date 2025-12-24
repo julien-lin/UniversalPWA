@@ -13,9 +13,9 @@
     "isolatedModules": true,
     "types": [],
     "paths": {
-      "@universal-pwa/core": ["packages/core/src"],
-      "@universal-pwa/cli": ["packages/cli/src"],
-      "@universal-pwa/templates": ["packages/templates/src"]
+      "@julien-lin/universal-pwa-core": ["packages/core/src"],
+      "@julien-lin/universal-pwa-cli": ["packages/cli/src"],
+      "@julien-lin/universal-pwa-templates": ["packages/templates/src"]
     }
   }
 }

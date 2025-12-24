@@ -1,15 +1,15 @@
-import { scanProject } from '@universal-pwa/core'
-import { generateManifest, generateAndWriteManifest } from '@universal-pwa/core'
-import { generateIcons } from '@universal-pwa/core'
-import { generateServiceWorker } from '@universal-pwa/core'
-import { injectMetaTagsInFile } from '@universal-pwa/core'
-import { checkProjectHttps } from '@universal-pwa/core'
+import { scanProject } from '@julien-lin/universal-pwa-core'
+import { generateManifest, generateAndWriteManifest } from '@julien-lin/universal-pwa-core'
+import { generateIcons } from '@julien-lin/universal-pwa-core'
+import { generateServiceWorker } from '@julien-lin/universal-pwa-core'
+import { injectMetaTagsInFile } from '@julien-lin/universal-pwa-core'
+import { checkProjectHttps } from '@julien-lin/universal-pwa-core'
 import chalk from 'chalk'
 import { existsSync } from 'fs'
 import { glob } from 'glob'
-import { join, resolve } from 'path'
-import type { Framework } from '@universal-pwa/core'
-import type { Architecture } from '@universal-pwa/core'
+import { join, resolve, relative, normalize } from 'path'
+import type { Framework } from '@julien-lin/universal-pwa-core'
+import type { Architecture } from '@julien-lin/universal-pwa-core'
 
 export interface InitOptions {
   projectPath?: string
@@ -35,6 +35,21 @@ export interface InitResult {
   htmlFilesInjected: number
   warnings: string[]
   errors: string[]
+}
+
+/**
+ * Normalise un chemin de manière sécurisée en le convertissant en chemin relatif
+ */
+function relativePath(fullPath: string, basePath: string): string {
+  try {
+    const rel = relative(basePath, fullPath)
+    // Normaliser et s'assurer que le chemin commence par /
+    const normalized = normalize(rel).replace(/\\/g, '/')
+    return normalized.startsWith('/') ? normalized : `/${normalized}`
+  } catch {
+    // En cas d'erreur, retourner le chemin tel quel (sera validé ailleurs)
+    return fullPath
+  }
 }
 
 /**
@@ -196,13 +211,24 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
         for (const htmlFile of htmlFiles.slice(0, 10)) {
           // Limiter à 10 fichiers pour éviter de surcharger
           try {
+            // Normaliser les chemins de manière sécurisée
+            const normalizePathForInjection = (fullPath: string | undefined, basePath: string, fallback: string): string => {
+              if (!fullPath) return fallback
+              try {
+                const rel = relativePath(fullPath, basePath)
+                return rel.startsWith('/') ? rel : `/${rel}`
+              } catch {
+                return fallback
+              }
+            }
+            
             const injectionResult = injectMetaTagsInFile(htmlFile, {
-              manifestPath: result.manifestPath ? join('/', result.manifestPath.replace(result.projectPath, '')) : '/manifest.json',
+              manifestPath: normalizePathForInjection(result.manifestPath, result.projectPath, '/manifest.json'),
               themeColor: themeColor ?? '#ffffff',
               backgroundColor: backgroundColor ?? '#000000',
               appleTouchIcon: iconPaths.find((p) => p.includes('180')) ?? '/apple-touch-icon.png',
               appleMobileWebAppCapable: true,
-              serviceWorkerPath: result.serviceWorkerPath ? join('/', result.serviceWorkerPath.replace(result.projectPath, '')) : '/sw.js',
+              serviceWorkerPath: normalizePathForInjection(result.serviceWorkerPath, result.projectPath, '/sw.js'),
             })
             
             if (injectionResult.injected.length > 0) {

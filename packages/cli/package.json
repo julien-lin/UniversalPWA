@@ -1,6 +1,19 @@
 {
-  "name": "@universal-pwa/cli",
-  "version": "0.0.0",
+  "name": "@julien-lin/universal-pwa-cli",
+  "version": "1.1.0",
+  "description": "CLI pour transformer n'importe quel projet web en PWA",
+  "keywords": ["pwa", "progressive-web-app", "cli", "workbox", "service-worker"],
+  "author": "julien-lin",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/julien-lin/UniversalPWA.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/julien-lin/UniversalPWA#readme",
+  "bugs": {
+    "url": "https://github.com/julien-lin/UniversalPWA/issues"
+  },
   "type": "module",
   "bin": {
     "universal-pwa": "dist/index.js"
@@ -22,10 +35,10 @@
     "dev": "tsx src/index.ts",
     "build": "tsup src/index.ts --dts --format esm,cjs",
     "lint": "eslint src --ext .ts",
-    "test": "vitest"
+    "test": "vitest run"
   },
   "dependencies": {
-    "@universal-pwa/core": "workspace:^",
+    "@julien-lin/universal-pwa-core": "workspace:^",
     "chalk": "^5.6.2",
     "commander": "^12.1.0",
     "fs-extra": "^11.3.3",

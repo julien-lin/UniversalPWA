@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { detectFramework, type Framework, type FrameworkDetectionResult } from './index'
 
-describe('@universal-pwa/core', () => {
+describe('@julien-lin/universal-pwa-core', () => {
   it('should export detectFramework', () => {
     expect(typeof detectFramework).toBe('function')
   })
