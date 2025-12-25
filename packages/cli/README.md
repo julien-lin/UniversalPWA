@@ -162,6 +162,10 @@ pnpm lint
 
 ## Links
 
-- **Homepage**: https://github.com/julien-lin/UniversalPWA
-- **Support**: For issues and questions, please use [GitHub Discussions](https://github.com/julien-lin/UniversalPWA/discussions)
-- **Sponsor**: https://github.com/sponsors/julien-lin
+- **Repository**: [https://github.com/julien-lin/UniversalPWA](https://github.com/julien-lin/UniversalPWA)
+- **Issues**: [https://github.com/julien-lin/UniversalPWA/issues](https://github.com/julien-lin/UniversalPWA/issues)
+- **Discussions**: [https://github.com/julien-lin/UniversalPWA/discussions](https://github.com/julien-lin/UniversalPWA/discussions)
+- **Contributing**: [https://github.com/julien-lin/UniversalPWA/blob/main/CONTRIBUTING.md](https://github.com/julien-lin/UniversalPWA/blob/main/CONTRIBUTING.md)
+- **Releases**: [https://github.com/julien-lin/UniversalPWA/releases](https://github.com/julien-lin/UniversalPWA/releases)
+- **Sponsor**: [https://github.com/sponsors/julien-lin](https://github.com/sponsors/julien-lin)
+- **npm Package**: [https://www.npmjs.com/package/@julien-lin/universal-pwa-cli](https://www.npmjs.com/package/@julien-lin/universal-pwa-cli)
