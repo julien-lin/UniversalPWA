@@ -134,8 +134,12 @@ export function generateManifest(options: ManifestGeneratorOptions): Manifest {
  */
 export function writeManifest(manifest: Manifest, outputDir: string): string {
   const manifestPath = join(outputDir, 'manifest.json')
-  const manifestJson = JSON.stringify(manifest, null, 2)
-  writeFileSync(manifestPath, manifestJson, 'utf-8')
+  // Validate manifest before writing
+  const validatedManifest = ManifestSchema.parse(manifest)
+  // Ensure valid JSON with proper encoding (UTF-8 without BOM)
+  const manifestJson = JSON.stringify(validatedManifest, null, 2)
+  // Write with UTF-8 encoding (no BOM)
+  writeFileSync(manifestPath, manifestJson, { encoding: 'utf8' })
   return manifestPath
 }
 

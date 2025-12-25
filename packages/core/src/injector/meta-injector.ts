@@ -71,18 +71,18 @@ export function injectMetaTags(htmlContent: string, options: MetaInjectorOptions
     }
   }
 
-  // Injecter theme-color
+  // Inject theme-color
   if (options.themeColor) {
+    // Find existing theme-color meta tag by name attribute
     const existingThemeColor = findElement(parsed, 'meta', { name: 'name', value: 'theme-color' })
     if (existingThemeColor) {
       // Update existing value
       updateMetaContent(existingThemeColor, options.themeColor)
       result.injected.push(`<meta name="theme-color" content="${options.themeColor}"> (updated)`)
-    } else if (!elementExists(parsed, 'meta', { name: 'theme-color', value: options.themeColor })) {
+    } else {
+      // No existing theme-color meta tag, inject new one
       injectMetaTag(head, 'theme-color', options.themeColor)
       result.injected.push(`<meta name="theme-color" content="${options.themeColor}">`)
-    } else {
-      result.skipped.push('theme-color (already exists)')
     }
   }
 
@@ -97,14 +97,24 @@ export function injectMetaTags(htmlContent: string, options: MetaInjectorOptions
     }
   }
 
-  // Injecter apple-mobile-web-app-capable
+  // Injecter mobile-web-app-capable (replaces deprecated apple-mobile-web-app-capable)
   if (options.appleMobileWebAppCapable !== undefined) {
     const content = options.appleMobileWebAppCapable ? 'yes' : 'no'
-    if (!elementExists(parsed, 'meta', { name: 'apple-mobile-web-app-capable', value: content })) {
-      injectMetaTag(head, 'apple-mobile-web-app-capable', content)
-      result.injected.push(`<meta name="apple-mobile-web-app-capable" content="${content}">`)
+    // Use the new standard meta tag
+    if (!elementExists(parsed, 'meta', { name: 'mobile-web-app-capable', value: content })) {
+      injectMetaTag(head, 'mobile-web-app-capable', content)
+      result.injected.push(`<meta name="mobile-web-app-capable" content="${content}">`)
     } else {
-      result.skipped.push('apple-mobile-web-app-capable (already exists)')
+      result.skipped.push('mobile-web-app-capable (already exists)')
+    }
+    // Also remove deprecated apple-mobile-web-app-capable if it exists
+    const deprecatedMeta = findElement(parsed, 'meta', { name: 'apple-mobile-web-app-capable' })
+    if (deprecatedMeta && deprecatedMeta.parent) {
+      const parent = deprecatedMeta.parent
+      if (parent.children) {
+        parent.children = parent.children.filter((child) => child !== deprecatedMeta)
+        result.warnings.push('Removed deprecated <meta name="apple-mobile-web-app-capable">')
+      }
     }
   }
 
@@ -128,8 +138,8 @@ export function injectMetaTags(htmlContent: string, options: MetaInjectorOptions
     }
   }
 
-  // Reconstruct HTML with dom-serializer
-  const modifiedHtml = render(parsed.document, { decodeEntities: false })
+  // Reconstruct HTML with dom-serializer AFTER all injections
+  let modifiedHtml = render(parsed.document, { decodeEntities: false })
 
   // Inject service worker registration (in body or before </body>)
   if (options.serviceWorkerPath) {
@@ -148,10 +158,13 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>`
-      // Inject before </body>
-      const finalHtml = modifiedHtml.replace('</body>', `${swScript}\n</body>`)
+      // Inject before </body> or at end if no body tag
+      if (modifiedHtml.includes('</body>')) {
+        modifiedHtml = modifiedHtml.replace('</body>', `${swScript}\n</body>`)
+      } else {
+        modifiedHtml = `${modifiedHtml}${swScript}`
+      }
       result.injected.push('Service Worker registration script')
-      return { html: finalHtml, result }
     } else {
       result.skipped.push('Service Worker registration (already exists)')
     }
