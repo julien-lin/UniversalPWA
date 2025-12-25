@@ -101,7 +101,8 @@ export function findElement(
           return element
         }
 
-        const attrValue = element.attributes?.find((attr) => attr.name.toLowerCase() === attribute.name.toLowerCase())?.value
+        // htmlparser2 uses attribs as an object, not attributes as an array
+        const attrValue = element.attribs?.[attribute.name.toLowerCase()]
         if (attrValue === attribute.value) {
           return element
         }

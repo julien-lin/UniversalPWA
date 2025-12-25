@@ -271,11 +271,26 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
       console.log(chalk.blue('💉 Injecting meta-tags...'))
       
       try {
-        // Find all HTML files
+        // Find all HTML files (including dist/ for production builds)
+        // Priority: dist/ > public/ > root
         const htmlFiles = await glob('**/*.html', {
           cwd: result.projectPath,
-          ignore: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/.nuxt/**'],
+          ignore: ['**/node_modules/**', '**/.next/**', '**/.nuxt/**'],
           absolute: true,
+        })
+        
+        // Sort: dist/ files first, then public/, then others
+        htmlFiles.sort((a, b) => {
+          const aInDist = a.includes('/dist/')
+          const bInDist = b.includes('/dist/')
+          const aInPublic = a.includes('/public/')
+          const bInPublic = b.includes('/public/')
+          
+          if (aInDist && !bInDist) return -1
+          if (!aInDist && bInDist) return 1
+          if (aInPublic && !bInPublic) return -1
+          if (!aInPublic && bInPublic) return 1
+          return 0
         })
 
         let injectedCount = 0
@@ -283,20 +298,42 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
           // Limit to 10 files to avoid overloading
           try {
             // Normalize paths securely
-            // For Vite/React, files in public/ are served at root
+            // For Vite/React, files in public/ or dist/ are served at root
             const normalizePathForInjection = (fullPath: string | undefined, basePath: string, outputDir: string, fallback: string): string => {
               if (!fullPath) return fallback
               try {
+                // Check if HTML file is in dist/ (production build)
+                const htmlInDist = htmlFile.includes('/dist/')
+                const swInDist = fullPath.includes('/dist/')
+                
+                // If HTML is in dist/, paths should be relative to dist/ root
+                if (htmlInDist && swInDist) {
+                  // Both in dist/, use relative path from dist/ root
+                  const distIndex = fullPath.indexOf('/dist/')
+                  if (distIndex !== -1) {
+                    const distPath = fullPath.substring(distIndex + 6) // Remove up to /dist/
+                    return distPath.startsWith('/') ? distPath : `/${distPath}`
+                  }
+                }
+                
                 // If path is in outputDir (e.g., public/), it must be served at root
                 const rel = relativePath(fullPath, basePath)
                 let normalized = rel.startsWith('/') ? rel : `/${rel}`
                 
-                // For Vite/React, if file is in public/, remove public/ from path
+                // For Vite/React, if file is in public/ or dist/, remove directory from path
                 // Ex: /public/sw.js -> /sw.js
+                // Ex: /dist/sw.js -> /sw.js
                 // Ex: /public/manifest.json -> /manifest.json
                 const outputDirName = outputDir.replace(basePath, '').replace(/^\/+|\/+$/g, '')
                 if (outputDirName && normalized.startsWith(`/${outputDirName}/`)) {
                   normalized = normalized.replace(`/${outputDirName}/`, '/')
+                }
+                
+                // Also handle dist/ directory if present
+                if (normalized.includes('/dist/')) {
+                  const distIndex = normalized.indexOf('/dist/')
+                  normalized = normalized.substring(distIndex + 6)
+                  normalized = normalized.startsWith('/') ? normalized : `/${normalized}`
                 }
                 
                 return normalized
