@@ -7,6 +7,20 @@ et ce projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+## [1.2.6] - 2024-12-25
+
+### Fixed
+- **CLI**: Support du dossier `dist/` pour les builds de production
+- **CLI**: Correction de la normalisation des chemins pour le service worker dans `dist/`
+- **Core**: Amélioration de la suppression du meta tag déprécié `apple-mobile-web-app-capable`
+- **Core**: Correction de l'injection du meta tag `theme-color` qui n'était pas injecté
+- **Core**: Correction de `findElement` pour utiliser `attribs` au lieu de `attributes` (compatibilité htmlparser2)
+- **Core**: Amélioration de la validation et de l'encodage du manifest.json (UTF-8 sans BOM)
+
+### Changed
+- **CLI**: Priorisation des fichiers HTML dans `dist/` pour les builds de production
+- **Core**: Remplacement automatique de `apple-mobile-web-app-capable` par `mobile-web-app-capable`
+
 ## [1.2.5] - 2024-12-25
 
 ### Fixed
