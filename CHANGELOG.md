@@ -7,6 +7,35 @@ et ce projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+## [1.2.5] - 2024-12-25
+
+### Fixed
+- **CRITICAL**: Correction du service worker qui utilisait des imports ES6 non supportés nativement par les navigateurs
+- **CRITICAL**: Les service workers ne fonctionnaient pas en production, empêchant l'installation du PWA
+- **Templates**: Conversion de tous les templates (static, spa, ssr, wordpress, php) pour utiliser `importScripts()` avec Workbox CDN au lieu d'imports ES6
+- **Manifest**: Le manifest.json inclut maintenant toujours `theme_color` et `background_color` (valeurs par défaut: #ffffff) pour garantir l'installabilité du PWA
+- **Service Worker**: Utilisation de l'API `workbox.*` via CDN (Workbox 7.4.0) pour compatibilité navigateur maximale
+
+### Changed
+- **Service Workers**: Tous les templates chargent maintenant Workbox depuis le CDN Google (`workbox-sw.js`)
+- **Manifest Generator**: `theme_color` et `background_color` sont toujours inclus dans le manifest généré
+
+## [1.2.4] - 2024-12-XX
+
+### Added
+- Optimisation SEO complète pour le site vitrine
+- Support multi-langue (en, fr, es) avec SEO optimisé
+- Composant SEO dynamique avec meta tags, Open Graph, Twitter Card, JSON-LD
+- Fichiers `robots.txt` et `sitemap.xml` pour le référencement
+- Mise à jour du domaine vers `universal-pwa.com`
+
+## [1.2.3] - 2024-12-XX
+
+### Added
+- Mode interactif pour la commande `init` avec prompts
+- Documentation française (README.fr.md) pour tous les packages
+- Site vitrine multi-langue avec système de sponsoring
+
 ## [1.2.2] - 2024-12-24
 
 ### Fixed

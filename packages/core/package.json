@@ -1,6 +1,6 @@
 {
   "name": "@julien-lin/universal-pwa-core",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Core engine for scanning, generation, and injection for UniversalPWA",
   "keywords": [
     "pwa",
