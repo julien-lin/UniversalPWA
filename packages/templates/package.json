@@ -1,6 +1,6 @@
 {
   "name": "@julien-lin/universal-pwa-templates",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Service worker templates for UniversalPWA",
   "keywords": [
     "pwa",
