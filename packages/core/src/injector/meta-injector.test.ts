@@ -58,7 +58,7 @@ describe('meta-injector', () => {
       expect(result.injected.some((i) => i.includes('apple-touch-icon'))).toBe(true)
     })
 
-    it('should inject apple-mobile-web-app-capable', () => {
+    it('should inject mobile-web-app-capable (replaces deprecated apple-mobile-web-app-capable)', () => {
       const html = '<html><head><title>Test</title></head><body></body></html>'
       const options: MetaInjectorOptions = {
         appleMobileWebAppCapable: true,
@@ -66,9 +66,10 @@ describe('meta-injector', () => {
 
       const { html: modifiedHtml, result } = injectMetaTags(html, options)
 
-      expect(modifiedHtml).toContain('name="apple-mobile-web-app-capable"')
+      expect(modifiedHtml).toContain('name="mobile-web-app-capable"')
       expect(modifiedHtml).toContain('content="yes"')
-      expect(result.injected.some((i) => i.includes('apple-mobile-web-app-capable'))).toBe(true)
+      expect(modifiedHtml).not.toContain('name="apple-mobile-web-app-capable"')
+      expect(result.injected.some((i) => i.includes('mobile-web-app-capable'))).toBe(true)
     })
 
     it('should skip existing manifest link', () => {
@@ -148,7 +149,7 @@ describe('meta-injector', () => {
       expect(modifiedHtml).toContain('rel="manifest"')
       expect(modifiedHtml).toContain('name="theme-color"')
       expect(modifiedHtml).toContain('rel="apple-touch-icon"')
-      expect(modifiedHtml).toContain('name="apple-mobile-web-app-capable"')
+      expect(modifiedHtml).toContain('name="mobile-web-app-capable"')
       expect(modifiedHtml).toContain('name="apple-mobile-web-app-status-bar-style"')
       expect(modifiedHtml).toContain('name="apple-mobile-web-app-title"')
       expect(modifiedHtml).toContain('navigator.serviceWorker.register')
