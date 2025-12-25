@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { initCommand } from './commands/init.js'
 import { previewCommand } from './commands/preview.js'
+import { verifyCommand } from './commands/verify.js'
 import { scanProject } from '@julien-lin/universal-pwa-core'
 import { promptInitOptions } from './prompts.js'
 
@@ -169,6 +170,31 @@ program
       console.log(chalk.gray(`  - Fonts: ${result.assets.fonts.length} files`))
 
       process.exit(0)
+    } catch (error) {
+      console.error(chalk.red(`Error: ${error instanceof Error ? error.message : String(error)}`))
+      process.exit(1)
+    }
+  })
+
+// Commande verify
+program
+  .command('verify')
+  .description('Verify PWA setup and check for missing files')
+  .option('-p, --project-path <path>', 'Project path', process.cwd())
+  .option('-o, --output-dir <dir>', 'Output directory', 'public')
+  .option('--no-docker', 'Skip Dockerfile checks')
+  .action(async (options: {
+    projectPath?: string
+    outputDir?: string
+    docker?: boolean
+  }) => {
+    try {
+      const result = await verifyCommand({
+        projectPath: options.projectPath,
+        outputDir: options.outputDir,
+        checkDocker: options.docker !== false,
+      })
+      process.exit(result.success ? 0 : 1)
     } catch (error) {
       console.error(chalk.red(`Error: ${error instanceof Error ? error.message : String(error)}`))
       process.exit(1)
