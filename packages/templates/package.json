@@ -2,7 +2,22 @@
   "name": "@julien-lin/universal-pwa-templates",
   "version": "1.2.4",
   "description": "Service worker templates for UniversalPWA",
-  "keywords": ["pwa", "progressive-web-app", "workbox", "service-worker", "templates"],
+  "keywords": [
+    "pwa",
+    "progressive-web-app",
+    "universal-pwa",
+    "service-worker",
+    "workbox",
+    "sw-templates",
+    "pwa-templates",
+    "service-worker-templates",
+    "workbox-templates",
+    "spa-pwa",
+    "ssr-pwa",
+    "static-pwa",
+    "wordpress-pwa",
+    "php-pwa"
+  ],
   "author": "julien-lin",
   "license": "MIT",
   "repository": {
