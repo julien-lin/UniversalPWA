@@ -1,5 +1,8 @@
 # UniversalPWA
 
+[![GitHub Stars](https://img.shields.io/github/stars/julien-lin/UniversalPWA?logo=github&style=flat-square)](https://github.com/julien-lin/UniversalPWA/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/julien-lin/UniversalPWA?logo=github&style=flat-square)](https://github.com/julien-lin/UniversalPWA/network/members)
+[![GitHub Issues](https://img.shields.io/github/issues/julien-lin/UniversalPWA?logo=github&style=flat-square)](https://github.com/julien-lin/UniversalPWA/issues)
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/julien-lin?logo=github&style=flat-square&label=Sponsors)](https://github.com/sponsors/julien-lin)
 [![npm version](https://img.shields.io/npm/v/@julien-lin/universal-pwa-cli?logo=npm&style=flat-square)](https://www.npmjs.com/package/@julien-lin/universal-pwa-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
@@ -327,6 +330,26 @@ MIT
 
 Contributions are welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
+**How to contribute:**
+1. 🍴 Fork the repository
+2. 🌿 Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. 💾 Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. 📤 Push to the branch (`git push origin feature/amazing-feature`)
+5. 🔄 Open a Pull Request
+
+See our [Contributing Guide](./CONTRIBUTING.md) for more details.
+
 ## 📝 Changelog
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
+
+## 🔗 Links
+
+- **Repository**: [https://github.com/julien-lin/UniversalPWA](https://github.com/julien-lin/UniversalPWA)
+- **Issues**: [https://github.com/julien-lin/UniversalPWA/issues](https://github.com/julien-lin/UniversalPWA/issues)
+- **Discussions**: [https://github.com/julien-lin/UniversalPWA/discussions](https://github.com/julien-lin/UniversalPWA/discussions)
+- **Releases**: [https://github.com/julien-lin/UniversalPWA/releases](https://github.com/julien-lin/UniversalPWA/releases)
+- **Sponsor**: [https://github.com/sponsors/julien-lin](https://github.com/sponsors/julien-lin)
+- **npm CLI**: [https://www.npmjs.com/package/@julien-lin/universal-pwa-cli](https://www.npmjs.com/package/@julien-lin/universal-pwa-cli)
+- **npm Core**: [https://www.npmjs.com/package/@julien-lin/universal-pwa-core](https://www.npmjs.com/package/@julien-lin/universal-pwa-core)
+- **npm Templates**: [https://www.npmjs.com/package/@julien-lin/universal-pwa-templates](https://www.npmjs.com/package/@julien-lin/universal-pwa-templates)
