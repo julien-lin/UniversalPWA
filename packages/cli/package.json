@@ -1,7 +1,7 @@
 {
   "name": "@julien-lin/universal-pwa-cli",
   "version": "1.2.4",
-  "description": "CLI pour transformer n'importe quel projet web en PWA",
+  "description": "CLI to transform any web project into a PWA",
   "keywords": [
     "pwa",
     "progressive-web-app",

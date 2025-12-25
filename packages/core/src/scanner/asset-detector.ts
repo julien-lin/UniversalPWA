@@ -45,7 +45,7 @@ export async function detectAssets(projectPath: string): Promise<AssetDetectionR
     apiRoutes: [],
   }
 
-  // Détection JS (inclure fichiers à la racine et sous-dossiers)
+  // JS detection (include root and subdirectory files)
   const jsExtensionsStr = JS_EXTENSIONS.map((ext) => ext.slice(1)).join(',')
   const jsPattern = `**/*.{${jsExtensionsStr}}`
   const jsRootPattern = `*.{${jsExtensionsStr}}`
@@ -68,7 +68,7 @@ export async function detectAssets(projectPath: string): Promise<AssetDetectionR
   const allJsFiles = new Set<string>([...jsFiles, ...jsRootFiles])
   result.javascript.push(...allJsFiles)
 
-  // Détection CSS (inclure fichiers à la racine et sous-dossiers)
+  // CSS detection (include root and subdirectory files)
   const cssExtensionsStr = CSS_EXTENSIONS.map((ext) => ext.slice(1)).join(',')
   const cssPattern = `**/*.{${cssExtensionsStr}}`
   const cssFiles = await glob(cssPattern, {
@@ -87,7 +87,7 @@ export async function detectAssets(projectPath: string): Promise<AssetDetectionR
   const allCssFiles = [...new Set([...cssFiles, ...cssRootFiles])]
   result.css.push(...allCssFiles.map((f) => join(projectPath, f)))
 
-  // Détection images (inclure fichiers à la racine et sous-dossiers)
+  // Image detection (include root and subdirectory files)
   const imagePatterns = IMAGE_EXTENSIONS.flatMap((ext) => [`**/*${ext}`, `*${ext}`])
   const allImageFiles = new Set<string>()
   for (const pattern of imagePatterns) {
@@ -101,7 +101,7 @@ export async function detectAssets(projectPath: string): Promise<AssetDetectionR
   }
   result.images.push(...Array.from(allImageFiles).map((f) => join(projectPath, f)))
 
-  // Détection fonts (inclure fichiers à la racine et sous-dossiers)
+  // Font detection (include root and subdirectory files)
   const fontPatterns = FONT_EXTENSIONS.flatMap((ext) => [`**/*${ext}`, `*${ext}`])
   const allFontFiles = new Set<string>()
   for (const pattern of fontPatterns) {
@@ -115,8 +115,8 @@ export async function detectAssets(projectPath: string): Promise<AssetDetectionR
   }
   result.fonts.push(...Array.from(allFontFiles).map((f) => join(projectPath, f)))
 
-  // Détection routes API (via fichiers de config ou patterns)
-  // Note: Cette détection est basique, peut être améliorée selon les frameworks
+  // API routes detection (via config files or patterns)
+  // Note: This detection is basic, can be improved per framework
   const routeFiles = await glob(`**/*{route,api,graphql}*.{js,ts,json}`, {
     cwd: projectPath,
     ignore: IGNORED_PATTERNS,
@@ -127,7 +127,7 @@ export async function detectAssets(projectPath: string): Promise<AssetDetectionR
     result.apiRoutes.push(...API_PATTERNS)
   }
 
-  // Filtrer les fichiers qui n'existent pas réellement
+  // Filter files that don't actually exist
   result.javascript = result.javascript.filter((f) => {
     try {
       return statSync(f).isFile()

@@ -21,7 +21,7 @@ describe('service-worker-generator', () => {
     }
     mkdirSync(TEST_DIR, { recursive: true })
 
-    // Créer des fichiers de test
+    // Create test files
     mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
     writeFileSync(join(TEST_DIR, 'public', 'index.html'), '<html><body>Test</body></html>')
     writeFileSync(join(TEST_DIR, 'public', 'app.js'), 'console.log("test")')
@@ -47,7 +47,7 @@ describe('service-worker-generator', () => {
       expect(result.count).toBeGreaterThan(0)
       expect(result.size).toBeGreaterThan(0)
 
-      // Vérifier que le service worker contient du code Workbox
+      // Verify that service worker contains Workbox code
       const swContent = readFileSync(result.swPath, 'utf-8')
       expect(swContent).toContain('workbox')
       expect(swContent).toContain('precacheAndRoute')
@@ -143,7 +143,7 @@ describe('service-worker-generator', () => {
       const result = await generateServiceWorker(options)
 
       expect(existsSync(result.swPath)).toBe(true)
-      // L'offline page devrait être dans le precache
+      // Offline page should be in precache
       expect(result.filePaths.some((path) => path.includes('offline.html'))).toBe(true)
     })
   })
@@ -225,7 +225,7 @@ describe('service-worker-generator', () => {
         globPatterns: ['**/*.{html,js,css}'],
       }
 
-      // Workbox peut gérer un répertoire vide, mais on teste quand même
+      // Workbox can handle empty directory, but test anyway
       await expect(generateServiceWorker(options)).resolves.toBeDefined()
     })
   })

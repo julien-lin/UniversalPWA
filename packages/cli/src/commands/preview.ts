@@ -20,7 +20,7 @@ export interface PreviewResult {
 }
 
 /**
- * Commande preview : lance un serveur local pour prévisualiser la PWA
+ * Preview command: launches a local server to preview the PWA
  */
 export function previewCommand(options: PreviewOptions = {}): Promise<PreviewResult> {
   const {
@@ -48,7 +48,7 @@ export function previewCommand(options: PreviewOptions = {}): Promise<PreviewRes
 
     console.log(chalk.blue('🔍 Checking PWA setup...'))
 
-    // Vérifier le manifest
+    // Check manifest
     const manifestPath = join(resolvedPath, 'public', 'manifest.json')
     const manifestPathAlt = join(resolvedPath, 'manifest.json')
     
@@ -60,7 +60,7 @@ export function previewCommand(options: PreviewOptions = {}): Promise<PreviewRes
       console.log(chalk.yellow('⚠ manifest.json not found'))
     }
 
-    // Vérifier le service worker
+    // Check service worker
     const swPath = join(resolvedPath, 'public', 'sw.js')
     const swPathAlt = join(resolvedPath, 'sw.js')
     
@@ -72,7 +72,7 @@ export function previewCommand(options: PreviewOptions = {}): Promise<PreviewRes
       console.log(chalk.yellow('⚠ Service worker (sw.js) not found'))
     }
 
-    // Vérifier HTTPS (pour production)
+    // Check HTTPS (for production)
     try {
       const httpsCheck = checkProjectHttps({ projectPath: resolvedPath })
       if (!httpsCheck.isSecure && !httpsCheck.isLocalhost && httpsCheck.warning) {
@@ -83,8 +83,8 @@ export function previewCommand(options: PreviewOptions = {}): Promise<PreviewRes
       // Ignore HTTPS check errors
     }
 
-    // Pour l'instant, on simule juste la vérification
-    // Dans une version complète, on lancerait un serveur HTTP local
+    // For now, just simulate the check
+    // In a full version, would launch a local HTTP server
     console.log(chalk.blue(`\n📦 PWA Preview would be available at: ${result.url}`))
     console.log(chalk.gray('   (Server not started in preview mode - use a static server like `serve` or `http-server`)'))
 

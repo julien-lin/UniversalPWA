@@ -92,7 +92,7 @@ describe('asset-detector', () => {
 
       const result = await detectAssets(TEST_DIR)
 
-      // La détection API est basique, vérifie au moins qu'elle ne plante pas
+      // API detection is basic, at least verify it doesn't crash
       expect(result.apiRoutes).toBeDefined()
     })
   })
@@ -122,7 +122,7 @@ describe('asset-detector', () => {
 
   describe('File validation', () => {
     it('should only return existing files', async () => {
-      // Les fichiers sont créés et vérifiés, donc tous devraient exister
+      // Files are created and verified, so all should exist
       writeFileSync(join(TEST_DIR, 'app.js'), 'console.log("test")')
 
       const result = await detectAssets(TEST_DIR)

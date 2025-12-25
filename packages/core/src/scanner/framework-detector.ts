@@ -139,7 +139,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
     }
   }
 
-  // Statique (si aucun framework détecté et fichiers HTML présents)
+  // Static (if no framework detected and HTML files present)
   if (!framework) {
     const htmlFiles = ['index.html', 'index.htm']
     const hasHtml = htmlFiles.some((file) => existsSync(join(projectPath, file)))

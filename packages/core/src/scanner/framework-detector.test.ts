@@ -7,7 +7,7 @@ const TEST_DIR = join(process.cwd(), '.test-tmp-framework-detector')
 
 describe('framework-detector', () => {
   beforeEach(() => {
-    // Cleanup - utiliser try/catch pour gérer les erreurs de suppression
+    // Cleanup - use try/catch to handle deletion errors
     try {
       if (existsSync(TEST_DIR)) {
         rmSync(TEST_DIR, { recursive: true, force: true })

@@ -26,10 +26,10 @@ describe('icon-generator', () => {
     }
     mkdirSync(TEST_DIR, { recursive: true })
 
-    // Créer une image source de test (PNG 512x512)
+    // Create test source image (PNG 512x512)
     sourceImage = join(TEST_DIR, 'source.png')
-    // Créer un PNG minimal valide (1x1 pixel)
-    // Pour les tests, on utilisera sharp pour créer une vraie image
+    // Create minimal valid PNG (1x1 pixel)
+    // For tests, use sharp to create a real image
     const sharp = (await import('sharp')).default
     await sharp({
       create: {
@@ -56,12 +56,12 @@ describe('icon-generator', () => {
       expect(result.splashScreens).toHaveLength(STANDARD_SPLASH_SIZES.length)
       expect(result.generatedFiles.length).toBeGreaterThan(0)
 
-      // Vérifier que les fichiers ont été créés
+      // Check that files were created
       for (const file of result.generatedFiles) {
         expect(existsSync(file)).toBe(true)
       }
 
-      // Vérifier la structure des icônes
+      // Check icon structure
       result.icons.forEach((icon, index) => {
         expect(icon.src).toContain(STANDARD_ICON_SIZES[index].name)
         expect(icon.sizes).toBe(`${STANDARD_ICON_SIZES[index].width}x${STANDARD_ICON_SIZES[index].height}`)
@@ -85,9 +85,9 @@ describe('icon-generator', () => {
 
       expect(result.icons).toHaveLength(2)
       expect(result.splashScreens).toHaveLength(0)
-      // Format PNG génère aussi apple-touch-icon.png
+      // PNG format also generates apple-touch-icon.png
       expect(result.generatedFiles.length).toBeGreaterThanOrEqual(2)
-      expect(result.generatedFiles.length).toBeLessThanOrEqual(3) // 2 icônes + optionnellement apple-touch-icon
+      expect(result.generatedFiles.length).toBeLessThanOrEqual(3) // 2 icons + optionally apple-touch-icon
     })
 
     it('should generate WebP format when specified', async () => {
@@ -142,7 +142,7 @@ describe('icon-generator', () => {
       })
 
       expect(result.icons).toHaveLength(1)
-      // Les fichiers devraient être créés même avec une qualité réduite
+      // Files should be created even with reduced quality
       expect(result.generatedFiles.length).toBeGreaterThan(0)
     })
   })
@@ -161,9 +161,9 @@ describe('icon-generator', () => {
       })
 
       expect(result.icons).toHaveLength(2)
-      // Format PNG génère aussi apple-touch-icon.png
+      // PNG format also generates apple-touch-icon.png
       expect(result.generatedFiles.length).toBeGreaterThanOrEqual(2)
-      expect(result.generatedFiles.length).toBeLessThanOrEqual(3) // 2 icônes + optionnellement apple-touch-icon
+      expect(result.generatedFiles.length).toBeLessThanOrEqual(3) // 2 icons + optionally apple-touch-icon
     })
   })
 
@@ -181,7 +181,7 @@ describe('icon-generator', () => {
       })
 
       expect(result.splashScreens).toHaveLength(2)
-      // Format PNG génère aussi apple-touch-icon.png
+      // PNG format also generates apple-touch-icon.png
       expect(result.generatedFiles.length).toBeGreaterThanOrEqual(2)
       expect(result.generatedFiles.length).toBeLessThanOrEqual(3) // 2 splash screens + optionnellement apple-touch-icon
     })

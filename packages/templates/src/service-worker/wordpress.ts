@@ -12,7 +12,7 @@ import { ExpirationPlugin } from 'workbox-expiration'
 // Precache des assets statiques
 precacheAndRoute(self.__WB_MANIFEST)
 
-// NetworkFirst pour les pages WordPress (priorité au serveur)
+// NetworkFirst for WordPress pages (server priority)
 registerRoute(
   ({ request }) => request.mode === 'navigate',
   new NetworkFirst({

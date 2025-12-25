@@ -18,23 +18,23 @@ export interface ScannerOptions {
 }
 
 /**
- * Orchestrateur principal du scanner
- * Combine les résultats de détection framework, assets et architecture
+ * Main scanner orchestrator
+ * Combines framework, assets, and architecture detection results
  */
 export async function scanProject(options: ScannerOptions): Promise<ScannerResult> {
   const { projectPath, includeAssets = true, includeArchitecture = true } = options
 
-  // Détection framework (synchrone)
+  // Framework detection (synchronous)
   const frameworkCandidate: unknown = detectFramework(projectPath)
   const framework: FrameworkDetectionResult = isFrameworkDetectionResult(frameworkCandidate)
     ? frameworkCandidate
     : { framework: null, confidence: 'low', indicators: [] }
 
-  // Détection assets (asynchrone)
+  // Assets detection (asynchronous)
   const assetsCandidate: unknown = includeAssets ? await detectAssets(projectPath) : getEmptyAssets()
   const assets: AssetDetectionResult = isAssetDetectionResult(assetsCandidate) ? assetsCandidate : getEmptyAssets()
 
-  // Détection architecture (asynchrone)
+  // Architecture detection (asynchronous)
   const architectureCandidate: unknown = includeArchitecture ? await detectArchitecture(projectPath) : getEmptyArchitecture()
   const architecture: ArchitectureDetectionResult = isArchitectureDetectionResult(architectureCandidate)
     ? architectureCandidate
@@ -50,14 +50,14 @@ export async function scanProject(options: ScannerOptions): Promise<ScannerResul
 }
 
 /**
- * Génère un rapport JSON du scan
+ * Generates a JSON report of the scan
  */
 export function generateReport(result: ScannerResult): string {
   return JSON.stringify(result, null, 2)
 }
 
 /**
- * Valide qu'un chemin de projet existe
+ * Validates that a project path exists
  */
 export function validateProjectPath(projectPath: string): boolean {
   try {
@@ -100,7 +100,7 @@ function isArchitectureDetectionResult(value: unknown): value is ArchitectureDet
   return isArch && isBuildTool && isConfidence && Array.isArray(v.indicators)
 }
 
-// Helpers pour les résultats vides
+// Helpers for empty results
 function getEmptyAssets(): AssetDetectionResult {
   return {
     javascript: [],
@@ -120,7 +120,7 @@ function getEmptyArchitecture(): ArchitectureDetectionResult {
   }
 }
 
-// Ré-exporter les types et fonctions pour faciliter l'utilisation
+// Re-export types and functions for easier usage
 export type { FrameworkDetectionResult, Framework } from './framework-detector.js'
 export type { AssetDetectionResult } from './asset-detector.js'
 export type { ArchitectureDetectionResult, Architecture, BuildTool } from './architecture-detector.js'

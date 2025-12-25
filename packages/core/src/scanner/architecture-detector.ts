@@ -22,7 +22,7 @@ export async function detectArchitecture(projectPath: string): Promise<Architect
   let buildTool: BuildTool | null = null
   let confidence: 'high' | 'medium' | 'low' = 'low'
 
-  // Détection build tools
+  // Build tools detection
   const packageJsonPath = join(projectPath, 'package.json')
   if (existsSync(packageJsonPath)) {
     try {
@@ -61,7 +61,7 @@ export async function detectArchitecture(projectPath: string): Promise<Architect
         confidence = 'high'
       }
 
-      // Détection Next.js/Nuxt (SSR par défaut) - Prioritaire
+      // Next.js/Nuxt detection (SSR by default) - Priority
       if (dependencies.next || packageContent.dependencies?.['next'] || packageContent.devDependencies?.['next']) {
         architecture = 'ssr'
         confidence = 'high'
@@ -76,8 +76,8 @@ export async function detectArchitecture(projectPath: string): Promise<Architect
     }
   }
 
-  // Détection via fichiers HTML (seulement si Next.js/Nuxt n'est pas déjà détecté)
-  // Utiliser plusieurs patterns pour être sûr de trouver les fichiers à la racine
+  // Detection via HTML files (only if Next.js/Nuxt not already detected)
+  // Use multiple patterns to ensure finding files at root
   const htmlPatterns = ['**/*.html', '*.html', 'index.html']
   const allHtmlFiles = new Set<string>()
   for (const pattern of htmlPatterns) {
@@ -91,7 +91,7 @@ export async function detectArchitecture(projectPath: string): Promise<Architect
   }
 
   if (allHtmlFiles.size > 0 && architecture !== 'ssr') {
-    // Analyser le premier fichier HTML trouvé (préférer index.html)
+    // Analyze first HTML file found (prefer index.html)
     const htmlArray = Array.from(allHtmlFiles)
     const firstHtml = htmlArray.find((f) => f === 'index.html' || f.endsWith('/index.html')) || htmlArray[0]
     const htmlPath = join(projectPath, firstHtml)
@@ -125,7 +125,7 @@ export async function detectArchitecture(projectPath: string): Promise<Architect
       const isLargeContent = htmlContent.length > 2000
       const hasRealContent = htmlContent.replace(/<[^>]+>/g, '').trim().length > 100
 
-      // Prioriser SSR si contenu très large avec du contenu réel
+      // Prioritize SSR if very large content with real content
       if (isLargeContent && hasRealContent && !hasSsrPattern) {
         indicators.push('HTML: very large content with real text → SSR')
         if (hasSpaPattern) {
@@ -151,7 +151,7 @@ export async function detectArchitecture(projectPath: string): Promise<Architect
         architecture = 'ssr'
         confidence = 'high'
       } else if (hasSpaPattern) {
-        // SPA pattern détecté - prioriser SPA sauf si contenu très large avec du texte réel
+        // SPA pattern detected - prioritize SPA unless very large content with real text
         if (isLargeContent && hasRealContent) {
           // Contenu large avec pattern SPA = probablement SSR avec hydration
           indicators.push('HTML: SPA pattern but large content → SSR')
@@ -177,7 +177,7 @@ export async function detectArchitecture(projectPath: string): Promise<Architect
     }
   }
 
-  // Détection via fichiers JS/TS (router patterns)
+  // Detection via JS/TS files (router patterns)
   const jsFiles = await glob('**/*.{js,ts,tsx,jsx}', {
     cwd: projectPath,
     ignore: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/.nuxt/**', '**/*.test.*', '**/*.spec.*'],
@@ -189,7 +189,7 @@ export async function detectArchitecture(projectPath: string): Promise<Architect
     // Chercher des patterns de router client-side
     let routerFilesFound = 0
     for (const jsFile of jsFiles.slice(0, 10)) {
-      // Limiter à 10 fichiers pour la performance
+      // Limit to 10 files for performance
       try {
         const jsPath = join(projectPath, jsFile)
         const jsContent = readFileSync(jsPath, 'utf-8').toLowerCase()

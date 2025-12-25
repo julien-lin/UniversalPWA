@@ -28,7 +28,7 @@ describe('init command', () => {
   })
 
   it('should scan project and detect framework', async () => {
-    // Créer un projet React minimal
+    // Create minimal React project
     writeFileSync(
       join(TEST_DIR, 'package.json'),
       JSON.stringify({
@@ -61,7 +61,7 @@ describe('init command', () => {
       skipInjection: true,
     })
 
-    // Le manifest ne peut pas être généré sans icônes (validation Zod)
+    // Manifest cannot be generated without icons (Zod validation)
     expect(result.warnings.some((w) => w.includes('icon'))).toBe(true)
   })
 
@@ -114,11 +114,11 @@ describe('init command', () => {
     const customOutput = join(TEST_DIR, 'custom-output')
     writeFileSync(join(TEST_DIR, 'index.html'), '<html><head><title>Test</title></head><body></body></html>')
     
-    // Créer une icône de test simple (fichier PNG minimal)
+    // Create simple test icon (minimal PNG file)
     // On utilise un fichier existant ou on skip ce test si sharp n'est pas disponible
     const iconPath = join(TEST_DIR, 'icon.png')
-    // Pour ce test, on simule juste que l'icône existe
-    // En production, l'utilisateur fournira une vraie icône
+    // For this test, just simulate that icon exists
+    // In production, user will provide a real icon
     writeFileSync(iconPath, Buffer.from('fake png'))
 
     const result = await initCommand({
@@ -131,14 +131,14 @@ describe('init command', () => {
       skipInjection: true,
     })
 
-    // Le test peut échouer si l'icône n'est pas valide, mais on vérifie au moins le chemin
+    // Test may fail if icon is invalid, but at least verify path
     if (result.manifestPath) {
       expect(result.manifestPath).toContain(customOutput)
     }
   })
 
   it('should handle errors gracefully', async () => {
-    // Créer un projet invalide
+    // Create invalid project
     writeFileSync(join(TEST_DIR, 'package.json'), 'invalid json')
 
     const result = await initCommand({
@@ -150,7 +150,7 @@ describe('init command', () => {
       skipInjection: true,
     })
 
-    // Le scanner devrait gérer l'erreur et continuer
+    // Scanner should handle error and continue
     expect(result.framework).toBeDefined()
   })
 
@@ -183,7 +183,7 @@ describe('init command', () => {
       skipInjection: false,
     })
 
-    // L'injection devrait être tentée même sans manifest généré
+    // Injection should be attempted even without generated manifest
     expect(result).toBeDefined()
   })
 })

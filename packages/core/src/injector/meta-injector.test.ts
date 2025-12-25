@@ -165,20 +165,20 @@ describe('meta-injector', () => {
 
         const { html: modifiedHtml } = injectMetaTags(html, options)
 
-        // Le chemin doit être échappé avec JSON.stringify
+        // Path must be escaped with JSON.stringify
         expect(modifiedHtml).toContain('navigator.serviceWorker.register')
-        // JSON.stringify échappe la chaîne, donc elle doit être entre guillemets JSON
-        // Vérifier que le chemin est correctement échappé (utilise JSON.stringify)
+        // JSON.stringify escapes the string, so it must be between JSON quotes
+        // Verify that path is correctly escaped (uses JSON.stringify)
         const match = modifiedHtml.match(/navigator\.serviceWorker\.register\(([^)]+)\)/)
         expect(match).not.toBeNull()
         if (match) {
-          // Le chemin doit être une chaîne JSON valide (échappée)
+          // Path must be a valid JSON string (escaped)
           const pathValue = match[1]
-          // JSON.stringify ajoute des guillemets et échappe les caractères spéciaux
-          // Le chemin doit contenir le chemin malveillant mais échappé
+          // JSON.stringify adds quotes and escapes special characters
+          // Path must contain malicious path but escaped
           expect(pathValue).toContain("sw.js")
-          // Le point important : le chemin est entre guillemets JSON, donc le code malveillant ne peut pas s'exécuter
-          // Vérifier que c'est une chaîne JSON (commence par un guillemet)
+          // Important point: path is between JSON quotes, so malicious code cannot execute
+          // Verify it's a JSON string (starts with a quote)
           expect(pathValue.trim()).toMatch(/^["']/)
         }
       })
@@ -192,13 +192,13 @@ describe('meta-injector', () => {
 
         const { html: modifiedHtml } = injectMetaTags(html, options)
 
-        // Le backslash doit être échappé
+        // Backslash must be escaped
         expect(modifiedHtml).toContain('navigator.serviceWorker.register')
-        // JSON.stringify échappe les backslashes, donc on devrait voir \\ dans le HTML
+        // JSON.stringify escapes backslashes, so we should see \\ in HTML
         const match = modifiedHtml.match(/navigator\.serviceWorker\.register\(([^)]+)\)/)
         expect(match).not.toBeNull()
         if (match) {
-          // Le chemin doit être échappé (les backslashes sont doublés)
+          // Path must be escaped (backslashes are doubled)
           expect(match[1]).toContain('\\\\')
         }
       })
@@ -212,14 +212,14 @@ describe('meta-injector', () => {
 
         const { html: modifiedHtml } = injectMetaTags(html, options)
 
-        // Les newlines doivent être échappés
+        // Newlines must be escaped
         expect(modifiedHtml).toContain('navigator.serviceWorker.register')
-        // JSON.stringify échappe les newlines en \n, donc on ne doit pas voir de newline littéral
-        // Le HTML ne doit pas contenir de newline littéral dans le script (sauf dans les guillemets JSON)
+        // JSON.stringify escapes newlines as \n, so we should not see literal newline
+        // HTML must not contain literal newline in script (except in JSON quotes)
         const match = modifiedHtml.match(/navigator\.serviceWorker\.register\(([^)]+)\)/)
         expect(match).not.toBeNull()
         if (match) {
-          // Le chemin doit être échappé (les newlines sont échappés en \n)
+          // Path must be escaped (newlines are escaped as \n)
           expect(match[1]).toContain('\\n')
         }
       })
@@ -233,15 +233,15 @@ describe('meta-injector', () => {
 
         const { html: modifiedHtml } = injectMetaTags(html, options)
 
-        // Les guillemets doivent être échappés
+        // Quotes must be escaped
         expect(modifiedHtml).toContain('navigator.serviceWorker.register')
-        // JSON.stringify échappe les guillemets, donc le chemin doit être entre guillemets JSON
+        // JSON.stringify escapes quotes, so path must be between JSON quotes
         const match = modifiedHtml.match(/navigator\.serviceWorker\.register\(([^)]+)\)/)
         expect(match).not.toBeNull()
         if (match) {
-          // Le chemin doit être une chaîne JSON valide (échappée)
+          // Path must be a valid JSON string (escaped)
           const pathValue = match[1]
-          // Vérifier que c'est une chaîne JSON (commence et se termine par des guillemets)
+          // Verify it's a JSON string (starts and ends with quotes)
           expect(pathValue).toMatch(/^["'].*["']$/)
         }
       })
