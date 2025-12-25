@@ -14,15 +14,15 @@ export function Home() {
             <div className="flex justify-center mb-8">
               <img
                 src="/logo.png"
-                alt="UniversalPWA Logo"
+                alt="UniversalPWA - PWA Generator and Converter Tool Logo"
                 className="h-24 w-24 md:h-32 md:w-32 object-contain drop-shadow-lg"
               />
             </div>
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-              {t.hero.title}
+              Transform Any Web Project into a PWA - UniversalPWA Generator
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              {t.hero.subtitle}
+              The easiest way to convert any web project into a Progressive Web App (PWA). Supports React, Vue, Angular, Next.js, Nuxt, WordPress, Symfony, Laravel, and more. Zero-config PWA generator with automatic framework detection.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a
@@ -51,9 +51,9 @@ export function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Get Started in 3 Steps
+              How to Create a PWA in 3 Simple Steps
             </h2>
-            <p className="text-xl text-gray-600">Install, initialize, and deploy</p>
+            <p className="text-xl text-gray-600">Transform your web project into a Progressive Web App with UniversalPWA - the fastest PWA generator available</p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center p-6 rounded-lg bg-gray-50">
@@ -90,16 +90,16 @@ export function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              {t.whatIsPWA.title}
+              What is a PWA? Understanding Progressive Web Apps
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              {t.whatIsPWA.subtitle}
+              Learn what Progressive Web Apps (PWA) are and why they're the future of web development. Discover how PWAs combine the best of web and mobile apps.
             </p>
           </div>
 
           <div className="mb-12 max-w-4xl mx-auto">
             <p className="text-lg text-gray-700 leading-relaxed text-center mb-8">
-              {t.whatIsPWA.definition}
+              A Progressive Web App (PWA) is a web application that uses modern web capabilities to provide a native app-like experience. PWAs are installable, work offline, are fast, and provide an engaging user experience. They combine the reach of the web with the functionality of native applications, making them the perfect solution for businesses looking to provide a seamless experience across all devices.
             </p>
           </div>
 
@@ -123,9 +123,9 @@ export function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              {t.features.title}
+              UniversalPWA Features - Complete PWA Solution
             </h2>
-            <p className="text-xl text-gray-600">{t.features.subtitle}</p>
+            <p className="text-xl text-gray-600">Everything you need to create, optimize, and deploy Progressive Web Apps across all frameworks</p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {t.features.items.slice(0, 3).map((feature, index) => (

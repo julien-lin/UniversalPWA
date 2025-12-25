@@ -27,7 +27,7 @@ export function Header() {
           <Link to="/" className="flex items-center space-x-3">
             <img
               src="/logo.png"
-              alt="UniversalPWA Logo"
+              alt="UniversalPWA - PWA Generator Logo"
               className="h-10 w-10 object-contain"
             />
             <span className="text-xl font-bold bg-gradient-to-r from-teal-600 to-indigo-700 bg-clip-text text-transparent">
