@@ -97,24 +97,27 @@ export function injectMetaTags(htmlContent: string, options: MetaInjectorOptions
     }
   }
 
-  // Injecter mobile-web-app-capable (replaces deprecated apple-mobile-web-app-capable)
+  // Inject mobile-web-app-capable (replaces deprecated apple-mobile-web-app-capable)
   if (options.appleMobileWebAppCapable !== undefined) {
     const content = options.appleMobileWebAppCapable ? 'yes' : 'no'
-    // Use the new standard meta tag
-    if (!elementExists(parsed, 'meta', { name: 'mobile-web-app-capable', value: content })) {
-      injectMetaTag(head, 'mobile-web-app-capable', content)
-      result.injected.push(`<meta name="mobile-web-app-capable" content="${content}">`)
-    } else {
-      result.skipped.push('mobile-web-app-capable (already exists)')
-    }
-    // Also remove deprecated apple-mobile-web-app-capable if it exists
-    const deprecatedMeta = findElement(parsed, 'meta', { name: 'apple-mobile-web-app-capable' })
+    
+    // First, remove deprecated apple-mobile-web-app-capable if it exists
+    // Search for meta tag with name="apple-mobile-web-app-capable"
+    const deprecatedMeta = findElement(parsed, 'meta', { name: 'name', value: 'apple-mobile-web-app-capable' })
     if (deprecatedMeta && deprecatedMeta.parent) {
       const parent = deprecatedMeta.parent
       if (parent.children) {
         parent.children = parent.children.filter((child) => child !== deprecatedMeta)
         result.warnings.push('Removed deprecated <meta name="apple-mobile-web-app-capable">')
       }
+    }
+    
+    // Use the new standard meta tag
+    if (!elementExists(parsed, 'meta', { name: 'mobile-web-app-capable', value: content })) {
+      injectMetaTag(head, 'mobile-web-app-capable', content)
+      result.injected.push(`<meta name="mobile-web-app-capable" content="${content}">`)
+    } else {
+      result.skipped.push('mobile-web-app-capable (already exists)')
     }
   }
 
