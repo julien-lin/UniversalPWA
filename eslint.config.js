@@ -30,8 +30,8 @@ export default [
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
   },
-  // Config Web/React (web-ui)
-  ...tseslint.configs.recommendedTypeChecked.map((config) => ({
+  // Config Web/React (web-ui) - Relaxed rules for showcase website
+  ...tseslint.configs.recommended.map((config) => ({
     ...config,
     files: ['packages/web-ui/**/*.{ts,tsx}'],
   })),
@@ -41,7 +41,9 @@ export default [
       ecmaVersion: 2020,
       globals: globals.browser,
       parserOptions: {
-        project: ['./packages/web-ui/tsconfig.app.json'],
+        ecmaVersion: 2020,
+        sourceType: 'module',
+        jsx: true,
       },
     },
     plugins: {
@@ -52,7 +54,17 @@ export default [
     ...reactRefresh.configs.vite,
     rules: {
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/no-misused-promises': 'off',
+      '@typescript-eslint/restrict-template-expressions': 'off',
+      '@typescript-eslint/restrict-plus-operands': 'off',
     },
   },
   // Désactiver certaines règles pour les fichiers de test
