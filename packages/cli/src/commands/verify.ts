@@ -1,8 +1,6 @@
 import { existsSync, readFileSync } from 'fs'
-import { join } from 'path'
-import { resolve } from 'path'
+import { join, resolve } from 'path'
 import chalk from 'chalk'
-import type { InitResult } from './init.js'
 
 export interface VerifyOptions {
   projectPath?: string
@@ -26,7 +24,7 @@ export interface VerifyResult {
 /**
  * Verify command: checks if all PWA files are present and correctly configured
  */
-export async function verifyCommand(options: VerifyOptions = {}): Promise<VerifyResult> {
+export function verifyCommand(options: VerifyOptions = {}): Promise<VerifyResult> {
   const {
     projectPath = process.cwd(),
     outputDir,

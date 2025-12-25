@@ -7,6 +7,17 @@ et ce projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+## [1.2.7] - 2024-12-25
+
+### Added
+- **CLI**: Nouvelle commande `verify` pour vérifier la configuration PWA
+- **CLI**: Détection automatique des fichiers PWA manquants
+- **CLI**: Vérification du Dockerfile et suggestions d'amélioration
+- **CLI**: Rapport détaillé des fichiers trouvés et manquants
+
+### Fixed
+- **CLI**: Correction des erreurs de lint dans la commande `verify`
+
 ## [1.2.6] - 2024-12-25
 
 ### Fixed
