@@ -159,10 +159,10 @@ export async function promptInitOptions(
     },
   ])
 
-  // Si skipIcons est true, on inverse la logique (skipIcons = false signifie générer)
+  // If skipIcons is true, invert the logic (skipIcons = false means generate)
   answers.skipIcons = !answers.skipIcons
 
-  // Validation finale pour s'assurer que les valeurs requises sont définies
+  // Final validation to ensure required values are defined
   if (!answers.name || answers.name.trim().length === 0) {
     answers.name = defaultName
   }

@@ -3,7 +3,7 @@ import { writeFileSync, mkdirSync, existsSync } from 'fs'
 import { join } from 'path'
 import { getServiceWorkerTemplate, determineTemplateType, type ServiceWorkerTemplateType } from '@julien-lin/universal-pwa-templates'
 import type { Architecture } from '../scanner/architecture-detector.js'
-// Utiliser string pour éviter les problèmes de type lint dans cette unité
+// Use string to avoid type lint issues in this unit
 // import type { Framework } from '../scanner/framework-detector'
 
 type StrategyName = 'CacheFirst' | 'NetworkFirst' | 'NetworkOnly' | 'StaleWhileRevalidate' | 'CacheOnly'
@@ -43,7 +43,7 @@ export interface ServiceWorkerGenerationResult {
 }
 
 /**
- * Génère un service worker avec Workbox
+ * Generates a service worker with Workbox
  */
 export async function generateServiceWorker(
   options: ServiceWorkerGeneratorOptions,
@@ -60,42 +60,42 @@ export async function generateServiceWorker(
     offlinePage,
   } = options
 
-  // Créer le répertoire de sortie si nécessaire
+  // Create output directory if necessary
   mkdirSync(outputDir, { recursive: true })
 
-  // Déterminer le type de template
+  // Determine template type
   const finalTemplateType = templateType ?? determineTemplateType(architecture, framework ?? null)
   const template = getServiceWorkerTemplate(finalTemplateType)
 
-  // Créer un fichier source temporaire avec le template
+  // Create temporary source file with template
   const swSrcPath = join(outputDir, 'sw-src.js')
   writeFileSync(swSrcPath, template.content, 'utf-8')
 
   const swDestPath = join(outputDir, swDest)
 
-  // Configuration Workbox (injectManifest accepte seulement globDirectory, globPatterns, swDest, swSrc, injectionPoint)
+  // Workbox configuration (injectManifest only accepts globDirectory, globPatterns, swDest, swSrc, injectionPoint)
   const workboxConfig: Parameters<typeof injectManifest>[0] = {
     globDirectory: globDirectory ?? projectPath,
     globPatterns,
     swDest: swDestPath,
     swSrc: swSrcPath,
-    // Injection du manifest dans le template
+    // Inject manifest into template
     injectionPoint: 'self.__WB_MANIFEST',
   }
 
-  // Ajouter une page offline si spécifiée
+  // Add offline page if specified
   if (offlinePage) {
     workboxConfig.globPatterns = [...(workboxConfig.globPatterns ?? []), offlinePage]
   }
 
   try {
-    // Utiliser injectManifest pour injecter le precache manifest dans le template
+    // Use injectManifest to inject precache manifest into template
     const result = await injectManifest(workboxConfig)
 
-    // Nettoyer le fichier source temporaire
+    // Clean up temporary source file
     try {
       if (existsSync(swSrcPath)) {
-        // On garde le fichier source pour debug, mais on pourrait le supprimer
+        // Keep source file for debug, but could be removed
         // rmSync(swSrcPath)
       }
     } catch {
@@ -103,7 +103,7 @@ export async function generateServiceWorker(
     }
 
     const resultFilePaths = result.filePaths ?? []
-    // Ajoute offlinePage au rapport si spécifiée et absente (robuste pour certains comportements Workbox)
+    // Add offlinePage to report if specified and absent (robust for some Workbox behaviors)
     const normalizedOffline = offlinePage ? offlinePage.replace(/^\.\//, '') : undefined
     const finalFilePaths = normalizedOffline && !resultFilePaths.some((p) => p.includes(normalizedOffline))
       ? [...resultFilePaths, normalizedOffline]
@@ -123,7 +123,7 @@ export async function generateServiceWorker(
 }
 
 /**
- * Génère un service worker simple sans template (utilise generateSW)
+ * Generates a simple service worker without template (uses generateSW)
  */
 export async function generateSimpleServiceWorker(
   options: Omit<ServiceWorkerGeneratorOptions, 'templateType' | 'swSrc'>,
@@ -139,12 +139,12 @@ export async function generateSimpleServiceWorker(
     runtimeCaching,
   } = options
 
-  // Créer le répertoire de sortie si nécessaire
+  // Create output directory if necessary
   mkdirSync(outputDir, { recursive: true })
 
   const swDestPath = join(outputDir, swDest)
 
-  // Configuration Workbox
+  // Workbox configuration
   const workboxConfig: Parameters<typeof generateSW>[0] = {
     globDirectory: globDirectory ?? projectPath,
     globPatterns,
@@ -155,7 +155,7 @@ export async function generateSimpleServiceWorker(
     sourcemap: false,
   }
 
-  // Ajouter runtime caching si spécifié
+  // Add runtime caching if specified
   if (runtimeCaching && runtimeCaching.length > 0) {
     workboxConfig.runtimeCaching = runtimeCaching.map((cache) => {
       const handlerMap: Record<string, StrategyName> = {
@@ -204,7 +204,7 @@ export async function generateSimpleServiceWorker(
 }
 
 /**
- * Génère et écrit le service worker avec template
+ * Generates and writes service worker with template
  */
 export async function generateAndWriteServiceWorker(
   options: ServiceWorkerGeneratorOptions,

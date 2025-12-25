@@ -18,7 +18,7 @@ export interface HTMLParserOptions {
 }
 
 /**
- * Parse un fichier HTML et retourne la structure du document
+ * Parses an HTML file and returns the document structure
  */
 export function parseHTMLFile(filePath: string, options: HTMLParserOptions = {}): ParsedHTML {
   const content = readFileSync(filePath, 'utf-8')
@@ -26,7 +26,7 @@ export function parseHTMLFile(filePath: string, options: HTMLParserOptions = {})
 }
 
 /**
- * Parse une chaîne HTML et retourne la structure du document
+ * Parses an HTML string and returns the document structure
  */
 export function parseHTML(htmlContent: string, options: HTMLParserOptions = {}): ParsedHTML {
   const {
@@ -40,7 +40,7 @@ export function parseHTML(htmlContent: string, options: HTMLParserOptions = {}):
     lowerCaseTags: true,
   })
 
-  // Trouver les éléments head, body, html
+  // Find head, body, html elements
   let head: Element | null = null
   let body: Element | null = null
   let html: Element | null = null
@@ -58,7 +58,7 @@ export function parseHTML(htmlContent: string, options: HTMLParserOptions = {}):
         html = element
       }
 
-      // Parcourir récursivement les enfants
+      // Recursively traverse children
       if (element.children) {
         for (const child of element.children) {
           findElements(child)
@@ -67,7 +67,7 @@ export function parseHTML(htmlContent: string, options: HTMLParserOptions = {}):
     }
   }
 
-  // Parcourir tous les enfants du document
+  // Traverse all document children
   if (document.children) {
     for (const child of document.children) {
       findElements(child)
@@ -84,7 +84,7 @@ export function parseHTML(htmlContent: string, options: HTMLParserOptions = {}):
 }
 
 /**
- * Trouve un élément dans le document par tag name
+ * Finds an element in the document by tag name
  */
 export function findElement(
   parsed: ParsedHTML,
@@ -107,7 +107,7 @@ export function findElement(
         }
       }
 
-      // Parcourir récursivement les enfants
+      // Recursively traverse children
       if (element.children) {
         for (const child of element.children) {
           const found = search(child)
@@ -125,7 +125,7 @@ export function findElement(
     if (searchIn.type === 'tag') {
       return search(searchIn)
     }
-    // Si c'est un document, chercher dans ses enfants
+    // If it's a document, search in its children
     if ('children' in searchIn && searchIn.children) {
       for (const child of searchIn.children) {
         const found = search(child)
@@ -140,7 +140,7 @@ export function findElement(
 }
 
 /**
- * Trouve tous les éléments correspondant à un tag name
+ * Finds all elements matching a tag name
  */
 export function findAllElements(
   parsed: ParsedHTML,
@@ -155,7 +155,7 @@ export function findAllElements(
       const element = node as Element
       const nodeTagName = element.tagName.toLowerCase()
 
-      // Ne pas inclure les éléments html, head, body dans les résultats (sauf si c'est ce qu'on cherche)
+      // Don't include html, head, body elements in results (unless that's what we're looking for)
       if (nodeTagName === targetTagName && (!isRoot || targetTagName === 'html' || targetTagName === 'head' || targetTagName === 'body')) {
         if (!attribute) {
           results.push(element)
@@ -167,11 +167,11 @@ export function findAllElements(
         }
       }
 
-      // Parcourir récursivement les enfants
+      // Recursively traverse children
       if (element.children) {
         for (const child of element.children) {
           const childElement = child as Element
-          // Ne pas traiter html, head, body comme racines pour la recherche
+          // Don't treat html, head, body as roots for search
           const childIsRoot = isRoot && childElement.type === 'tag' && (childElement.tagName.toLowerCase() === 'html' || childElement.tagName.toLowerCase() === 'head' || childElement.tagName.toLowerCase() === 'body')
           search(child, childIsRoot)
         }
@@ -179,11 +179,11 @@ export function findAllElements(
     }
   }
 
-  // Chercher dans head si disponible
+  // Search in head if available
   if (parsed.head) {
     search(parsed.head, true)
   } else {
-    // Si head n'existe pas, chercher dans tous les enfants du document
+    // If head doesn't exist, search in all document children
     if (parsed.document.children) {
       for (const child of parsed.document.children) {
         const childElement = child as Element
@@ -197,7 +197,7 @@ export function findAllElements(
 }
 
 /**
- * Vérifie si un élément existe déjà dans le document
+ * Checks if an element already exists in the document
  */
 export function elementExists(
   parsed: ParsedHTML,
@@ -208,11 +208,11 @@ export function elementExists(
 }
 
 /**
- * Convertit un document parsé en HTML string
+ * Converts a parsed document to HTML string
  */
 export function serializeHTML(parsed: ParsedHTML): string {
-  // Utiliser une approche simple : reconstruire le HTML à partir du document
-  // Pour une implémentation complète, on pourrait utiliser dom-serializer
-  // Pour l'instant, on retourne le contenu original modifié manuellement
+  // Use simple approach: reconstruct HTML from document
+  // For full implementation, could use dom-serializer
+  // For now, return original content modified manually
   return parsed.originalContent
 }

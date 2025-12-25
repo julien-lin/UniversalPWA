@@ -191,7 +191,7 @@ describe('scanner orchestrator', () => {
     it('should handle invalid project path gracefully', async () => {
       const invalidPath = join(TEST_DIR, 'non-existent')
 
-      // Le scan devrait quand même fonctionner mais retourner des résultats vides
+      // Scan should still work but return empty results
       const result = await scanProject({ projectPath: invalidPath })
 
       expect(result.framework.framework).toBeNull()
@@ -204,7 +204,7 @@ describe('scanner orchestrator', () => {
 
       const result = await scanProject({ projectPath: TEST_DIR })
 
-      // Le scanner devrait gérer l'erreur et continuer
+      // Scanner should handle error and continue
       expect(result.framework).toBeDefined()
       expect(result.assets).toBeDefined()
       expect(result.architecture).toBeDefined()

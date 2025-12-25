@@ -21,7 +21,7 @@ export interface InjectionResult {
 }
 
 /**
- * Injecte les meta-tags PWA dans le HTML
+ * Injects PWA meta-tags into HTML
  */
 export function injectMetaTags(htmlContent: string, options: MetaInjectorOptions = {}): { html: string; result: InjectionResult } {
   const parsed = parseHTML(htmlContent)
@@ -31,12 +31,12 @@ export function injectMetaTags(htmlContent: string, options: MetaInjectorOptions
     warnings: [],
   }
 
-  // Créer ou trouver le head
+  // Create or find the head
   let head = parsed.head
   if (!head) {
-    // Si pas de head, créer un head
+    // If no head, create one
     if (parsed.html) {
-      // Créer un head dans html
+      // Create a head element in html
       const headElement = {
         type: 'tag',
         name: 'head',
@@ -60,7 +60,7 @@ export function injectMetaTags(htmlContent: string, options: MetaInjectorOptions
     }
   }
 
-  // Injecter le manifest link
+  // Inject manifest link
   if (options.manifestPath) {
     const manifestHref = options.manifestPath.startsWith('/') ? options.manifestPath : `/${options.manifestPath}`
     if (!elementExists(parsed, 'link', { name: 'rel', value: 'manifest' })) {
@@ -75,7 +75,7 @@ export function injectMetaTags(htmlContent: string, options: MetaInjectorOptions
   if (options.themeColor) {
     const existingThemeColor = findElement(parsed, 'meta', { name: 'name', value: 'theme-color' })
     if (existingThemeColor) {
-      // Mettre à jour la valeur existante
+      // Update existing value
       updateMetaContent(existingThemeColor, options.themeColor)
       result.injected.push(`<meta name="theme-color" content="${options.themeColor}"> (updated)`)
     } else if (!elementExists(parsed, 'meta', { name: 'theme-color', value: options.themeColor })) {
@@ -128,17 +128,17 @@ export function injectMetaTags(htmlContent: string, options: MetaInjectorOptions
     }
   }
 
-  // Reconstruire le HTML avec dom-serializer
+  // Reconstruct HTML with dom-serializer
   const modifiedHtml = render(parsed.document, { decodeEntities: false })
 
-  // Injecter le service worker registration (dans le body ou avant </body>)
+  // Inject service worker registration (in body or before </body>)
   if (options.serviceWorkerPath) {
     const swPath = options.serviceWorkerPath.startsWith('/') ? options.serviceWorkerPath : `/${options.serviceWorkerPath}`
     if (!htmlContent.includes('navigator.serviceWorker')) {
-      // Échapper le chemin pour éviter l'injection XSS
+      // Escape path to prevent XSS injection
       const escapedSwPath = escapeJavaScriptString(swPath)
       
-      // Injecter le script de registration du service worker
+      // Inject service worker registration script
       const swScript = `\n<script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -148,7 +148,7 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>`
-      // Injecter avant </body>
+      // Inject before </body>
       const finalHtml = modifiedHtml.replace('</body>', `${swScript}\n</body>`)
       result.injected.push('Service Worker registration script')
       return { html: finalHtml, result }
@@ -161,7 +161,7 @@ if ('serviceWorker' in navigator) {
 }
 
 /**
- * Injecte un tag link dans le head
+ * Injects a link tag into the head
  */
 function injectLinkTag(head: Element, rel: string, href: string): void {
   const linkElement = {
@@ -185,7 +185,7 @@ function injectLinkTag(head: Element, rel: string, href: string): void {
 }
 
 /**
- * Injecte un tag meta dans le head
+ * Injects a meta tag into the head
  */
 function injectMetaTag(head: Element, name: string, content: string): void {
   const metaElement = {
@@ -209,7 +209,7 @@ function injectMetaTag(head: Element, name: string, content: string): void {
 }
 
 /**
- * Met à jour le contenu d'un meta tag existant
+ * Updates the content of an existing meta tag
  */
 function updateMetaContent(metaElement: Element, newContent: string): void {
   if (metaElement.attribs) {
@@ -220,23 +220,23 @@ function updateMetaContent(metaElement: Element, newContent: string): void {
 }
 
 /**
- * Échappe une chaîne pour l'injection sécurisée dans du JavaScript
- * Convertit la chaîne en une chaîne JavaScript échappée
+ * Escapes a string for safe injection into JavaScript
+ * Converts the string to an escaped JavaScript string
  */
 function escapeJavaScriptString(str: string): string {
-  // Utiliser JSON.stringify pour échapper correctement tous les caractères spéciaux
-  // Cela gère les guillemets, backslashes, newlines, etc.
+  // Use JSON.stringify to properly escape all special characters
+  // This handles quotes, backslashes, newlines, etc.
   return JSON.stringify(str)
 }
 
 /**
- * Injecte les meta-tags dans un fichier HTML
+ * Injects meta-tags into an HTML file
  */
 export function injectMetaTagsInFile(filePath: string, options: MetaInjectorOptions = {}): InjectionResult {
   const parsed = parseHTMLFile(filePath)
   const { html, result } = injectMetaTags(parsed.originalContent, options)
 
-  // Écrire le HTML modifié
+  // Write modified HTML
   writeFileSync(filePath, html, 'utf-8')
 
   return result

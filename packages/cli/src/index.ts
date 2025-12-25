@@ -10,7 +10,7 @@ import { previewCommand } from './commands/preview.js'
 import { scanProject } from '@julien-lin/universal-pwa-core'
 import { promptInitOptions } from './prompts.js'
 
-// Lire la version depuis package.json
+// Read version from package.json
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const packageJsonPath = join(__dirname, '../package.json')
@@ -25,7 +25,7 @@ try {
   const packageJson = JSON.parse(packageJsonContent) as PackageJson
   version = packageJson.version || '0.0.0'
 } catch {
-  // Si on ne peut pas lire le package.json, utiliser la version par défaut
+  // If package.json cannot be read, use default version
   version = '0.0.0'
 }
 
@@ -65,14 +65,14 @@ program
     try {
       const projectPath = options.projectPath ?? process.cwd()
 
-      // Si aucune option n'est fournie, utiliser le mode interactif
+      // If no options provided, use interactive mode
       const hasOptions = options.name || options.shortName || options.iconSource ||
         options.themeColor || options.backgroundColor || options.skipIcons !== undefined
 
       let finalOptions = { ...options }
 
       if (!hasOptions) {
-        // Mode interactif : scanner d'abord pour détecter le framework
+        // Interactive mode: scan first to detect framework
         console.log(chalk.blue('🔍 Scanning project...'))
         const scanResult = await scanProject({
           projectPath,
@@ -80,15 +80,15 @@ program
           includeArchitecture: false,
         })
 
-        // Afficher les résultats du scan
+        // Display scan results
         console.log(chalk.green(`✓ Framework detected: ${scanResult.framework.framework ?? 'Unknown'}`))
         console.log(chalk.green(`✓ Architecture: ${scanResult.architecture.architecture}`))
 
-        // Lancer les prompts
+        // Launch prompts
         const promptAnswers = await promptInitOptions(projectPath, scanResult.framework.framework)
 
-        // Fusionner les réponses des prompts avec les options
-        // S'assurer que toutes les valeurs sont correctement définies
+        // Merge prompt answers with options
+        // Ensure all values are properly defined
         finalOptions = {
           ...options,
           name: promptAnswers.name?.trim() || 'My PWA',
@@ -175,5 +175,5 @@ program
     }
   })
 
-// Parse les arguments
+// Parse arguments
 program.parse()

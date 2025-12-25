@@ -53,7 +53,7 @@ registerRoute(
   })
 )
 
-// StaleWhileRevalidate pour CSS/JS (mise à jour en arrière-plan)
+// StaleWhileRevalidate for CSS/JS (background update)
 registerRoute(
   ({ request }) => request.destination === 'style' || request.destination === 'script',
   new StaleWhileRevalidate({

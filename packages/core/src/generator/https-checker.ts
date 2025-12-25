@@ -78,10 +78,10 @@ export function checkHttps(url: string, allowHttpLocalhost = true): HttpsCheckRe
 }
 
 /**
- * Détecte l'URL du projet à partir de fichiers de configuration
+ * Detects project URL from configuration files
  */
 export function detectProjectUrl(projectPath: string): string | null {
-  // Vérifier les fichiers de configuration courants
+  // Check common configuration files
   const configFiles = [
     { file: 'package.json', key: 'homepage' as const },
     { file: 'package.json', key: 'url' as const },
@@ -138,17 +138,17 @@ export function detectProjectUrl(projectPath: string): string | null {
 }
 
 /**
- * Vérifie HTTPS pour un projet
+ * Checks HTTPS for a project
  */
 export function checkProjectHttps(options: HttpsCheckerOptions = {}): HttpsCheckResult {
   const { url, projectPath, allowHttpLocalhost = true } = options
 
-  // Si une URL est fournie directement, l'utiliser
+  // If URL is provided directly, use it
   if (url) {
     return checkHttps(url, allowHttpLocalhost)
   }
 
-  // Sinon, essayer de détecter l'URL depuis les fichiers de configuration
+  // Otherwise, try to detect URL from configuration files
   if (projectPath) {
     const detectedUrl = detectProjectUrl(projectPath)
     if (detectedUrl) {
@@ -156,7 +156,7 @@ export function checkProjectHttps(options: HttpsCheckerOptions = {}): HttpsCheck
     }
   }
 
-  // Par défaut, considérer comme non sécurisé si on ne peut pas déterminer
+  // By default, consider as insecure if cannot be determined
   return {
     isSecure: false,
     isLocalhost: false,

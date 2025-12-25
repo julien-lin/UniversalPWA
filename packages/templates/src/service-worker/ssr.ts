@@ -12,7 +12,7 @@ import { ExpirationPlugin } from 'workbox-expiration'
 // Precache des assets statiques critiques
 precacheAndRoute(self.__WB_MANIFEST)
 
-// NetworkFirst pour les pages HTML (priorité au serveur pour contenu frais)
+// NetworkFirst for HTML pages (server priority for fresh content)
 registerRoute(
   ({ request }) => request.mode === 'navigate',
   new NetworkFirst({

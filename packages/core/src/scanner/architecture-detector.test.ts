@@ -247,7 +247,7 @@ describe('architecture-detector', () => {
 
       const result = await detectArchitecture(TEST_DIR)
 
-      // Le résultat devrait être valide même si certains fichiers ne peuvent pas être lus
+      // Result should be valid even if some files cannot be read
       expect(result.architecture).toBeDefined()
     })
   })
@@ -269,7 +269,7 @@ describe('architecture-detector', () => {
     })
 
     it('should handle HTML read errors gracefully', async () => {
-      // Créer un répertoire mais pas de fichier HTML valide
+      // Create directory but no valid HTML file
       mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
 
       const result = await detectArchitecture(TEST_DIR)

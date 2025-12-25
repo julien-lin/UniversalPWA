@@ -38,22 +38,22 @@ export interface InitResult {
 }
 
 /**
- * Normalise un chemin de manière sécurisée en le convertissant en chemin relatif
+ * Normalizes a path securely by converting it to a relative path
  */
 function relativePath(fullPath: string, basePath: string): string {
   try {
     const rel = relative(basePath, fullPath)
-    // Normaliser et s'assurer que le chemin commence par /
+    // Normalize and ensure path starts with /
     const normalized = normalize(rel).replace(/\\/g, '/')
     return normalized.startsWith('/') ? normalized : `/${normalized}`
   } catch {
-    // En cas d'erreur, retourner le chemin tel quel (sera validé ailleurs)
+    // On error, return path as-is (will be validated elsewhere)
     return fullPath
   }
 }
 
 /**
- * Commande init : scanne le projet et génère les fichiers PWA
+ * Init command: scans project and generates PWA files
  */
 export async function initCommand(options: InitOptions = {}): Promise<InitResult> {
   const {
@@ -81,7 +81,7 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
   }
 
   try {
-    // Vérifier que le chemin existe
+    // Check that path exists
     if (!existsSync(result.projectPath)) {
       result.errors.push(`Project path does not exist: ${result.projectPath}`)
       return result
@@ -89,7 +89,7 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
 
     console.log(chalk.blue('🔍 Scanning project...'))
     
-    // Scanner le projet
+    // Scan project
     const scanResult = await scanProject({
       projectPath: result.projectPath,
       includeAssets: true,
@@ -102,22 +102,22 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     console.log(chalk.green(`✓ Framework detected: ${result.framework ?? 'Unknown'}`))
     console.log(chalk.green(`✓ Architecture: ${result.architecture}`))
 
-    // Vérifier HTTPS
+    // Check HTTPS
     const httpsCheck = checkProjectHttps({ projectPath: result.projectPath })
     if (!httpsCheck.isSecure && !httpsCheck.isLocalhost) {
       result.warnings.push(httpsCheck.warning ?? 'HTTPS required for production PWA')
       console.log(chalk.yellow(`⚠ ${httpsCheck.warning}`))
     }
 
-    // Déterminer le répertoire de sortie
+    // Determine output directory
     const finalOutputDir = outputDir ?? (result.framework === 'WordPress' ? join(result.projectPath, 'public') : join(result.projectPath, 'public'))
 
-    // Générer le manifest
+    // Generate manifest
     console.log(chalk.blue('📝 Generating manifest.json...'))
     
     const appName = name ?? (result.framework ? `${result.framework} App` : 'My PWA')
-    // S'assurer que shortName est toujours défini et valide (max 12 caractères, non vide)
-    // Normaliser shortName (peut être undefined, string vide, ou valide)
+    // Ensure shortName is always defined and valid (max 12 characters, non-empty)
+    // Normalize shortName (can be undefined, empty string, or valid)
     const normalizedShortName = shortName && typeof shortName === 'string' && shortName.trim().length > 0
       ? shortName.trim()
       : undefined
@@ -126,18 +126,18 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     if (normalizedShortName && normalizedShortName.length > 0 && normalizedShortName.length <= 12) {
       appShortName = normalizedShortName
     } else {
-      // Utiliser appName comme fallback, s'assurer qu'il n'est pas vide
+      // Use appName as fallback, ensure it's not empty
       const fallbackName = appName && appName.length > 0 ? appName : 'My PWA'
       appShortName = fallbackName.substring(0, 12)
     }
-    // Garantir que appShortName n'est jamais vide ou undefined
+    // Ensure appShortName is never empty or undefined
     if (!appShortName || appShortName.trim().length === 0) {
       appShortName = 'PWA'
     }
-    // S'assurer que appShortName est bien une string (pas undefined)
+    // Ensure appShortName is a string (not undefined)
     appShortName = String(appShortName)
 
-    // Générer les icônes si une source est fournie
+    // Generate icons if source is provided
     let iconPaths: string[] = []
     if (!skipIcons && iconSource) {
       const iconSourcePath = existsSync(iconSource) ? iconSource : join(result.projectPath, iconSource)
@@ -154,7 +154,7 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
           iconPaths = iconResult.icons.map((icon) => icon.src)
           result.iconsGenerated = iconResult.icons.length
           
-          // Vérifier si apple-touch-icon.png a été généré
+          // Check if apple-touch-icon.png was generated
           const appleTouchIconPath = join(finalOutputDir, 'apple-touch-icon.png')
           if (existsSync(appleTouchIconPath)) {
             iconPaths.push('/apple-touch-icon.png')
@@ -174,9 +174,9 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
       }
     }
 
-    // Générer le manifest (avec ou sans icônes)
-    // Validation finale de appShortName avant utilisation - garantir qu'il est toujours une string valide
-    let finalShortName: string = 'PWA' // Valeur par défaut
+    // Generate manifest (with or without icons)
+    // Final validation of appShortName before use - ensure it's always a valid string
+    let finalShortName: string = 'PWA' // Default value
     
     if (appShortName && typeof appShortName === 'string' && appShortName.trim().length > 0) {
       finalShortName = appShortName.trim().substring(0, 12)
@@ -184,17 +184,17 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
       finalShortName = appName.substring(0, 12)
     }
     
-    // Garantir que finalShortName n'est jamais vide ou undefined
+    // Ensure finalShortName is never empty or undefined
     if (!finalShortName || finalShortName.trim().length === 0) {
       finalShortName = 'PWA'
     }
     
-    // Double vérification : s'assurer que c'est bien une string
+    // Double check: ensure it's a string
     finalShortName = String(finalShortName).trim().substring(0, 12) || 'PWA'
     
     let manifestPath: string | undefined
     if (iconPaths.length > 0) {
-      // Manifest avec icônes générées
+      // Manifest with generated icons
       const manifestWithIcons = generateManifest({
         name: appName,
         shortName: finalShortName,
@@ -214,14 +214,14 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
       result.manifestPath = manifestPath
       console.log(chalk.green(`✓ Manifest generated: ${manifestPath}`))
     } else {
-      // Manifest minimal sans icônes (utiliser une icône placeholder)
-      // Note: Le manifest requiert au moins une icône selon le schéma Zod
-      // On crée un manifest avec une icône placeholder qui devra être remplacée
+      // Minimal manifest without icons (use placeholder icon)
+      // Note: Manifest requires at least one icon according to Zod schema
+      // Create manifest with placeholder icon that must be replaced
       result.warnings.push('No icons provided. Manifest generated with placeholder icon. Please provide an icon source with --icon-source for production.')
       console.log(chalk.yellow('⚠ Generating manifest with placeholder icon'))
       
-      // Créer un manifest avec une icône placeholder
-      // finalShortName est déjà validé ci-dessus
+      // Create manifest with placeholder icon
+      // finalShortName is already validated above
       const manifestMinimal = generateManifest({
         name: appName,
         shortName: finalShortName,
@@ -231,7 +231,7 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
         themeColor: themeColor ?? '#ffffff',
         backgroundColor: backgroundColor ?? '#000000',
         icons: [{
-          src: '/icon-192x192.png', // Placeholder - l'utilisateur devra ajouter une vraie icône
+          src: '/icon-192x192.png', // Placeholder - user must add a real icon
           sizes: '192x192',
           type: 'image/png',
         }],
@@ -242,7 +242,7 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
       console.log(chalk.green(`✓ Manifest generated: ${manifestPath}`))
     }
 
-    // Générer le service worker
+    // Generate service worker
     if (!skipServiceWorker) {
       console.log(chalk.blue('⚙️ Generating service worker...'))
       
@@ -266,12 +266,12 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
       }
     }
 
-    // Injecter les meta-tags dans les fichiers HTML
+    // Inject meta-tags into HTML files
     if (!skipInjection) {
       console.log(chalk.blue('💉 Injecting meta-tags...'))
       
       try {
-        // Trouver tous les fichiers HTML
+        // Find all HTML files
         const htmlFiles = await glob('**/*.html', {
           cwd: result.projectPath,
           ignore: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/.nuxt/**'],
@@ -280,18 +280,18 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
 
         let injectedCount = 0
         for (const htmlFile of htmlFiles.slice(0, 10)) {
-          // Limiter à 10 fichiers pour éviter de surcharger
+          // Limit to 10 files to avoid overloading
           try {
-            // Normaliser les chemins de manière sécurisée
-            // Pour Vite/React, les fichiers de public/ sont servis à la racine
+            // Normalize paths securely
+            // For Vite/React, files in public/ are served at root
             const normalizePathForInjection = (fullPath: string | undefined, basePath: string, outputDir: string, fallback: string): string => {
               if (!fullPath) return fallback
               try {
-                // Si le chemin est dans outputDir (ex: public/), on doit le servir à la racine
+                // If path is in outputDir (e.g., public/), it must be served at root
                 const rel = relativePath(fullPath, basePath)
                 let normalized = rel.startsWith('/') ? rel : `/${rel}`
                 
-                // Pour Vite/React, si le fichier est dans public/, enlever public/ du chemin
+                // For Vite/React, if file is in public/, remove public/ from path
                 // Ex: /public/sw.js -> /sw.js
                 // Ex: /public/manifest.json -> /manifest.json
                 const outputDirName = outputDir.replace(basePath, '').replace(/^\/+|\/+$/g, '')
@@ -305,7 +305,7 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
               }
             }
             
-            // Déterminer le chemin apple-touch-icon
+            // Determine apple-touch-icon path
             const appleTouchIconFullPath = join(finalOutputDir, 'apple-touch-icon.png')
             const appleTouchIconExists = existsSync(appleTouchIconFullPath)
             
@@ -315,7 +315,7 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
               backgroundColor: backgroundColor ?? '#000000',
               appleTouchIcon: appleTouchIconExists 
                 ? normalizePathForInjection(appleTouchIconFullPath, result.projectPath, finalOutputDir, '/apple-touch-icon.png')
-                : '/apple-touch-icon.png', // Placeholder si non généré
+                : '/apple-touch-icon.png', // Placeholder if not generated
               appleMobileWebAppCapable: true,
               serviceWorkerPath: normalizePathForInjection(result.serviceWorkerPath, result.projectPath, finalOutputDir, '/sw.js'),
             })

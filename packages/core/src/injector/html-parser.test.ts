@@ -126,9 +126,9 @@ describe('html-parser', () => {
 
       const metas = findAllElements(parsed, 'meta')
 
-      // htmlparser2 peut trouver plus d'éléments (html, head sont aussi des tags)
+      // htmlparser2 may find more elements (html, head are also tags)
       expect(metas.length).toBeGreaterThanOrEqual(2)
-      // Vérifier qu'on trouve bien les meta tags
+      // Verify that meta tags are found
       const metaTags = metas.filter((m) => m.tagName.toLowerCase() === 'meta')
       expect(metaTags).toHaveLength(2)
     })
@@ -148,9 +148,9 @@ describe('html-parser', () => {
 
       const manifestLinks = findAllElements(parsed, 'link', { name: 'rel', value: 'manifest' })
 
-      // Vérifier qu'on trouve au moins le link manifest
+      // Verify that at least manifest link is found
       expect(manifestLinks.length).toBeGreaterThanOrEqual(1)
-      // Vérifier que tous les liens trouvés ont bien rel="manifest"
+      // Verify that all found links have rel="manifest"
       manifestLinks.forEach((link) => {
         const relAttr = link.attributes?.find((attr) => attr.name.toLowerCase() === 'rel')
         expect(relAttr?.value).toBe('manifest')

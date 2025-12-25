@@ -49,7 +49,7 @@ export function determineTemplateType(
   architecture: 'spa' | 'ssr' | 'static',
   framework?: string | null,
 ): ServiceWorkerTemplateType {
-  // Framework spécifique
+  // Framework specific
   if (framework === 'WordPress') {
     return 'wordpress'
   }
@@ -67,7 +67,7 @@ export function determineTemplateType(
     return 'ssr'
   }
 
-  // Par défaut : statique
+  // Default: static
   return 'static'
 }
 

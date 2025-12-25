@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { writeFileSync } from 'fs'
 import { join } from 'path'
 
-// Schéma Zod pour validation du manifest
+// Zod schema for manifest validation
 const ManifestIconSchema = z.object({
   src: z.string(),
   sizes: z.string(),
@@ -59,11 +59,11 @@ export interface ManifestGeneratorOptions {
 }
 
 /**
- * Génère un manifest.json pour PWA
+ * Generates a manifest.json for PWA
  */
 export function generateManifest(options: ManifestGeneratorOptions): Manifest {
-  // Validation et normalisation de shortName - garantir qu'il est toujours une string valide
-  let shortName: string = 'PWA' // Valeur par défaut
+  // Validate and normalize shortName - ensure it's always a valid string
+  let shortName: string = 'PWA' // Default value
   
   if (options.shortName && typeof options.shortName === 'string' && options.shortName.trim().length > 0) {
     shortName = options.shortName.trim().substring(0, 12)
@@ -71,12 +71,12 @@ export function generateManifest(options: ManifestGeneratorOptions): Manifest {
     shortName = options.name.substring(0, 12)
   }
   
-  // Garantir que shortName n'est jamais vide
+  // Ensure shortName is never empty
   if (!shortName || shortName.trim().length === 0) {
     shortName = 'PWA'
   }
   
-  // Conversion explicite en string et limitation à 12 caractères
+  // Explicit conversion to string and limit to 12 characters
   shortName = String(shortName).trim().substring(0, 12) || 'PWA'
   
   const manifest: Manifest = {
@@ -128,12 +128,12 @@ export function generateManifest(options: ManifestGeneratorOptions): Manifest {
     manifest.related_applications = options.relatedApplications
   }
 
-  // Validation avec Zod
+  // Validate with Zod
   return ManifestSchema.parse(manifest)
 }
 
 /**
- * Écrit le manifest.json dans le répertoire de sortie
+ * Writes manifest.json to the output directory
  */
 export function writeManifest(manifest: Manifest, outputDir: string): string {
   const manifestPath = join(outputDir, 'manifest.json')
@@ -143,7 +143,7 @@ export function writeManifest(manifest: Manifest, outputDir: string): string {
 }
 
 /**
- * Génère et écrit le manifest.json
+ * Generates and writes manifest.json
  */
 export function generateAndWriteManifest(options: ManifestGeneratorOptions, outputDir: string): string {
   const manifest = generateManifest(options)
