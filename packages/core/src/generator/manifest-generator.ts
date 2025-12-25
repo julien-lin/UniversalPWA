@@ -96,13 +96,10 @@ export function generateManifest(options: ManifestGeneratorOptions): Manifest {
     manifest.orientation = options.orientation
   }
 
-  if (options.themeColor) {
-    manifest.theme_color = options.themeColor
-  }
-
-  if (options.backgroundColor) {
-    manifest.background_color = options.backgroundColor
-  }
+  // Always include theme_color and background_color for PWA installability
+  // Use provided values or sensible defaults
+  manifest.theme_color = options.themeColor ?? '#ffffff'
+  manifest.background_color = options.backgroundColor ?? '#ffffff'
 
   if (options.splashScreens && options.splashScreens.length > 0) {
     manifest.splash_screens = options.splashScreens

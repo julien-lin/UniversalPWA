@@ -45,6 +45,9 @@ describe('manifest-generator', () => {
       expect(manifest.scope).toBe('/')
       expect(manifest.display).toBe('standalone')
       expect(manifest.icons).toHaveLength(1)
+      // theme_color and background_color should always be present for PWA installability
+      expect(manifest.theme_color).toBe('#ffffff')
+      expect(manifest.background_color).toBe('#ffffff')
     })
 
     it('should generate full manifest with all options', () => {

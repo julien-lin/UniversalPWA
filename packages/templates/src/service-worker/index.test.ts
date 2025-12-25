@@ -12,26 +12,29 @@ describe('service-worker templates', () => {
       const template = getServiceWorkerTemplate('static')
 
       expect(template.type).toBe('static')
-      expect(template.content).toContain('precacheAndRoute')
-      expect(template.content).toContain('CacheFirst')
-      expect(template.content).toContain('NetworkFirst')
+      expect(template.content).toContain('importScripts')
+      expect(template.content).toContain('workbox.precaching.precacheAndRoute')
+      expect(template.content).toContain('workbox.strategies.CacheFirst')
+      expect(template.content).toContain('workbox.strategies.NetworkFirst')
     })
 
     it('should return spa template', () => {
       const template = getServiceWorkerTemplate('spa')
 
       expect(template.type).toBe('spa')
-      expect(template.content).toContain('precacheAndRoute')
-      expect(template.content).toContain('NavigationRoute')
-      expect(template.content).toContain('createHandlerBoundToURL')
+      expect(template.content).toContain('importScripts')
+      expect(template.content).toContain('workbox.precaching.precacheAndRoute')
+      expect(template.content).toContain('workbox.routing.NavigationRoute')
+      expect(template.content).toContain('workbox.precaching.createHandlerBoundToURL')
     })
 
     it('should return ssr template', () => {
       const template = getServiceWorkerTemplate('ssr')
 
       expect(template.type).toBe('ssr')
-      expect(template.content).toContain('precacheAndRoute')
-      expect(template.content).toContain('NetworkFirst')
+      expect(template.content).toContain('importScripts')
+      expect(template.content).toContain('workbox.precaching.precacheAndRoute')
+      expect(template.content).toContain('workbox.strategies.NetworkFirst')
       expect(template.content).toContain('networkTimeoutSeconds')
     })
 
@@ -39,7 +42,8 @@ describe('service-worker templates', () => {
       const template = getServiceWorkerTemplate('wordpress')
 
       expect(template.type).toBe('wordpress')
-      expect(template.content).toContain('precacheAndRoute')
+      expect(template.content).toContain('importScripts')
+      expect(template.content).toContain('workbox.precaching.precacheAndRoute')
       expect(template.content).toContain('/wp-content/')
       expect(template.content).toContain('/wp-admin/')
       expect(template.content).toContain('/wp-json/')
@@ -49,7 +53,8 @@ describe('service-worker templates', () => {
       const template = getServiceWorkerTemplate('php')
 
       expect(template.type).toBe('php')
-      expect(template.content).toContain('precacheAndRoute')
+      expect(template.content).toContain('importScripts')
+      expect(template.content).toContain('workbox.precaching.precacheAndRoute')
       expect(template.content).toContain('/build/')
       expect(template.content).toContain('/public/')
     })
@@ -113,14 +118,14 @@ describe('service-worker templates', () => {
   })
 
   describe('template content validation', () => {
-    it('should all templates contain workbox imports', () => {
+    it('should all templates use importScripts with Workbox CDN', () => {
       const types: ServiceWorkerTemplateType[] = ['static', 'spa', 'ssr', 'wordpress', 'php']
 
       types.forEach((type) => {
         const template = getServiceWorkerTemplate(type)
-        expect(template.content).toContain('workbox-precaching')
-        expect(template.content).toContain('workbox-routing')
-        expect(template.content).toContain('workbox-strategies')
+        expect(template.content).toContain('importScripts')
+        expect(template.content).toContain('workbox-cdn/releases/7.4.0/workbox-sw.js')
+        expect(template.content).toContain('typeof workbox !== \'undefined\'')
       })
     })
 
@@ -129,14 +134,14 @@ describe('service-worker templates', () => {
 
       types.forEach((type) => {
         const template = getServiceWorkerTemplate(type)
-        expect(template.content).toContain('precacheAndRoute')
+        expect(template.content).toContain('workbox.precaching.precacheAndRoute')
       })
     })
 
     it('should spa template contain NavigationRoute', () => {
       const template = getServiceWorkerTemplate('spa')
-      expect(template.content).toContain('NavigationRoute')
-      expect(template.content).toContain('createHandlerBoundToURL')
+      expect(template.content).toContain('workbox.routing.NavigationRoute')
+      expect(template.content).toContain('workbox.precaching.createHandlerBoundToURL')
     })
 
     it('should wordpress template contain wp-specific routes', () => {
