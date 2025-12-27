@@ -42,11 +42,15 @@ export function usePWAInstall(): UsePWAInstallReturn {
       if (window.isPWAInstalled) {
         return window.isPWAInstalled()
       }
-      // Fallback: vérifier le display-mode
-      return (
-        window.matchMedia('(display-mode: standalone)').matches ||
-        (window.navigator as any).standalone === true
-      )
+      // Fallback: vérifier le display-mode (si matchMedia est disponible)
+      if (typeof window.matchMedia === 'function') {
+        return (
+          window.matchMedia('(display-mode: standalone)').matches ||
+          (window.navigator as any).standalone === true
+        )
+      }
+      // Si matchMedia n'est pas disponible (ex: environnement de test), retourner false
+      return false
     }
 
     setIsInstalled(checkInstalled())
