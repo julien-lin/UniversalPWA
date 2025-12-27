@@ -144,15 +144,16 @@ export function injectMetaTags(htmlContent: string, options: MetaInjectorOptions
   // Reconstruct HTML with dom-serializer AFTER all injections
   let modifiedHtml = render(parsed.document, { decodeEntities: false })
 
-  // Inject service worker registration (in body or before </body>)
+  // Inject service worker registration and PWA install handler (in body or before </body>)
   if (options.serviceWorkerPath) {
     const swPath = options.serviceWorkerPath.startsWith('/') ? options.serviceWorkerPath : `/${options.serviceWorkerPath}`
     if (!htmlContent.includes('navigator.serviceWorker')) {
       // Escape path to prevent XSS injection
       const escapedSwPath = escapeJavaScriptString(swPath)
       
-      // Inject service worker registration script
+      // Inject service worker registration and PWA install handler script
       const swScript = `\n<script>
+// Service Worker Registration
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register(${escapedSwPath})
@@ -160,6 +161,67 @@ if ('serviceWorker' in navigator) {
       .catch((error) => console.error('SW registration failed:', error));
   });
 }
+
+// PWA Install Handler
+let deferredPrompt = null;
+let isInstalled = false;
+
+// Check if app is already installed
+if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+  isInstalled = true;
+}
+
+// Listen for beforeinstallprompt event
+window.addEventListener('beforeinstallprompt', (e) => {
+  // Prevent the mini-infobar from appearing on mobile
+  e.preventDefault();
+  // Stash the event so it can be triggered later
+  deferredPrompt = e;
+  // Update UI to notify the user they can install the PWA
+  window.dispatchEvent(new CustomEvent('pwa-installable', { detail: { installable: true } }));
+  console.log('PWA installable: beforeinstallprompt event captured');
+});
+
+// Listen for app installed event
+window.addEventListener('appinstalled', () => {
+  isInstalled = true;
+  deferredPrompt = null;
+  window.dispatchEvent(new CustomEvent('pwa-installed', { detail: { installed: true } }));
+  console.log('PWA installed successfully');
+});
+
+// Expose global install function
+window.installPWA = function() {
+  if (!deferredPrompt) {
+    console.warn('PWA install prompt not available. App may already be installed or not installable.');
+    return Promise.reject(new Error('PWA install prompt not available'));
+  }
+  
+  // Show the install prompt
+  deferredPrompt.prompt();
+  
+  // Wait for the user to respond to the prompt
+  return deferredPrompt.userChoice.then((choiceResult) => {
+    if (choiceResult.outcome === 'accepted') {
+      console.log('User accepted the install prompt');
+    } else {
+      console.log('User dismissed the install prompt');
+    }
+    deferredPrompt = null;
+    window.dispatchEvent(new CustomEvent('pwa-install-choice', { detail: { outcome: choiceResult.outcome } }));
+    return choiceResult;
+  });
+};
+
+// Expose global check function
+window.isPWAInstalled = function() {
+  return isInstalled || window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+};
+
+// Expose global check if installable
+window.isPWAInstallable = function() {
+  return deferredPrompt !== null;
+};
 </script>`
       // Inject before </body> or at end if no body tag
       if (modifiedHtml.includes('</body>')) {
@@ -168,7 +230,65 @@ if ('serviceWorker' in navigator) {
         modifiedHtml = `${modifiedHtml}${swScript}`
       }
       result.injected.push('Service Worker registration script')
+      result.injected.push('PWA install handler script')
     } else {
+      // Service worker exists, but check if install handler exists
+      if (!htmlContent.includes('beforeinstallprompt') && !htmlContent.includes('window.installPWA')) {
+        const installScript = `\n<script>
+// PWA Install Handler
+let deferredPrompt = null;
+let isInstalled = false;
+
+// Check if app is already installed
+if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+  isInstalled = true;
+}
+
+// Listen for beforeinstallprompt event
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  window.dispatchEvent(new CustomEvent('pwa-installable', { detail: { installable: true } }));
+  console.log('PWA installable: beforeinstallprompt event captured');
+});
+
+window.addEventListener('appinstalled', () => {
+  isInstalled = true;
+  deferredPrompt = null;
+  window.dispatchEvent(new CustomEvent('pwa-installed', { detail: { installed: true } }));
+  console.log('PWA installed successfully');
+});
+
+window.installPWA = function() {
+  if (!deferredPrompt) {
+    console.warn('PWA install prompt not available.');
+    return Promise.reject(new Error('PWA install prompt not available'));
+  }
+  deferredPrompt.prompt();
+  return deferredPrompt.userChoice.then((choiceResult) => {
+    deferredPrompt = null;
+    window.dispatchEvent(new CustomEvent('pwa-install-choice', { detail: { outcome: choiceResult.outcome } }));
+    return choiceResult;
+  });
+};
+
+window.isPWAInstalled = function() {
+  return isInstalled || window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+};
+
+window.isPWAInstallable = function() {
+  return deferredPrompt !== null;
+};
+</script>`
+        if (modifiedHtml.includes('</body>')) {
+          modifiedHtml = modifiedHtml.replace('</body>', `${installScript}\n</body>`)
+        } else {
+          modifiedHtml = `${modifiedHtml}${installScript}`
+        }
+        result.injected.push('PWA install handler script')
+      } else {
+        result.skipped.push('PWA install handler (already exists)')
+      }
       result.skipped.push('Service Worker registration (already exists)')
     }
   }
