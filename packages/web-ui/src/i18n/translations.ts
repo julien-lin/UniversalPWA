@@ -48,6 +48,32 @@ export interface Translations {
       docs: string
     }
     copyright: string
+    quickLinks: string
+    support: string
+    github: string
+    sponsor: string
+  }
+  quickStart: {
+    title: string
+    subtitle: string
+    step1: string
+    step2: string
+    step3: string
+    step3Description: string
+  }
+  featuresPage: {
+    title: string
+    ctaTitle: string
+    ctaSubtitle: string
+    ctaButton: string
+  }
+  sponsorsPage: {
+    ourSponsors: string
+    thankYou: string
+    viewOnGitHub: string
+    questions: string
+    contactVia: string
+    githubDiscussions: string
   }
 }
 
@@ -72,32 +98,32 @@ export const translations: Record<Language, Translations> = {
         {
           title: 'One-Click Conversion',
           description: 'Transform any web project into a PWA instantly. No manual configuration needed.',
-          icon: '⚡',
+          icon: 'zap',
         },
         {
           title: 'Framework Agnostic',
           description: 'Works with React, Vue, Angular, Next.js, WordPress, Symfony, Laravel, and static sites.',
-          icon: '🔧',
+          icon: 'settings',
         },
         {
           title: 'Auto-Detection',
           description: 'Automatically detects your project framework and generates optimized PWA files.',
-          icon: '🔍',
+          icon: 'search',
         },
         {
           title: 'Interactive Mode',
           description: 'User-friendly prompts guide you through the setup process with smart defaults.',
-          icon: '💬',
+          icon: 'message-circle',
         },
         {
           title: 'Icon Generation',
           description: 'Automatically generates all required PWA icons and splash screens from a single source image.',
-          icon: '🎨',
+          icon: 'image',
         },
         {
           title: 'Production Ready',
           description: 'Generates optimized service workers with Workbox and validates all PWA requirements.',
-          icon: '🚀',
+          icon: 'send',
         },
       ],
     },
@@ -109,32 +135,32 @@ export const translations: Record<Language, Translations> = {
         {
           title: 'Installable',
           description: 'Users can install PWAs directly from their browser, no app store required. They appear on the home screen just like native apps.',
-          icon: '📱',
+          icon: 'smartphone',
         },
         {
           title: 'Offline Support',
           description: 'PWAs work offline or on slow networks thanks to service workers. Content is cached and available even without internet.',
-          icon: '🌐',
+          icon: 'globe',
         },
         {
           title: 'Fast & Responsive',
           description: 'PWAs load instantly and respond quickly to user interactions, providing a smooth experience on any device.',
-          icon: '⚡',
+          icon: 'zap',
         },
         {
           title: 'Cross-Platform',
           description: 'One PWA works across all platforms - iOS, Android, Windows, macOS, and Linux. No need to build separate apps.',
-          icon: '🔄',
+          icon: 'refresh-cw',
         },
         {
           title: 'Secure',
           description: 'PWAs require HTTPS, ensuring all data is encrypted and secure. Users can trust your application.',
-          icon: '🔒',
+          icon: 'shield',
         },
         {
           title: 'Always Up-to-Date',
           description: 'PWAs automatically update in the background. Users always have the latest version without manual updates.',
-          icon: '🔄',
+          icon: 'refresh-cw',
         },
       ],
     },
@@ -160,6 +186,32 @@ export const translations: Record<Language, Translations> = {
         docs: 'Documentation',
       },
       copyright: '© 2024 UniversalPWA. All rights reserved.',
+      quickLinks: 'Quick Links',
+      support: 'Support',
+      github: 'GitHub',
+      sponsor: 'Sponsor',
+    },
+    quickStart: {
+      title: 'How to Create a PWA in 3 Simple Steps',
+      subtitle: 'Transform your web project into a Progressive Web App with UniversalPWA - the fastest PWA generator available',
+      step1: '1. Install',
+      step2: '2. Initialize',
+      step3: '3. Deploy',
+      step3Description: 'Your PWA is ready to deploy!',
+    },
+    featuresPage: {
+      title: 'UniversalPWA Features - Complete PWA Generator Solution',
+      ctaTitle: 'Ready to Get Started?',
+      ctaSubtitle: 'Transform your web project into a PWA in minutes',
+      ctaButton: 'Install Now',
+    },
+    sponsorsPage: {
+      ourSponsors: 'Our Sponsors',
+      thankYou: 'Thank you to everyone who supports UniversalPWA!',
+      viewOnGitHub: 'View on GitHub Sponsors',
+      questions: 'Questions about sponsoring?',
+      contactVia: 'Contact us via',
+      githubDiscussions: 'GitHub Discussions',
     },
   },
   fr: {
@@ -182,32 +234,32 @@ export const translations: Record<Language, Translations> = {
         {
           title: 'Conversion en Un Clic',
           description: 'Transformez n\'importe quel projet web en PWA instantanément. Aucune configuration manuelle nécessaire.',
-          icon: '⚡',
+          icon: 'zap',
         },
         {
           title: 'Indépendant du Framework',
           description: 'Fonctionne avec React, Vue, Angular, Next.js, WordPress, Symfony, Laravel et sites statiques.',
-          icon: '🔧',
+          icon: 'settings',
         },
         {
           title: 'Détection Automatique',
           description: 'Détecte automatiquement votre framework et génère des fichiers PWA optimisés.',
-          icon: '🔍',
+          icon: 'search',
         },
         {
           title: 'Mode Interactif',
           description: 'Prompts conviviaux vous guident à travers le processus de configuration avec des valeurs par défaut intelligentes.',
-          icon: '💬',
+          icon: 'message-circle',
         },
         {
           title: 'Génération d\'Icônes',
           description: 'Génère automatiquement toutes les icônes PWA et splash screens requises à partir d\'une seule image source.',
-          icon: '🎨',
+          icon: 'image',
         },
         {
           title: 'Prêt pour la Production',
           description: 'Génère des service workers optimisés avec Workbox et valide tous les requis PWA.',
-          icon: '🚀',
+          icon: 'send',
         },
       ],
     },
@@ -219,32 +271,32 @@ export const translations: Record<Language, Translations> = {
         {
           title: 'Installable',
           description: 'Les utilisateurs peuvent installer les PWA directement depuis leur navigateur, sans magasin d\'applications. Elles apparaissent sur l\'écran d\'accueil comme les applications natives.',
-          icon: '📱',
+          icon: 'smartphone',
         },
         {
           title: 'Support Hors Ligne',
           description: 'Les PWA fonctionnent hors ligne ou sur des réseaux lents grâce aux service workers. Le contenu est mis en cache et disponible même sans internet.',
-          icon: '🌐',
+          icon: 'globe',
         },
         {
           title: 'Rapide & Réactive',
           description: 'Les PWA se chargent instantanément et répondent rapidement aux interactions utilisateur, offrant une expérience fluide sur n\'importe quel appareil.',
-          icon: '⚡',
+          icon: 'zap',
         },
         {
           title: 'Multi-Plateforme',
           description: 'Une seule PWA fonctionne sur toutes les plateformes - iOS, Android, Windows, macOS et Linux. Pas besoin de créer des applications séparées.',
-          icon: '🔄',
+          icon: 'refresh-cw',
         },
         {
           title: 'Sécurisée',
           description: 'Les PWA nécessitent HTTPS, garantissant que toutes les données sont cryptées et sécurisées. Les utilisateurs peuvent faire confiance à votre application.',
-          icon: '🔒',
+          icon: 'shield',
         },
         {
           title: 'Toujours à Jour',
           description: 'Les PWA se mettent à jour automatiquement en arrière-plan. Les utilisateurs ont toujours la dernière version sans mises à jour manuelles.',
-          icon: '🔄',
+          icon: 'refresh-cw',
         },
       ],
     },
@@ -270,6 +322,32 @@ export const translations: Record<Language, Translations> = {
         docs: 'Documentation',
       },
       copyright: '© 2024 UniversalPWA. Tous droits réservés.',
+      quickLinks: 'Liens Rapides',
+      support: 'Support',
+      github: 'GitHub',
+      sponsor: 'Sponsor',
+    },
+    quickStart: {
+      title: 'Comment Créer une PWA en 3 Étapes Simples',
+      subtitle: 'Transformez votre projet web en Progressive Web App avec UniversalPWA - le générateur PWA le plus rapide disponible',
+      step1: '1. Installer',
+      step2: '2. Initialiser',
+      step3: '3. Déployer',
+      step3Description: 'Votre PWA est prête à être déployée !',
+    },
+    featuresPage: {
+      title: 'Fonctionnalités UniversalPWA - Solution Complète de Générateur PWA',
+      ctaTitle: 'Prêt à Commencer ?',
+      ctaSubtitle: 'Transformez votre projet web en PWA en quelques minutes',
+      ctaButton: 'Installer Maintenant',
+    },
+    sponsorsPage: {
+      ourSponsors: 'Nos Sponsors',
+      thankYou: 'Merci à tous ceux qui soutiennent UniversalPWA !',
+      viewOnGitHub: 'Voir sur GitHub Sponsors',
+      questions: 'Des questions sur le parrainage ?',
+      contactVia: 'Contactez-nous via',
+      githubDiscussions: 'Discussions GitHub',
     },
   },
   es: {
@@ -292,32 +370,32 @@ export const translations: Record<Language, Translations> = {
         {
           title: 'Conversión de Un Clic',
           description: 'Transforma cualquier proyecto web en una PWA instantáneamente. No se necesita configuración manual.',
-          icon: '⚡',
+          icon: 'zap',
         },
         {
           title: 'Independiente del Framework',
           description: 'Funciona con React, Vue, Angular, Next.js, WordPress, Symfony, Laravel y sitios estáticos.',
-          icon: '🔧',
+          icon: 'settings',
         },
         {
           title: 'Detección Automática',
           description: 'Detecta automáticamente tu framework y genera archivos PWA optimizados.',
-          icon: '🔍',
+          icon: 'search',
         },
         {
           title: 'Modo Interactivo',
           description: 'Prompts amigables te guían a través del proceso de configuración con valores predeterminados inteligentes.',
-          icon: '💬',
+          icon: 'message-circle',
         },
         {
           title: 'Generación de Iconos',
           description: 'Genera automáticamente todos los iconos PWA y splash screens requeridos desde una sola imagen fuente.',
-          icon: '🎨',
+          icon: 'image',
         },
         {
           title: 'Listo para Producción',
           description: 'Genera service workers optimizados con Workbox y valida todos los requisitos PWA.',
-          icon: '🚀',
+          icon: 'send',
         },
       ],
     },
@@ -329,32 +407,32 @@ export const translations: Record<Language, Translations> = {
         {
           title: 'Instalable',
           description: 'Los usuarios pueden instalar PWAs directamente desde su navegador, sin necesidad de tienda de aplicaciones. Aparecen en la pantalla de inicio como aplicaciones nativas.',
-          icon: '📱',
+          icon: 'smartphone',
         },
         {
           title: 'Soporte Offline',
           description: 'Las PWAs funcionan offline o en redes lentas gracias a los service workers. El contenido se almacena en caché y está disponible incluso sin internet.',
-          icon: '🌐',
+          icon: 'globe',
         },
         {
           title: 'Rápida y Responsiva',
           description: 'Las PWAs se cargan instantáneamente y responden rápidamente a las interacciones del usuario, proporcionando una experiencia fluida en cualquier dispositivo.',
-          icon: '⚡',
+          icon: 'zap',
         },
         {
           title: 'Multiplataforma',
           description: 'Una sola PWA funciona en todas las plataformas - iOS, Android, Windows, macOS y Linux. No es necesario crear aplicaciones separadas.',
-          icon: '🔄',
+          icon: 'refresh-cw',
         },
         {
           title: 'Segura',
           description: 'Las PWAs requieren HTTPS, asegurando que todos los datos estén encriptados y seguros. Los usuarios pueden confiar en tu aplicación.',
-          icon: '🔒',
+          icon: 'shield',
         },
         {
           title: 'Siempre Actualizada',
           description: 'Las PWAs se actualizan automáticamente en segundo plano. Los usuarios siempre tienen la última versión sin actualizaciones manuales.',
-          icon: '🔄',
+          icon: 'refresh-cw',
         },
       ],
     },
@@ -380,6 +458,32 @@ export const translations: Record<Language, Translations> = {
         docs: 'Documentación',
       },
       copyright: '© 2024 UniversalPWA. Todos los derechos reservados.',
+      quickLinks: 'Enlaces Rápidos',
+      support: 'Soporte',
+      github: 'GitHub',
+      sponsor: 'Patrocinar',
+    },
+    quickStart: {
+      title: 'Cómo Crear una PWA en 3 Pasos Simples',
+      subtitle: 'Transforma tu proyecto web en una Progressive Web App con UniversalPWA - el generador PWA más rápido disponible',
+      step1: '1. Instalar',
+      step2: '2. Inicializar',
+      step3: '3. Desplegar',
+      step3Description: '¡Tu PWA está lista para desplegarse!',
+    },
+    featuresPage: {
+      title: 'Características UniversalPWA - Solución Completa de Generador PWA',
+      ctaTitle: '¿Listo para Empezar?',
+      ctaSubtitle: 'Transforma tu proyecto web en una PWA en minutos',
+      ctaButton: 'Instalar Ahora',
+    },
+    sponsorsPage: {
+      ourSponsors: 'Nuestros Patrocinadores',
+      thankYou: '¡Gracias a todos los que apoyan UniversalPWA!',
+      viewOnGitHub: 'Ver en GitHub Sponsors',
+      questions: '¿Preguntas sobre patrocinio?',
+      contactVia: 'Contáctanos a través de',
+      githubDiscussions: 'Discusiones de GitHub',
     },
   },
 }

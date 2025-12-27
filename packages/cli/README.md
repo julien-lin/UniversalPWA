@@ -25,6 +25,26 @@ pnpm add -g @julien-lin/universal-pwa-cli
 
 Initialize a PWA in your project.
 
+#### ⚠️ Important: Workflow for Production Builds
+
+For projects using build tools (React, Vite, Vue, etc.), **always build first**, then initialize the PWA:
+
+```bash
+# 1. Build your project first (generates assets with hashes)
+npm run build
+# or
+pnpm build
+# or
+yarn build
+
+# 2. Then initialize PWA (CLI will auto-detect dist/ directory)
+universal-pwa init --output-dir dist
+```
+
+**Why?** The service worker needs to precache all your built assets (JS/CSS with hashes). If you initialize before building, the service worker won't know about the hashed filenames.
+
+The CLI automatically detects `dist/` directory for React/Vite projects if it exists. You can also explicitly specify it with `--output-dir dist`.
+
 #### Interactive Mode (Recommended)
 
 Simply run without arguments to launch interactive prompts:
@@ -57,11 +77,16 @@ universal-pwa init [options]
 - `--skip-icons` : Skip icon generation
 - `--skip-service-worker` : Skip service worker generation
 - `--skip-injection` : Skip meta-tags injection
-- `-o, --output-dir <dir>` : Output directory (default: `public`)
+- `-o, --output-dir <dir>` : Output directory (auto-detects `dist/` for React/Vite, otherwise `public/`)
 
-**Example:**
+**Examples:**
 
 ```bash
+# For production build (React/Vite)
+npm run build
+universal-pwa init --output-dir dist --icon-source ./logo.png
+
+# For development or static sites
 universal-pwa init \
   --name "My Application" \
   --short-name "MyApp" \

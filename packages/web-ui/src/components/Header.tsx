@@ -20,49 +20,62 @@ export function Header() {
   ]
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm">
+    <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-3">
+          <Link to="/" className="flex items-center space-x-3 group">
             <img
               src="/logo.png"
               alt="UniversalPWA - PWA Generator Logo"
-              className="h-10 w-10 object-contain"
+              className="h-9 w-9 object-contain transition-opacity group-hover:opacity-80"
             />
-            <span className="text-xl font-bold bg-gradient-to-r from-teal-600 to-indigo-700 bg-clip-text text-transparent">
+            <span className="text-lg font-semibold tracking-tight" style={{ color: '#2C736B' }}>
               UniversalPWA
             </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-1">
             <Link
               to="/"
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                 isActive('/')
-                  ? 'text-teal-600 bg-teal-50'
-                  : 'text-gray-700 hover:text-teal-600 hover:bg-gray-50'
+                  ? 'text-white'
+                  : 'text-gray-600 hover:text-white'
               }`}
+              style={isActive('/') ? { backgroundColor: '#45A596' } : {}}
+              onMouseEnter={(e) => {
+                if (!isActive('/')) {
+                  e.currentTarget.style.backgroundColor = '#f0fdfa'
+                  e.currentTarget.style.color = '#45A596'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive('/')) {
+                  e.currentTarget.style.backgroundColor = ''
+                  e.currentTarget.style.color = ''
+                }
+              }}
             >
               {t.nav.home}
             </Link>
             <Link
               to="/features"
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                 isActive('/features')
-                  ? 'text-teal-600 bg-teal-50'
-                  : 'text-gray-700 hover:text-teal-600 hover:bg-gray-50'
+                  ? 'text-gray-900 bg-gray-100'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
               {t.nav.features}
             </Link>
             <Link
               to="/sponsors"
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                 isActive('/sponsors')
-                  ? 'text-teal-600 bg-teal-50'
-                  : 'text-gray-700 hover:text-teal-600 hover:bg-gray-50'
+                  ? 'text-gray-900 bg-gray-100'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
               {t.nav.sponsors}
@@ -71,22 +84,44 @@ export function Header() {
               href="https://github.com/julien-lin/UniversalPWA"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-gray-700 hover:text-gray-900 transition-colors"
+              className="p-2 rounded-lg transition-all duration-200 ml-2"
+              style={{ color: '#6b7280' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#45A596'
+                e.currentTarget.style.backgroundColor = '#f0fdfa'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = '#6b7280'
+                e.currentTarget.style.backgroundColor = ''
+              }}
             >
               <FiGithub className="w-5 h-5" />
             </a>
 
             {/* Language Selector */}
-            <div className="flex items-center space-x-1 border-l border-gray-200 pl-4">
+            <div className="flex items-center space-x-1 border-l border-gray-200 pl-4 ml-2">
               {languages.map((lang) => (
                 <button
                   key={lang.code}
                   onClick={() => setLanguage(lang.code)}
-                  className={`px-2 py-1 rounded text-sm font-medium transition-colors ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                     language === lang.code
-                      ? 'text-teal-600 bg-teal-50'
-                      : 'text-gray-600 hover:text-teal-600 hover:bg-gray-50'
+                      ? 'text-white'
+                      : 'text-gray-500'
                   }`}
+                  style={language === lang.code ? { backgroundColor: '#45A596' } : {}}
+                  onMouseEnter={(e) => {
+                    if (language !== lang.code) {
+                      e.currentTarget.style.color = '#45A596'
+                      e.currentTarget.style.backgroundColor = '#f0fdfa'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (language !== lang.code) {
+                      e.currentTarget.style.color = ''
+                      e.currentTarget.style.backgroundColor = ''
+                    }
+                  }}
                 >
                   {lang.label}
                 </button>
@@ -145,7 +180,7 @@ export function Header() {
               rel="noopener noreferrer"
               className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-teal-600 hover:bg-gray-50"
             >
-              GitHub
+              {t.footer.github}
             </a>
             <div className="flex items-center space-x-2 px-3 py-2 border-t border-gray-200 mt-2 pt-2">
               {languages.map((lang) => (
