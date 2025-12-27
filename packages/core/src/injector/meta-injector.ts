@@ -141,6 +141,33 @@ export function injectMetaTags(htmlContent: string, options: MetaInjectorOptions
     }
   }
 
+  // Ensure body exists before injecting scripts
+  let body = parsed.body
+  if (!body) {
+    // Create body element if missing
+    if (parsed.html) {
+      const bodyElement = {
+        type: 'tag',
+        name: 'body',
+        tagName: 'body',
+        attribs: {},
+        children: [],
+        parent: parsed.html,
+        next: null,
+        prev: null,
+      } as unknown as Element
+      if (parsed.html.children) {
+        parsed.html.children.push(bodyElement)
+      } else {
+        parsed.html.children = [bodyElement]
+      }
+      body = bodyElement
+      result.warnings.push('Created <body> tag (was missing)')
+    } else {
+      result.warnings.push('No <html> or <body> tag found, scripts may not be injected correctly')
+    }
+  }
+
   // Reconstruct HTML with dom-serializer AFTER all injections
   let modifiedHtml = render(parsed.document, { decodeEntities: false })
 
@@ -167,7 +194,9 @@ let deferredPrompt = null;
 let isInstalled = false;
 
 // Check if app is already installed
-if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+if (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches) {
+  isInstalled = true;
+} else if (window.navigator.standalone === true) {
   isInstalled = true;
 }
 
@@ -215,7 +244,14 @@ window.installPWA = function() {
 
 // Expose global check function
 window.isPWAInstalled = function() {
-  return isInstalled || window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  if (isInstalled) return true;
+  if (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches) {
+    return true;
+  }
+  if (window.navigator.standalone === true) {
+    return true;
+  }
+  return false;
 };
 
 // Expose global check if installable
@@ -223,11 +259,20 @@ window.isPWAInstallable = function() {
   return deferredPrompt !== null;
 };
 </script>`
-      // Inject before </body> or at end if no body tag
-      if (modifiedHtml.includes('</body>')) {
-        modifiedHtml = modifiedHtml.replace('</body>', `${swScript}\n</body>`)
+      // Inject before </body> tag (more reliable than string replacement)
+      // Use last occurrence to handle malformed HTML with multiple </body> tags
+      const lastBodyIndex = modifiedHtml.lastIndexOf('</body>')
+      if (lastBodyIndex !== -1) {
+        modifiedHtml = modifiedHtml.slice(0, lastBodyIndex) + swScript + '\n' + modifiedHtml.slice(lastBodyIndex)
+      } else if (modifiedHtml.includes('</html>')) {
+        // If no </body> but has </html>, inject before </html>
+        const htmlIndex = modifiedHtml.lastIndexOf('</html>')
+        modifiedHtml = modifiedHtml.slice(0, htmlIndex) + swScript + '\n</body>\n' + modifiedHtml.slice(htmlIndex)
+        result.warnings.push('Injected script before </html> (no </body> found)')
       } else {
-        modifiedHtml = `${modifiedHtml}${swScript}`
+        // Last resort: append at the end
+        modifiedHtml = modifiedHtml + swScript
+        result.warnings.push('Injected script at end of file (no </body> or </html> found)')
       }
       result.injected.push('Service Worker registration script')
       result.injected.push('PWA install handler script')
@@ -240,7 +285,9 @@ let deferredPrompt = null;
 let isInstalled = false;
 
 // Check if app is already installed
-if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+if (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches) {
+  isInstalled = true;
+} else if (window.navigator.standalone === true) {
   isInstalled = true;
 }
 
@@ -273,17 +320,31 @@ window.installPWA = function() {
 };
 
 window.isPWAInstalled = function() {
-  return isInstalled || window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  if (isInstalled) return true;
+  if (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches) {
+    return true;
+  }
+  if (window.navigator.standalone === true) {
+    return true;
+  }
+  return false;
 };
 
 window.isPWAInstallable = function() {
   return deferredPrompt !== null;
 };
 </script>`
-        if (modifiedHtml.includes('</body>')) {
-          modifiedHtml = modifiedHtml.replace('</body>', `${installScript}\n</body>`)
+        // Inject before </body> tag (use last occurrence for reliability)
+        const lastBodyIndex = modifiedHtml.lastIndexOf('</body>')
+        if (lastBodyIndex !== -1) {
+          modifiedHtml = modifiedHtml.slice(0, lastBodyIndex) + installScript + '\n' + modifiedHtml.slice(lastBodyIndex)
+        } else if (modifiedHtml.includes('</html>')) {
+          const htmlIndex = modifiedHtml.lastIndexOf('</html>')
+          modifiedHtml = modifiedHtml.slice(0, htmlIndex) + installScript + '\n</body>\n' + modifiedHtml.slice(htmlIndex)
+          result.warnings.push('Injected install script before </html> (no </body> found)')
         } else {
           modifiedHtml = `${modifiedHtml}${installScript}`
+          result.warnings.push('Injected install script at end of file (no </body> or </html> found)')
         }
         result.injected.push('PWA install handler script')
       } else {
