@@ -110,7 +110,30 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     }
 
     // Determine output directory
-    const finalOutputDir = outputDir ?? (result.framework === 'WordPress' ? join(result.projectPath, 'public') : join(result.projectPath, 'public'))
+    // Priority: explicit outputDir > dist/ (for React/Vite builds) > public/ > root
+    let finalOutputDir: string
+    if (outputDir) {
+      finalOutputDir = resolve(outputDir)
+    } else {
+      // Auto-detect: prefer dist/ for React/Vite projects (production builds)
+      const distDir = join(result.projectPath, 'dist')
+      const publicDir = join(result.projectPath, 'public')
+      
+      // For React/Vite: prefer dist/ if it exists (production build), otherwise public/
+      if ((result.framework === 'React' || result.framework === 'Vite') && existsSync(distDir)) {
+        finalOutputDir = distDir
+        console.log(chalk.gray(`  Using dist/ directory (production build detected)`))
+      } else if (result.framework === 'WordPress') {
+        finalOutputDir = publicDir
+      } else if (existsSync(publicDir)) {
+        finalOutputDir = publicDir
+      } else if (existsSync(distDir)) {
+        finalOutputDir = distDir
+      } else {
+        // Fallback to public/ (will be created if needed)
+        finalOutputDir = publicDir
+      }
+    }
 
     // Generate manifest
     console.log(chalk.blue('📝 Generating manifest.json...'))

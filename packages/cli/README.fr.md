@@ -23,6 +23,26 @@ pnpm add -g @julien-lin/universal-pwa-cli
 
 Initialise une PWA dans votre projet.
 
+#### ⚠️ Important : Workflow pour les Builds de Production
+
+Pour les projets utilisant des outils de build (React, Vite, Vue, etc.), **toujours builder d'abord**, puis initialiser la PWA :
+
+```bash
+# 1. Builder votre projet d'abord (génère les assets avec hash)
+npm run build
+# ou
+pnpm build
+# ou
+yarn build
+
+# 2. Puis initialiser la PWA (le CLI détectera automatiquement dist/)
+universal-pwa init --output-dir dist
+```
+
+**Pourquoi ?** Le service worker doit precacher tous vos assets buildés (JS/CSS avec hash). Si vous initialisez avant de builder, le service worker ne connaîtra pas les noms de fichiers hashés.
+
+Le CLI détecte automatiquement le répertoire `dist/` pour les projets React/Vite s'il existe. Vous pouvez aussi le spécifier explicitement avec `--output-dir dist`.
+
 #### Mode Interactif (Recommandé)
 
 Exécutez simplement sans arguments pour lancer les prompts interactifs :
@@ -55,11 +75,16 @@ universal-pwa init [options]
 - `--skip-icons` : Ignorer la génération d'icônes
 - `--skip-service-worker` : Ignorer la génération du service worker
 - `--skip-injection` : Ignorer l'injection des meta-tags
-- `-o, --output-dir <dir>` : Répertoire de sortie (défaut : `public`)
+- `-o, --output-dir <dir>` : Répertoire de sortie (détecte automatiquement `dist/` pour React/Vite, sinon `public/`)
 
-**Exemple :**
+**Exemples :**
 
 ```bash
+# Pour un build de production (React/Vite)
+npm run build
+universal-pwa init --output-dir dist --icon-source ./logo.png
+
+# Pour le développement ou sites statiques
 universal-pwa init \
   --name "Mon Application" \
   --short-name "MonApp" \
