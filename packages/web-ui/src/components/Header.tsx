@@ -3,6 +3,7 @@ import { FiMenu, FiX, FiGithub } from 'react-icons/fi'
 import { useState } from 'react'
 import { useTranslation } from '../hooks/useTranslation'
 import { useLanguage } from '../contexts/LanguageContext'
+import { PWAInstallButton } from './PWAInstallButton'
 import type { Language } from '../i18n/translations'
 
 export function Header() {
@@ -97,6 +98,11 @@ export function Header() {
             >
               <FiGithub className="w-5 h-5" />
             </a>
+
+            {/* PWA Install Button */}
+            <div className="ml-2">
+              <PWAInstallButton variant="minimal" />
+            </div>
 
             {/* Language Selector */}
             <div className="flex items-center space-x-1 border-l border-gray-200 pl-4 ml-2">

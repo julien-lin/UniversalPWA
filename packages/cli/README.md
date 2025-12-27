@@ -94,6 +94,84 @@ universal-pwa init \
   --theme-color "#2c3e50"
 ```
 
+### PWA Install Button
+
+The CLI automatically injects a PWA install handler into your HTML. To display an install button in your application, use the exposed global functions:
+
+#### Available Global Functions
+
+- `window.installPWA()` : Triggers the install prompt
+- `window.isPWAInstalled()` : Checks if the app is already installed
+- `window.isPWAInstallable()` : Checks if the app is installable
+
+#### Vanilla JavaScript Example
+
+```javascript
+// Check if installable and show a button
+if (window.isPWAInstallable && window.isPWAInstallable()) {
+  const installButton = document.createElement('button')
+  installButton.textContent = 'Install App'
+  installButton.onclick = () => {
+    window.installPWA().catch(console.error)
+  }
+  document.body.appendChild(installButton)
+}
+```
+
+#### React Example
+
+```tsx
+import { useState, useEffect } from 'react'
+
+function InstallButton() {
+  const [isInstallable, setIsInstallable] = useState(false)
+  const [isInstalled, setIsInstalled] = useState(false)
+
+  useEffect(() => {
+    // Check initial state
+    if (window.isPWAInstalled) {
+      setIsInstalled(window.isPWAInstalled())
+    }
+    if (window.isPWAInstallable) {
+      setIsInstallable(window.isPWAInstallable())
+    }
+
+    // Listen to custom events
+    const handleInstallable = () => setIsInstallable(true)
+    const handleInstalled = () => {
+      setIsInstalled(true)
+      setIsInstallable(false)
+    }
+
+    window.addEventListener('pwa-installable', handleInstallable)
+    window.addEventListener('pwa-installed', handleInstalled)
+
+    return () => {
+      window.removeEventListener('pwa-installable', handleInstallable)
+      window.removeEventListener('pwa-installed', handleInstalled)
+    }
+  }, [])
+
+  if (isInstalled || !isInstallable) {
+    return null
+  }
+
+  return (
+    <button onClick={() => window.installPWA?.()}>
+      Install App
+    </button>
+  )
+}
+```
+
+#### Custom Events
+
+The injected script emits custom events you can listen to:
+
+- `pwa-installable` : Emitted when the app becomes installable
+- `pwa-installed` : Emitted after successful installation
+- `pwa-install-choice` : Emitted with user's choice (`{ detail: { outcome: 'accepted' | 'dismissed' } }`)
+
 ### `scan` Command
 
 Scan a project and detect framework, architecture, and assets.
