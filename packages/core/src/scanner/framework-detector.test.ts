@@ -474,6 +474,191 @@ describe('framework-detector', () => {
     })
   })
 
+  describe('Django', () => {
+    it('should detect Django with manage.py and settings.py', () => {
+      writeFileSync(join(TEST_DIR, 'manage.py'), '#!/usr/bin/env python')
+      writeFileSync(join(TEST_DIR, 'settings.py'), '# Django settings')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('django')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators.some((i) => i.includes('Django'))).toBe(true)
+    })
+
+    it('should detect Django with manage.py and django/ directory', () => {
+      writeFileSync(join(TEST_DIR, 'manage.py'), '#!/usr/bin/env python')
+      mkdirSync(join(TEST_DIR, 'django'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('django')
+      expect(result.confidence).toBe('high')
+    })
+  })
+
+  describe('Flask', () => {
+    it('should detect Flask with requirements.txt and app.py', () => {
+      writeFileSync(join(TEST_DIR, 'requirements.txt'), 'Flask==3.0.0')
+      writeFileSync(join(TEST_DIR, 'app.py'), 'from flask import Flask')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('flask')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators.some((i) => i.includes('Flask'))).toBe(true)
+    })
+
+    it('should detect Flask with requirements.txt and application.py', () => {
+      writeFileSync(join(TEST_DIR, 'requirements.txt'), 'flask==3.0.0')
+      writeFileSync(join(TEST_DIR, 'application.py'), 'from flask import Flask')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('flask')
+      expect(result.confidence).toBe('high')
+    })
+  })
+
+  describe('FastAPI', () => {
+    it('should detect FastAPI with requirements.txt', () => {
+      writeFileSync(join(TEST_DIR, 'requirements.txt'), 'fastapi==0.104.0')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('fastapi')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators.some((i) => i.includes('FastAPI'))).toBe(true)
+    })
+  })
+
+  describe('Ruby on Rails', () => {
+    it('should detect Rails with Gemfile and config/application.rb', () => {
+      writeFileSync(join(TEST_DIR, 'Gemfile'), "gem 'rails', '~> 7.0'")
+      mkdirSync(join(TEST_DIR, 'config'), { recursive: true })
+      writeFileSync(join(TEST_DIR, 'config', 'application.rb'), 'module MyApp')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('rails')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators.some((i) => i.includes('rails'))).toBe(true)
+    })
+
+    it('should detect Rails with Gemfile and config/routes.rb', () => {
+      writeFileSync(join(TEST_DIR, 'Gemfile'), 'gem "rails"')
+      mkdirSync(join(TEST_DIR, 'config'), { recursive: true })
+      writeFileSync(join(TEST_DIR, 'config', 'routes.rb'), 'Rails.application.routes.draw do')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('rails')
+      expect(result.confidence).toBe('high')
+    })
+  })
+
+  describe('Sinatra', () => {
+    it('should detect Sinatra with Gemfile and app.rb', () => {
+      writeFileSync(join(TEST_DIR, 'Gemfile'), "gem 'sinatra'")
+      writeFileSync(join(TEST_DIR, 'app.rb'), 'require "sinatra"')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('sinatra')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators.some((i) => i.includes('sinatra'))).toBe(true)
+    })
+
+    it('should detect Sinatra with Gemfile and main.rb', () => {
+      writeFileSync(join(TEST_DIR, 'Gemfile'), 'gem "sinatra"')
+      writeFileSync(join(TEST_DIR, 'main.rb'), 'require "sinatra"')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('sinatra')
+      expect(result.confidence).toBe('high')
+    })
+  })
+
+  describe('Go', () => {
+    it('should detect Go web project with go.mod and main.go with HTTP server', () => {
+      writeFileSync(join(TEST_DIR, 'go.mod'), 'module myapp')
+      writeFileSync(join(TEST_DIR, 'main.go'), 'package main\nimport "net/http"\nfunc main() { http.ListenAndServe(":8080", nil) }')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('go')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators.some((i) => i.includes('HTTP server'))).toBe(true)
+    })
+
+    it('should detect Go web project with go.mod and server.go', () => {
+      writeFileSync(join(TEST_DIR, 'go.mod'), 'module myapp')
+      writeFileSync(join(TEST_DIR, 'server.go'), 'package main\nimport "net/http"\nfunc main() { http.Server{} }')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('go')
+      expect(result.confidence).toBe('high')
+    })
+  })
+
+  describe('Spring Boot', () => {
+    it('should detect Spring Boot with pom.xml', () => {
+      writeFileSync(
+        join(TEST_DIR, 'pom.xml'),
+        '<?xml version="1.0"?><project><dependencies><dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency></dependencies></project>',
+      )
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('spring')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators.some((i) => i.includes('spring-boot'))).toBe(true)
+    })
+
+    it('should detect Spring Boot with build.gradle', () => {
+      writeFileSync(
+        join(TEST_DIR, 'build.gradle'),
+        'dependencies { implementation "org.springframework.boot:spring-boot-starter-web" }',
+      )
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('spring')
+      expect(result.confidence).toBe('high')
+    })
+  })
+
+  describe('ASP.NET Core', () => {
+    it('should detect ASP.NET Core with .csproj and Program.cs', () => {
+      writeFileSync(
+        join(TEST_DIR, 'MyApp.csproj'),
+        '<Project Sdk="Microsoft.NET.Sdk.Web"><PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup></Project>',
+      )
+      writeFileSync(join(TEST_DIR, 'Program.cs'), 'var builder = WebApplication.CreateBuilder(args);')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('aspnet')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators.some((i) => i.includes('ASP.NET Core'))).toBe(true)
+    })
+
+    it('should detect ASP.NET Core with .csproj and Startup.cs', () => {
+      writeFileSync(
+        join(TEST_DIR, 'MyApp.csproj'),
+        '<Project Sdk="Microsoft.NET.Sdk.Web"><PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup></Project>',
+      )
+      writeFileSync(join(TEST_DIR, 'Startup.cs'), 'public class Startup')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('aspnet')
+      expect(result.confidence).toBe('high')
+    })
+  })
+
   describe('Error handling', () => {
     it('should handle missing files gracefully', () => {
       const result = detectFramework(TEST_DIR)
