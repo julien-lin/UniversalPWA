@@ -26,6 +26,7 @@ export interface InitOptions {
   outputDir?: string
   forceScan?: boolean
   noCache?: boolean
+  maxHtmlFiles?: number // Optionnel : limite le nombre de fichiers HTML traités (par défaut: illimité)
 }
 
 export interface InitResult {
@@ -71,6 +72,7 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     skipServiceWorker = false,
     skipInjection = false,
     outputDir,
+    maxHtmlFiles,
   } = options
 
   const result: InitResult = {
@@ -457,8 +459,17 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
           return 0
         })
 
+        // Limiter le nombre de fichiers HTML si maxHtmlFiles est défini
+        const htmlFilesToProcess = maxHtmlFiles && maxHtmlFiles > 0
+          ? htmlFiles.slice(0, maxHtmlFiles)
+          : htmlFiles
+
+        if (htmlFiles.length > 0) {
+          console.log(chalk.gray(`  Found ${htmlFiles.length} HTML file(s)${maxHtmlFiles && maxHtmlFiles > 0 ? ` (processing ${htmlFilesToProcess.length})` : ''}`))
+        }
+
         // Backup HTML files before injection
-        for (const htmlFile of htmlFiles.slice(0, 10)) {
+        for (const htmlFile of htmlFilesToProcess) {
           const htmlRelativePath = relative(result.projectPath, htmlFile)
           if (htmlRelativePath && !htmlRelativePath.startsWith('..')) {
             transaction.backupFile(htmlRelativePath)
@@ -466,8 +477,16 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
         }
 
         let injectedCount = 0
-        for (const htmlFile of htmlFiles.slice(0, 10)) {
-          // Limit to 10 files to avoid overloading
+        let processedCount = 0
+        const totalFiles = htmlFilesToProcess.length
+
+        for (const htmlFile of htmlFilesToProcess) {
+          processedCount++
+          // Log progression pour gros projets (tous les 50 fichiers ou à la fin)
+          if (totalFiles > 50 && (processedCount % 50 === 0 || processedCount === totalFiles)) {
+            console.log(chalk.gray(`  Processing ${processedCount}/${totalFiles} files...`))
+          }
+
           try {
             // Normalize paths securely
             // For Vite/React, files in public/ or dist/ are served at root

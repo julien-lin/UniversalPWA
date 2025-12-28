@@ -53,6 +53,7 @@ program
   .option('-o, --output-dir <dir>', 'Output directory', 'public')
   .option('--force-scan', 'Force scan (bypass cache)')
   .option('--no-cache', 'Disable cache')
+  .option('--max-html-files <number>', 'Maximum number of HTML files to process (default: unlimited)', (value) => Number.parseInt(value, 10))
   .action(async (options: {
     projectPath?: string
     name?: string
@@ -143,6 +144,7 @@ program
         outputDir: finalOptions.outputDir,
         forceScan: options.forceScan,
         noCache: options.noCache,
+        maxHtmlFiles: options.maxHtmlFiles,
       })
       process.exit(result.success ? 0 : 1)
     } catch (error) {
