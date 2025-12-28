@@ -169,11 +169,27 @@ function getEmptyArchitecture(): ArchitectureDetectionResult {
 }
 
 // Re-export types and functions for easier usage
-export type { FrameworkDetectionResult, Framework } from './framework-detector.js'
+export type { FrameworkDetectionResult, Framework, FrameworkVersion, ProjectConfiguration } from './framework-detector.js'
 export type { AssetDetectionResult } from './asset-detector.js'
 export type { ArchitectureDetectionResult, Architecture, BuildTool } from './architecture-detector.js'
+export type {
+  OptimizationResult,
+  AdaptiveCacheStrategy,
+  OptimizedManifestConfig,
+  AssetOptimizationSuggestion,
+  ApiType,
+  CacheStrategy,
+} from './optimizer.js'
 
 export { detectFramework } from './framework-detector.js'
 export { detectAssets } from './asset-detector.js'
 export { detectArchitecture } from './architecture-detector.js'
+export {
+  optimizeProject,
+  detectApiType,
+  generateAdaptiveCacheStrategies,
+  detectUnoptimizedImages,
+  generateOptimalShortName,
+  suggestManifestColors,
+} from './optimizer.js'
 
