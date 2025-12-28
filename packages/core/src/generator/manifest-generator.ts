@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { writeFileSync } from 'fs'
 import { join } from 'path'
+import { generateOptimalShortName } from '../scanner/optimizer.js'
 
 // Zod schema for manifest validation
 const ManifestIconSchema = z.object({
@@ -68,7 +69,8 @@ export function generateManifest(options: ManifestGeneratorOptions): Manifest {
   if (options.shortName && typeof options.shortName === 'string' && options.shortName.trim().length > 0) {
     shortName = options.shortName.trim().substring(0, 12)
   } else if (options.name && typeof options.name === 'string' && options.name.length > 0) {
-    shortName = options.name.substring(0, 12)
+    // Utiliser generateOptimalShortName pour générer un short_name optimal
+    shortName = generateOptimalShortName(options.name)
   }
   
   // Ensure shortName is never empty
