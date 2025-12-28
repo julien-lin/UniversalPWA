@@ -186,6 +186,142 @@ describe('framework-detector', () => {
     })
   })
 
+  describe('SvelteKit', () => {
+    it('should detect SvelteKit with @sveltejs/kit and .svelte-kit', () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            '@sveltejs/kit': '^2.0.0',
+          },
+        }),
+      )
+      mkdirSync(join(TEST_DIR, '.svelte-kit'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('sveltekit')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('package.json: @sveltejs/kit')
+      expect(result.indicators).toContain('.svelte-kit/')
+    })
+  })
+
+  describe('Svelte', () => {
+    it('should detect Svelte standalone (without SvelteKit)', () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            svelte: '^4.0.0',
+          },
+        }),
+      )
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('svelte')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('package.json: svelte')
+    })
+
+    it('should prefer SvelteKit over Svelte when both present', () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            svelte: '^4.0.0',
+            '@sveltejs/kit': '^2.0.0',
+          },
+        }),
+      )
+      mkdirSync(join(TEST_DIR, '.svelte-kit'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('sveltekit')
+      expect(result.confidence).toBe('high')
+    })
+  })
+
+  describe('Remix', () => {
+    it('should detect Remix with @remix-run/react and app/', () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            '@remix-run/react': '^2.0.0',
+          },
+        }),
+      )
+      mkdirSync(join(TEST_DIR, 'app'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('remix')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('package.json: @remix-run/*')
+      expect(result.indicators).toContain('app/')
+    })
+
+    it('should detect Remix with @remix-run/node', () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            '@remix-run/node': '^2.0.0',
+          },
+        }),
+      )
+      mkdirSync(join(TEST_DIR, 'app'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('remix')
+      expect(result.confidence).toBe('high')
+    })
+  })
+
+  describe('Astro', () => {
+    it('should detect Astro with astro and .astro', () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            astro: '^4.0.0',
+          },
+        }),
+      )
+      mkdirSync(join(TEST_DIR, '.astro'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('astro')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('package.json: astro')
+      expect(result.indicators).toContain('.astro/')
+    })
+  })
+
+  describe('SolidJS', () => {
+    it('should detect SolidJS with solid-js', () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            'solid-js': '^1.8.0',
+          },
+        }),
+      )
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('solidjs')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('package.json: solid-js')
+    })
+  })
+
   describe('Priority', () => {
     it('should prioritize WordPress over other frameworks', () => {
       writeFileSync(join(TEST_DIR, 'wp-config.php'), '<?php')

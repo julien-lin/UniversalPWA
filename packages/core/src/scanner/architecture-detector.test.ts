@@ -153,6 +153,88 @@ describe('architecture-detector', () => {
       expect(result.architecture).toBe('ssr')
       expect(result.indicators.some((i) => i.includes('Next.js'))).toBe(true)
     })
+
+    it('should detect SSR with SvelteKit', async () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            '@sveltejs/kit': '^2.0.0',
+          },
+        }),
+      )
+
+      const result = await detectArchitecture(TEST_DIR)
+
+      expect(result.architecture).toBe('ssr')
+      expect(result.indicators.some((i) => i.includes('SvelteKit'))).toBe(true)
+    })
+
+    it('should detect SSR with Remix', async () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            '@remix-run/react': '^2.0.0',
+          },
+        }),
+      )
+
+      const result = await detectArchitecture(TEST_DIR)
+
+      expect(result.architecture).toBe('ssr')
+      expect(result.indicators.some((i) => i.includes('Remix'))).toBe(true)
+    })
+
+    it('should detect SSR with Astro', async () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            astro: '^4.0.0',
+          },
+        }),
+      )
+
+      const result = await detectArchitecture(TEST_DIR)
+
+      expect(result.architecture).toBe('ssr')
+      expect(result.indicators.some((i) => i.includes('Astro'))).toBe(true)
+    })
+  })
+
+  describe('SPA detection for new frameworks', () => {
+    it('should detect SPA with Svelte (standalone)', async () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            svelte: '^4.0.0',
+          },
+        }),
+      )
+
+      const result = await detectArchitecture(TEST_DIR)
+
+      expect(result.architecture).toBe('spa')
+      expect(result.indicators.some((i) => i.includes('Svelte'))).toBe(true)
+    })
+
+    it('should detect SPA with SolidJS', async () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            'solid-js': '^1.8.0',
+          },
+        }),
+      )
+
+      const result = await detectArchitecture(TEST_DIR)
+
+      expect(result.architecture).toBe('spa')
+      expect(result.indicators.some((i) => i.includes('SolidJS'))).toBe(true)
+    })
   })
 
   describe('Static detection', () => {

@@ -10,6 +10,11 @@ export type Framework =
   | 'angular'
   | 'nextjs'
   | 'nuxt'
+  | 'svelte'
+  | 'sveltekit'
+  | 'remix'
+  | 'astro'
+  | 'solidjs'
   | 'static'
 
 export interface FrameworkDetectionResult {
@@ -131,6 +136,57 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
         indicators.push('package.json: @angular/core')
         if (!framework) {
           framework = 'angular'
+          confidence = 'high'
+        }
+      }
+
+      // SvelteKit (priorité sur Svelte car framework complet)
+      if (dependencies['@sveltejs/kit']) {
+        indicators.push('package.json: @sveltejs/kit')
+        if (existsSync(join(projectPath, '.svelte-kit'))) {
+          indicators.push('.svelte-kit/')
+          framework = 'sveltekit'
+          confidence = 'high'
+          return { framework, confidence, indicators }
+        }
+      }
+
+      // Svelte (standalone, sans SvelteKit)
+      if (dependencies.svelte && !dependencies['@sveltejs/kit']) {
+        indicators.push('package.json: svelte')
+        if (!framework) {
+          framework = 'svelte'
+          confidence = 'high'
+        }
+      }
+
+      // Remix
+      if (dependencies['@remix-run/node'] || dependencies['@remix-run/react']) {
+        indicators.push('package.json: @remix-run/*')
+        if (existsSync(join(projectPath, 'app'))) {
+          indicators.push('app/')
+          framework = 'remix'
+          confidence = 'high'
+          return { framework, confidence, indicators }
+        }
+      }
+
+      // Astro
+      if (dependencies.astro) {
+        indicators.push('package.json: astro')
+        if (existsSync(join(projectPath, '.astro'))) {
+          indicators.push('.astro/')
+          framework = 'astro'
+          confidence = 'high'
+          return { framework, confidence, indicators }
+        }
+      }
+
+      // SolidJS
+      if (dependencies['solid-js']) {
+        indicators.push('package.json: solid-js')
+        if (!framework) {
+          framework = 'solidjs'
           confidence = 'high'
         }
       }
