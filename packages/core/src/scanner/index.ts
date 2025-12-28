@@ -1,7 +1,17 @@
 import { existsSync } from 'fs'
+import { join } from 'path'
 import { detectFramework, type FrameworkDetectionResult } from './framework-detector.js'
 import { detectAssets, type AssetDetectionResult } from './asset-detector.js'
 import { detectArchitecture, type ArchitectureDetectionResult } from './architecture-detector.js'
+import {
+  loadCache,
+  saveCache,
+  isCacheValid,
+  getCachedResult,
+  updateCache,
+  cleanCache,
+  type CacheOptions,
+} from './cache.js'
 
 export interface ScannerResult {
   framework: FrameworkDetectionResult
@@ -15,6 +25,9 @@ export interface ScannerOptions {
   projectPath: string
   includeAssets?: boolean
   includeArchitecture?: boolean
+  useCache?: boolean
+  cacheFile?: string
+  forceScan?: boolean
 }
 
 /**
@@ -22,7 +35,39 @@ export interface ScannerOptions {
  * Combines framework, assets, and architecture detection results
  */
 export async function scanProject(options: ScannerOptions): Promise<ScannerResult> {
-  const { projectPath, includeAssets = true, includeArchitecture = true } = options
+  const {
+    projectPath,
+    includeAssets = true,
+    includeArchitecture = true,
+    useCache = true,
+    cacheFile,
+    forceScan = false,
+  } = options
+
+  // Gestion du cache
+  const cacheFilePath = cacheFile ?? join(projectPath, '.universal-pwa-cache.json')
+  let cache = useCache ? loadCache(cacheFilePath) : null
+
+  // Nettoyer le cache des entrées expirées
+  if (cache) {
+    cache = cleanCache(cache) ?? null
+    if (cache) {
+      saveCache(cache, cacheFilePath)
+    }
+  }
+
+  // Vérifier si le cache est valide
+  if (useCache && !forceScan && cache) {
+    const cacheOptions: CacheOptions = {
+      force: forceScan,
+    }
+    if (isCacheValid(projectPath, cache, cacheOptions)) {
+      const cachedResult = getCachedResult(projectPath, cache)
+      if (cachedResult) {
+        return cachedResult
+      }
+    }
+  }
 
   // Framework detection (synchronous)
   const frameworkCandidate: unknown = detectFramework(projectPath)
@@ -52,13 +97,21 @@ export async function scanProject(options: ScannerOptions): Promise<ScannerResul
     ? architectureCandidate
     : getEmptyArchitecture()
 
-  return {
+  const result: ScannerResult = {
     framework,
     assets,
     architecture,
     timestamp: new Date().toISOString(),
     projectPath,
   }
+
+  // Mettre à jour le cache
+  if (useCache) {
+    const updatedCache = updateCache(projectPath, result, cache)
+    saveCache(updatedCache, cacheFilePath)
+  }
+
+  return result
 }
 
 /**
