@@ -7,10 +7,6 @@ import {
   suggestColors,
   suggestConfiguration,
   generateSuggestions,
-  type NameSuggestion,
-  type IconSuggestion,
-  type ColorSuggestion,
-  type ConfigurationSuggestion,
 } from './suggestions.js'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-suggestions')
