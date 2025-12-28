@@ -34,6 +34,12 @@ export type Framework =
   | 'remix'
   | 'astro'
   | 'solidjs'
+  | 'jekyll'
+  | 'hugo'
+  | 'gatsby'
+  | 'eleventy'
+  | 'vitepress'
+  | 'docusaurus'
   | 'static'
 
 export interface FrameworkDetectionResult {
@@ -502,6 +508,89 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
       }
     } catch {
       // Ignore glob errors
+    }
+  }
+
+  // Static Site Generators (SSG) - check before generic static
+  if (!framework) {
+    // Jekyll
+    if (existsSync(join(projectPath, '_config.yml'))) {
+      indicators.push('_config.yml (Jekyll)')
+      if (existsSync(join(projectPath, '_posts'))) {
+        indicators.push('_posts/')
+        framework = 'jekyll'
+        confidence = 'high'
+        return { framework, confidence, indicators }
+      }
+      framework = 'jekyll'
+      confidence = 'medium'
+      return { framework, confidence, indicators }
+    }
+
+    // Hugo
+    const hugoConfigFiles = ['config.toml', 'config.yaml', 'config.yml', 'hugo.toml', 'hugo.yaml', 'hugo.yml']
+    const hasHugoConfig = hugoConfigFiles.some((file) => existsSync(join(projectPath, file)))
+    if (hasHugoConfig) {
+      indicators.push('Hugo config file found')
+      if (existsSync(join(projectPath, 'content')) && existsSync(join(projectPath, 'layouts'))) {
+        indicators.push('content/ and layouts/')
+        framework = 'hugo'
+        confidence = 'high'
+        return { framework, confidence, indicators }
+      }
+      if (existsSync(join(projectPath, 'content'))) {
+        indicators.push('content/')
+        framework = 'hugo'
+        confidence = 'high'
+        return { framework, confidence, indicators }
+      }
+    }
+
+    // Gatsby
+    if (existsSync(join(projectPath, 'gatsby-config.js')) || existsSync(join(projectPath, 'gatsby-config.ts'))) {
+      indicators.push('gatsby-config.js/ts (Gatsby)')
+      framework = 'gatsby'
+      confidence = 'high'
+      return { framework, confidence, indicators }
+    }
+
+    // 11ty (Eleventy)
+    const eleventyFiles = ['.eleventy.js', '.eleventy.cjs', 'eleventy.config.js', 'eleventy.config.cjs']
+    const hasEleventyConfig = eleventyFiles.some((file) => existsSync(join(projectPath, file)))
+    if (hasEleventyConfig) {
+      indicators.push('Eleventy config file found')
+      if (existsSync(join(projectPath, '_data'))) {
+        indicators.push('_data/')
+        framework = 'eleventy'
+        confidence = 'high'
+        return { framework, confidence, indicators }
+      }
+      framework = 'eleventy'
+      confidence = 'high'
+      return { framework, confidence, indicators }
+    }
+
+    // VitePress
+    if (existsSync(join(projectPath, 'vitepress.config.js')) || existsSync(join(projectPath, 'vitepress.config.ts'))) {
+      indicators.push('vitepress.config.js/ts (VitePress)')
+      framework = 'vitepress'
+      confidence = 'high'
+      return { framework, confidence, indicators }
+    }
+    // VitePress in docs directory
+    if (existsSync(join(projectPath, 'docs', '.vitepress', 'config.js')) || existsSync(join(projectPath, 'docs', '.vitepress', 'config.ts'))) {
+      indicators.push('docs/.vitepress/config.js/ts (VitePress)')
+      framework = 'vitepress'
+      confidence = 'high'
+      return { framework, confidence, indicators }
+    }
+
+    // Docusaurus
+    if (existsSync(join(projectPath, 'docusaurus.config.js')) || existsSync(join(projectPath, 'docusaurus.config.ts'))) {
+      indicators.push('docusaurus.config.js/ts (Docusaurus)')
+      framework = 'docusaurus'
+      confidence = 'high'
+      return { framework, confidence, indicators }
     }
   }
 
