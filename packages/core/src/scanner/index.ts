@@ -28,7 +28,7 @@ export async function scanProject(options: ScannerOptions): Promise<ScannerResul
   const frameworkCandidate: unknown = detectFramework(projectPath)
   const framework: FrameworkDetectionResult = isFrameworkDetectionResult(frameworkCandidate)
     ? frameworkCandidate
-    : { framework: null, confidence: 'low', indicators: [] }
+    : { framework: null, confidence: 'low', confidenceScore: 0, indicators: [], version: null }
 
   // Assets detection (asynchronous)
   const assetsCandidate: unknown = includeAssets ? await detectAssets(projectPath) : getEmptyAssets()
@@ -70,11 +70,30 @@ export function validateProjectPath(projectPath: string): boolean {
 // Type guards to ensure safe assignments for linting
 function isFrameworkDetectionResult(value: unknown): value is FrameworkDetectionResult {
   if (!value || typeof value !== 'object') return false
-  const v = value as { framework?: unknown; confidence?: unknown; indicators?: unknown }
+  const v = value as {
+    framework?: unknown
+    confidence?: unknown
+    confidenceScore?: unknown
+    indicators?: unknown
+    version?: unknown
+  }
+  const isValidVersion = (ver: unknown): boolean => {
+    if (ver === null) return true
+    if (typeof ver !== 'object') return false
+    const vv = ver as { major?: unknown; minor?: unknown; patch?: unknown; raw?: unknown }
+    return (
+      typeof vv.major === 'number' &&
+      (vv.minor === null || typeof vv.minor === 'number') &&
+      (vv.patch === null || typeof vv.patch === 'number') &&
+      typeof vv.raw === 'string'
+    )
+  }
   return (
     (v.framework === null || typeof v.framework === 'string') &&
     (v.confidence === 'low' || v.confidence === 'medium' || v.confidence === 'high') &&
-    Array.isArray(v.indicators)
+    (typeof v.confidenceScore === 'number' && v.confidenceScore >= 0 && v.confidenceScore <= 100) &&
+    Array.isArray(v.indicators) &&
+    (v.version === null || isValidVersion(v.version))
   )
 }
 

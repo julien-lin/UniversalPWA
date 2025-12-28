@@ -25,9 +25,13 @@ describe('@julien-lin/universal-pwa-core', () => {
     const result: FrameworkDetectionResult = {
       framework: null,
       confidence: 'low',
+      confidenceScore: 0,
       indicators: [],
+      version: null,
     }
     expect(result).toBeDefined()
+    expect(result.confidenceScore).toBe(0)
+    expect(result.version).toBeNull()
   })
 })
 
