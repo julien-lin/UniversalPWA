@@ -1,6 +1,7 @@
-import { existsSync, readFileSync, statSync } from 'fs'
-import { join } from 'path'
+import { existsSync, readFileSync, statSync, mkdirSync } from 'fs'
+import { join, dirname, extname, basename } from 'path'
 import { glob } from 'glob'
+import sharp from 'sharp'
 import type { AssetDetectionResult } from './asset-detector.js'
 import type { ProjectConfiguration } from './framework-detector.js'
 
@@ -32,11 +33,29 @@ export interface AssetOptimizationSuggestion {
   priority: 'high' | 'medium' | 'low'
 }
 
+export interface OptimizedImageResult {
+  original: string
+  optimized: string[]
+  format: 'webp' | 'png' | 'jpg'
+  originalSize: number
+  optimizedSize: number
+  savings: number // Percentage
+}
+
+export interface ImageOptimizationOptions {
+  convertToWebP?: boolean
+  generateResponsiveSizes?: boolean
+  quality?: number
+  maxWidth?: number
+  outputDir?: string
+}
+
 export interface OptimizationResult {
   cacheStrategies: AdaptiveCacheStrategy[]
   manifestConfig: OptimizedManifestConfig
   assetSuggestions: AssetOptimizationSuggestion[]
   apiType: ApiType
+  optimizedImages?: OptimizedImageResult[]
 }
 
 /**
@@ -285,6 +304,182 @@ export function detectUnoptimizedImages(assets: AssetDetectionResult): AssetOpti
 }
 
 /**
+ * Génère différentes tailles d'une image pour le responsive (srcset)
+ */
+export async function generateResponsiveImageSizes(
+  imagePath: string,
+  outputDir: string,
+  sizes: number[] = [320, 640, 768, 1024, 1280, 1920],
+): Promise<string[]> {
+  if (!existsSync(imagePath)) {
+    throw new Error(`Image not found: ${imagePath}`)
+  }
+
+  mkdirSync(outputDir, { recursive: true })
+
+  const generatedFiles: string[] = []
+  const ext = extname(imagePath)
+  const baseName = basename(imagePath, ext)
+  const image = sharp(imagePath)
+  const metadata = await image.metadata()
+
+  if (!metadata.width || !metadata.height) {
+    throw new Error('Unable to read image dimensions')
+  }
+
+  const aspectRatio = metadata.width / metadata.height
+
+  for (const width of sizes) {
+    // Ne pas upscale
+    if (width > metadata.width) {
+      continue
+    }
+
+    const height = Math.round(width / aspectRatio)
+    const outputPath = join(outputDir, `${baseName}-${width}w${ext}`)
+
+    try {
+      await image
+        .clone()
+        .resize(width, height, {
+          fit: 'cover',
+          position: 'center',
+        })
+        .toFile(outputPath)
+
+      generatedFiles.push(outputPath)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.warn(`Failed to generate responsive size ${width}w for ${imagePath}: ${message}`)
+    }
+  }
+
+  return generatedFiles
+}
+
+/**
+ * Optimise une image (compression, conversion WebP)
+ */
+export async function optimizeImage(
+  imagePath: string,
+  options: ImageOptimizationOptions = {},
+): Promise<OptimizedImageResult | null> {
+  if (!existsSync(imagePath)) {
+    return null
+  }
+
+  const {
+    convertToWebP = false,
+    quality = 85,
+    maxWidth,
+    outputDir = dirname(imagePath),
+  } = options
+
+  try {
+    const originalStats = statSync(imagePath)
+    const originalSize = originalStats.size
+    const ext = extname(imagePath).toLowerCase()
+    const baseName = basename(imagePath, ext)
+    const image = sharp(imagePath)
+    const metadata = await image.metadata()
+
+    if (!metadata.width || !metadata.height) {
+      return null
+    }
+
+    const optimizedFiles: string[] = []
+    let totalOptimizedSize = 0
+
+    // Déterminer le format de sortie
+    const outputFormat = convertToWebP && ext !== '.webp' ? 'webp' : ext.slice(1) as 'png' | 'jpg' | 'webp'
+    const outputExt = outputFormat === 'webp' ? '.webp' : ext
+    const outputPath = join(outputDir, `${baseName}${outputExt}`)
+
+    mkdirSync(outputDir, { recursive: true })
+
+    // Préparer le pipeline
+    let pipeline = image.clone()
+
+    // Redimensionner si maxWidth spécifié
+    if (maxWidth && metadata.width > maxWidth) {
+      const aspectRatio = metadata.width / metadata.height
+      const newHeight = Math.round(maxWidth / aspectRatio)
+      pipeline = pipeline.resize(maxWidth, newHeight, {
+        fit: 'cover',
+        position: 'center',
+      })
+    }
+
+    // Appliquer le format et la qualité
+    if (outputFormat === 'webp') {
+      pipeline = pipeline.webp({ quality })
+    } else if (outputFormat === 'png') {
+      pipeline = pipeline.png({ quality, compressionLevel: 9 })
+    } else if (outputFormat === 'jpg' || outputFormat === 'jpeg') {
+      pipeline = pipeline.jpeg({ quality, mozjpeg: true })
+    }
+
+    // Générer l'image optimisée
+    await pipeline.toFile(outputPath)
+    optimizedFiles.push(outputPath)
+
+    const optimizedStats = statSync(outputPath)
+    totalOptimizedSize = optimizedStats.size
+
+    const savings = ((originalSize - totalOptimizedSize) / originalSize) * 100
+
+    return {
+      original: imagePath,
+      optimized: optimizedFiles,
+      format: outputFormat,
+      originalSize,
+      optimizedSize: totalOptimizedSize,
+      savings: Math.max(0, savings),
+    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.warn(`Failed to optimize image ${imagePath}: ${message}`)
+    return null
+  }
+}
+
+/**
+ * Optimise automatiquement les images d'un projet
+ */
+export async function optimizeProjectImages(
+  assets: AssetDetectionResult,
+  options: ImageOptimizationOptions = {},
+): Promise<OptimizedImageResult[]> {
+  const results: OptimizedImageResult[] = []
+  const highPriorityImages = detectUnoptimizedImages(assets).filter((s) => s.priority === 'high')
+
+  // Optimiser seulement les images haute priorité par défaut
+  const imagesToOptimize = highPriorityImages.length > 0
+    ? highPriorityImages.map((s) => s.file)
+    : assets.images.slice(0, 10) // Limiter à 10 images par défaut
+
+  for (const imagePath of imagesToOptimize) {
+    try {
+      const result = await optimizeImage(imagePath, {
+        ...options,
+        convertToWebP: true, // Par défaut, convertir en WebP
+        quality: 85,
+      })
+
+      if (result && result.savings > 0) {
+        results.push(result)
+      }
+    } catch (err: unknown) {
+      // Ignore individual image errors
+      const message = err instanceof Error ? err.message : String(err)
+      console.warn(`Skipped optimization for ${imagePath}: ${message}`)
+    }
+  }
+
+  return results
+}
+
+/**
  * Génère un short_name optimal depuis un nom
  */
 export function generateOptimalShortName(name: string): string {
@@ -385,6 +580,7 @@ export async function optimizeProject(
   configuration: ProjectConfiguration,
   framework: string | null,
   iconSource?: string,
+  autoOptimizeImages: boolean = false,
 ): Promise<OptimizationResult> {
   // Détecter le type d'API
   const apiType = detectApiType(projectPath, assets)
@@ -394,6 +590,15 @@ export async function optimizeProject(
 
   // Détecter images non optimisées
   const assetSuggestions = detectUnoptimizedImages(assets)
+
+  // Optimiser automatiquement les images si demandé
+  let optimizedImages: OptimizedImageResult[] | undefined
+  if (autoOptimizeImages && assets.images.length > 0) {
+    optimizedImages = await optimizeProjectImages(assets, {
+      convertToWebP: true,
+      quality: 85,
+    })
+  }
 
   // Suggérer couleurs pour manifest
   const manifestColors = await suggestManifestColors(projectPath, framework, iconSource)
@@ -406,6 +611,7 @@ export async function optimizeProject(
     },
     assetSuggestions,
     apiType,
+    optimizedImages,
   }
 }
 

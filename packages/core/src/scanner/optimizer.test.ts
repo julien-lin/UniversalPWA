@@ -8,6 +8,9 @@ import {
   generateOptimalShortName,
   suggestManifestColors,
   optimizeProject,
+  optimizeImage,
+  optimizeProjectImages,
+  generateResponsiveImageSizes,
   type AssetDetectionResult,
   type ProjectConfiguration,
 } from './optimizer.js'
@@ -327,6 +330,126 @@ describe('optimizer', () => {
       const result = await optimizeProject(TEST_DIR, assets, config, null)
 
       expect(result.apiType).toBe('GraphQL')
+    })
+  })
+
+  describe('optimizeImage', () => {
+    it('should optimize image and convert to WebP', async () => {
+      // Créer une image PNG de test
+      const testImagePath = join(TEST_DIR, 'test-image.png')
+      // Utiliser sharp pour créer une image de test
+      const sharp = (await import('sharp')).default
+      await sharp({
+        create: {
+          width: 1000,
+          height: 1000,
+          channels: 4,
+          background: { r: 255, g: 0, b: 0, alpha: 1 },
+        },
+      })
+        .png()
+        .toFile(testImagePath)
+
+      const result = await optimizeImage(testImagePath, {
+        convertToWebP: true,
+        quality: 85,
+        outputDir: TEST_DIR,
+      })
+
+      expect(result).not.toBeNull()
+      if (result) {
+        expect(result.optimized.length).toBeGreaterThan(0)
+        expect(result.format).toBe('webp')
+        expect(result.originalSize).toBeGreaterThan(0)
+        expect(result.optimizedSize).toBeGreaterThan(0)
+      }
+    })
+
+    it('should return null for non-existent image', async () => {
+      const result = await optimizeImage(join(TEST_DIR, 'non-existent.png'))
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('generateResponsiveImageSizes', () => {
+    it('should generate responsive image sizes', async () => {
+      // Créer une image de test
+      const testImagePath = join(TEST_DIR, 'test-image.png')
+      const sharp = (await import('sharp')).default
+      await sharp({
+        create: {
+          width: 2000,
+          height: 1500,
+          channels: 4,
+          background: { r: 0, g: 255, b: 0, alpha: 1 },
+        },
+      })
+        .png()
+        .toFile(testImagePath)
+
+      const outputDir = join(TEST_DIR, 'responsive')
+      const result = await generateResponsiveImageSizes(testImagePath, outputDir, [320, 640, 1024])
+
+      expect(result.length).toBeGreaterThan(0)
+      expect(result.every((file) => file.includes('test-image'))).toBe(true)
+    })
+
+    it('should not upscale images', async () => {
+      // Créer une petite image
+      const testImagePath = join(TEST_DIR, 'small-image.png')
+      const sharp = (await import('sharp')).default
+      await sharp({
+        create: {
+          width: 200,
+          height: 200,
+          channels: 4,
+          background: { r: 0, g: 0, b: 255, alpha: 1 },
+        },
+      })
+        .png()
+        .toFile(testImagePath)
+
+      const outputDir = join(TEST_DIR, 'responsive-small')
+      const result = await generateResponsiveImageSizes(testImagePath, outputDir, [320, 640, 1024])
+
+      // Ne devrait générer que des tailles <= 200
+      expect(result.length).toBe(0) // Aucune taille générée car toutes > 200
+    })
+  })
+
+  describe('optimizeProjectImages', () => {
+    it('should optimize high priority images', async () => {
+      // Créer une grande image (> 1MB simulé)
+      const largeImagePath = join(TEST_DIR, 'large-image.png')
+      const sharp = (await import('sharp')).default
+      // Créer une image assez grande
+      await sharp({
+        create: {
+          width: 2000,
+          height: 2000,
+          channels: 4,
+          background: { r: 128, g: 128, b: 128, alpha: 1 },
+        },
+      })
+        .png({ compressionLevel: 0 }) // Pas de compression pour créer un gros fichier
+        .toFile(largeImagePath)
+
+      const assets: AssetDetectionResult = {
+        javascript: [],
+        css: [],
+        images: [largeImagePath],
+        fonts: [],
+        apiRoutes: [],
+      }
+
+      const results = await optimizeProjectImages(assets, {
+        convertToWebP: true,
+        quality: 85,
+        outputDir: TEST_DIR,
+      })
+
+      expect(results.length).toBeGreaterThan(0)
+      expect(results[0].savings).toBeGreaterThanOrEqual(0)
     })
   })
 })

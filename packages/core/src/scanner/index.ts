@@ -179,6 +179,8 @@ export type {
   AssetOptimizationSuggestion,
   ApiType,
   CacheStrategy,
+  OptimizedImageResult,
+  ImageOptimizationOptions,
 } from './optimizer.js'
 
 export { detectFramework } from './framework-detector.js'
@@ -191,5 +193,8 @@ export {
   detectUnoptimizedImages,
   generateOptimalShortName,
   suggestManifestColors,
+  optimizeImage,
+  optimizeProjectImages,
+  generateResponsiveImageSizes,
 } from './optimizer.js'
 
