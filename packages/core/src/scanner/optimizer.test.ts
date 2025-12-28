@@ -257,20 +257,20 @@ describe('optimizer', () => {
   })
 
   describe('suggestManifestColors', () => {
-    it('should suggest React colors', async () => {
-      const colors = await suggestManifestColors(TEST_DIR, 'react')
+    it('should suggest React colors', () => {
+      const colors = suggestManifestColors(TEST_DIR, 'react')
       expect(colors.themeColor).toBe('#61dafb')
       expect(colors.backgroundColor).toBe('#282c34')
     })
 
-    it('should suggest Vue colors', async () => {
-      const colors = await suggestManifestColors(TEST_DIR, 'vue')
+    it('should suggest Vue colors', () => {
+      const colors = suggestManifestColors(TEST_DIR, 'vue')
       expect(colors.themeColor).toBe('#42b983')
       expect(colors.backgroundColor).toBe('#ffffff')
     })
 
-    it('should suggest default colors for unknown framework', async () => {
-      const colors = await suggestManifestColors(TEST_DIR, 'unknown')
+    it('should suggest default colors for unknown framework', () => {
+      const colors = suggestManifestColors(TEST_DIR, 'unknown')
       expect(colors.themeColor).toBeDefined()
       expect(colors.backgroundColor).toBeDefined()
     })

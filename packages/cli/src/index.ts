@@ -47,12 +47,12 @@ program
   .option('-i, --icon-source <path>', 'Source image for icons')
   .option('-t, --theme-color <color>', 'Theme color (hex)')
   .option('-b, --background-color <color>', 'Background color (hex)')
-      .option('--skip-icons', 'Skip icon generation')
-      .option('--skip-service-worker', 'Skip service worker generation')
-      .option('--skip-injection', 'Skip HTML meta-tag injection')
-      .option('-o, --output-dir <dir>', 'Output directory', 'public')
-      .option('--force-scan', 'Force scan (bypass cache)')
-      .option('--no-cache', 'Disable cache')
+  .option('--skip-icons', 'Skip icon generation')
+  .option('--skip-service-worker', 'Skip service worker generation')
+  .option('--skip-injection', 'Skip HTML meta-tag injection')
+  .option('-o, --output-dir <dir>', 'Output directory', 'public')
+  .option('--force-scan', 'Force scan (bypass cache)')
+  .option('--no-cache', 'Disable cache')
   .action(async (options: {
     projectPath?: string
     name?: string
@@ -97,7 +97,7 @@ program
           // Vérifier que dist/ existe et contient des fichiers buildés
           const { detectEnvironment } = await import('./utils/environment-detector.js')
           const envDetection = detectEnvironment(projectPath, scanResult.framework.framework)
-          
+
           if (envDetection.suggestedOutputDir === 'dist') {
             finalOptions.outputDir = 'dist'
           } else if (envDetection.suggestedOutputDir === 'build') {
