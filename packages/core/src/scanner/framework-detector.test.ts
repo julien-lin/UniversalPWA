@@ -1093,6 +1093,180 @@ describe('framework-detector', () => {
     })
   })
 
+  describe('Project Configuration Detection', () => {
+    it('should detect TypeScript from tsconfig.json', () => {
+      writeFileSync(join(TEST_DIR, 'tsconfig.json'), '{}')
+      writeFileSync(join(TEST_DIR, 'package.json'), JSON.stringify({ dependencies: { react: '^18.0.0' } }))
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.configuration.language).toBe('typescript')
+      expect(result.indicators).toContain('TypeScript detected')
+    })
+
+    it('should detect TypeScript from .ts files', () => {
+      writeFileSync(join(TEST_DIR, 'package.json'), JSON.stringify({ dependencies: { react: '^18.0.0' } }))
+      writeFileSync(join(TEST_DIR, 'App.tsx'), 'export default function App() {}')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.configuration.language).toBe('typescript')
+    })
+
+    it('should detect styled-components', () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            react: '^18.0.0',
+            'styled-components': '^5.0.0',
+          },
+        }),
+      )
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.configuration.cssInJs).toContain('styled-components')
+      expect(result.indicators.some((i) => i.includes('CSS-in-JS: styled-components'))).toBe(true)
+    })
+
+    it('should detect emotion', () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            react: '^18.0.0',
+            '@emotion/react': '^11.0.0',
+          },
+        }),
+      )
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.configuration.cssInJs).toContain('emotion')
+    })
+
+    it('should detect Redux', () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            react: '^18.0.0',
+            redux: '^4.0.0',
+          },
+        }),
+      )
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.configuration.stateManagement).toContain('redux')
+      expect(result.indicators.some((i) => i.includes('State Management: redux'))).toBe(true)
+    })
+
+    it('should detect Zustand', () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            react: '^18.0.0',
+            zustand: '^4.0.0',
+          },
+        }),
+      )
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.configuration.stateManagement).toContain('zustand')
+    })
+
+    it('should detect Pinia for Vue', () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            vue: '^3.0.0',
+            pinia: '^2.0.0',
+          },
+        }),
+      )
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.configuration.stateManagement).toContain('pinia')
+    })
+
+    it('should detect Vite as build tool', () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            react: '^18.0.0',
+            vite: '^5.0.0',
+          },
+        }),
+      )
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.configuration.buildTool).toBe('vite')
+      expect(result.indicators.some((i) => i.includes('Build Tool: vite'))).toBe(true)
+    })
+
+    it('should detect Webpack as build tool', () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            react: '^18.0.0',
+            webpack: '^5.0.0',
+          },
+        }),
+      )
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.configuration.buildTool).toBe('webpack')
+    })
+
+    it('should detect multiple CSS-in-JS libraries', () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            react: '^18.0.0',
+            'styled-components': '^5.0.0',
+            '@emotion/react': '^11.0.0',
+          },
+        }),
+      )
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.configuration.cssInJs.length).toBeGreaterThan(1)
+      expect(result.configuration.cssInJs).toContain('styled-components')
+      expect(result.configuration.cssInJs).toContain('emotion')
+    })
+
+    it('should detect multiple state management libraries', () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            react: '^18.0.0',
+            redux: '^4.0.0',
+            zustand: '^4.0.0',
+          },
+        }),
+      )
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.configuration.stateManagement.length).toBeGreaterThan(1)
+      expect(result.configuration.stateManagement).toContain('redux')
+      expect(result.configuration.stateManagement).toContain('zustand')
+    })
+  })
+
   describe('Error handling', () => {
     it('should handle missing files gracefully', () => {
       const result = detectFramework(TEST_DIR)

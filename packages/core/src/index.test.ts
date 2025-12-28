@@ -28,10 +28,17 @@ describe('@julien-lin/universal-pwa-core', () => {
       confidenceScore: 0,
       indicators: [],
       version: null,
+      configuration: {
+        language: null,
+        cssInJs: [],
+        stateManagement: [],
+        buildTool: null,
+      },
     }
     expect(result).toBeDefined()
     expect(result.confidenceScore).toBe(0)
     expect(result.version).toBeNull()
+    expect(result.configuration).toBeDefined()
   })
 })
 

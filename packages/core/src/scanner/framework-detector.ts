@@ -49,12 +49,20 @@ export interface FrameworkVersion {
   raw: string
 }
 
+export interface ProjectConfiguration {
+  language: 'typescript' | 'javascript' | null
+  cssInJs: string[] // Liste des librairies CSS-in-JS détectées (styled-components, emotion, etc.)
+  stateManagement: string[] // Liste des state management détectés (Redux, Zustand, Pinia, etc.)
+  buildTool: string | null // Vite, Webpack, Rollup, etc.
+}
+
 export interface FrameworkDetectionResult {
   framework: Framework | null
   confidence: 'high' | 'medium' | 'low'
   confidenceScore: number // Score numérique 0-100
   indicators: string[]
   version: FrameworkVersion | null // Version du framework détectée
+  configuration: ProjectConfiguration // Configurations spécifiques du projet
 }
 
 /**
@@ -165,6 +173,121 @@ function detectFrameworkVersion(
 }
 
 /**
+ * Détecte les configurations spécifiques du projet (TypeScript, CSS-in-JS, state management)
+ */
+function detectProjectConfiguration(projectPath: string): ProjectConfiguration {
+  const config: ProjectConfiguration = {
+    language: null,
+    cssInJs: [],
+    stateManagement: [],
+    buildTool: null,
+  }
+
+  // Détection TypeScript
+  const tsConfigPath = join(projectPath, 'tsconfig.json')
+  if (existsSync(tsConfigPath)) {
+    config.language = 'typescript'
+  } else {
+    // Vérifier s'il y a des fichiers .ts ou .tsx
+    try {
+      const tsFiles = globSync('**/*.{ts,tsx}', {
+        cwd: projectPath,
+        ignore: ['**/node_modules/**', '**/dist/**', '**/build/**'],
+        absolute: false,
+        maxDepth: 3,
+      })
+      if (tsFiles.length > 0) {
+        config.language = 'typescript'
+      } else {
+        config.language = 'javascript'
+      }
+    } catch {
+      config.language = 'javascript'
+    }
+  }
+
+  // Détection depuis package.json
+  const packageJsonPath = join(projectPath, 'package.json')
+  if (existsSync(packageJsonPath)) {
+    try {
+      const packageContent = JSON.parse(readFileSync(packageJsonPath, 'utf-8')) as {
+        dependencies?: Record<string, string>
+        devDependencies?: Record<string, string>
+      }
+      const dependencies = {
+        ...(packageContent.dependencies ?? {}),
+        ...(packageContent.devDependencies ?? {}),
+      }
+
+      // CSS-in-JS
+      if (dependencies['styled-components']) {
+        config.cssInJs.push('styled-components')
+      }
+      if (dependencies['@emotion/react'] || dependencies['@emotion/styled']) {
+        config.cssInJs.push('emotion')
+      }
+      if (dependencies['@stitches/react'] || dependencies['@stitches/core']) {
+        config.cssInJs.push('stitches')
+      }
+      if (dependencies.linaria) {
+        config.cssInJs.push('linaria')
+      }
+      if (dependencies.goober) {
+        config.cssInJs.push('goober')
+      }
+      if (dependencies.aphrodite) {
+        config.cssInJs.push('aphrodite')
+      }
+
+      // State Management
+      if (dependencies.redux || dependencies['@reduxjs/toolkit']) {
+        config.stateManagement.push('redux')
+      }
+      if (dependencies.zustand) {
+        config.stateManagement.push('zustand')
+      }
+      if (dependencies.pinia || dependencies['@pinia/core']) {
+        config.stateManagement.push('pinia')
+      }
+      if (dependencies.mobx || dependencies['mobx-react']) {
+        config.stateManagement.push('mobx')
+      }
+      if (dependencies.recoil) {
+        config.stateManagement.push('recoil')
+      }
+      if (dependencies.jotai) {
+        config.stateManagement.push('jotai')
+      }
+      if (dependencies.valtio) {
+        config.stateManagement.push('valtio')
+      }
+      if (dependencies['@tanstack/react-query'] || dependencies['react-query']) {
+        config.stateManagement.push('react-query')
+      }
+
+      // Build Tool
+      if (dependencies.vite || Object.keys(dependencies).some((key) => key.startsWith('vite-plugin-'))) {
+        config.buildTool = 'vite'
+      } else if (dependencies.webpack || Object.keys(dependencies).some((key) => key.startsWith('webpack-'))) {
+        config.buildTool = 'webpack'
+      } else if (dependencies.rollup || Object.keys(dependencies).some((key) => key.startsWith('rollup-plugin-'))) {
+        config.buildTool = 'rollup'
+      } else if (dependencies.esbuild) {
+        config.buildTool = 'esbuild'
+      } else if (dependencies.parcel || dependencies['parcel-bundler']) {
+        config.buildTool = 'parcel'
+      } else if (dependencies['@turbo/*'] || dependencies.turbo) {
+        config.buildTool = 'turbopack'
+      }
+    } catch {
+      // Ignore JSON parse errors
+    }
+  }
+
+  return config
+}
+
+/**
  * Helper pour créer un FrameworkDetectionResult avec score calculé
  */
 function createResult(
@@ -172,10 +295,25 @@ function createResult(
   confidence: 'high' | 'medium' | 'low',
   indicators: string[],
   version: FrameworkVersion | null = null,
+  configuration: ProjectConfiguration | null = null,
 ): FrameworkDetectionResult {
   const confidenceScore = calculateConfidenceScore(framework, confidence, indicators)
   const finalConfidence = scoreToConfidence(confidenceScore)
-  return { framework, confidence: finalConfidence, confidenceScore, indicators, version }
+  // Si configuration n'est pas fournie, créer une config vide
+  const finalConfig: ProjectConfiguration = configuration ?? {
+    language: null,
+    cssInJs: [],
+    stateManagement: [],
+    buildTool: null,
+  }
+  return {
+    framework,
+    confidence: finalConfidence,
+    confidenceScore,
+    indicators,
+    version,
+    configuration: finalConfig,
+  }
 }
 
 /**
@@ -185,6 +323,9 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
   const indicators: string[] = []
   let framework: Framework | null = null
   let confidence: 'high' | 'medium' | 'low' = 'low'
+
+  // Détecter la configuration du projet une seule fois
+  const projectConfig = detectProjectConfiguration(projectPath)
 
   // WordPress
   if (existsSync(join(projectPath, 'wp-config.php'))) {
@@ -196,11 +337,11 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
         indicators.push('wp-content/plugins/woocommerce/')
         framework = 'woocommerce'
         confidence = 'high'
-        return createResult(framework, confidence, indicators)
+        return createResult(framework, confidence, indicators, null, projectConfig)
       }
       framework = 'wordpress'
       confidence = 'high'
-      return createResult(framework, confidence, indicators)
+      return createResult(framework, confidence, indicators, null, projectConfig)
     }
   }
 
@@ -211,7 +352,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
       indicators.push('themes/')
       framework = 'drupal'
       confidence = 'high'
-      return createResult(framework, confidence, indicators)
+      return createResult(framework, confidence, indicators, null, projectConfig)
     }
   }
 
@@ -222,7 +363,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
       indicators.push('administrator/')
       framework = 'joomla'
       confidence = 'high'
-      return createResult(framework, confidence, indicators)
+      return createResult(framework, confidence, indicators, null, projectConfig)
     }
   }
 
@@ -231,7 +372,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
     indicators.push('theme.liquid or config/settings_schema.json (Shopify)')
     framework = 'shopify'
     confidence = 'high'
-    return createResult(framework, confidence, indicators)
+    return createResult(framework, confidence, indicators, null, projectConfig)
   }
 
   // PHP frameworks & CMS via composer.json
@@ -254,7 +395,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
           indicators.push('app/ and pub/')
           framework = 'magento'
           confidence = 'high'
-          return createResult(framework, confidence, indicators)
+          return createResult(framework, confidence, indicators, null, projectConfig)
         }
       }
 
@@ -265,7 +406,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
           indicators.push('config/ and themes/')
           framework = 'prestashop'
           confidence = 'high'
-          return createResult(framework, confidence, indicators)
+          return createResult(framework, confidence, indicators, null, projectConfig)
         }
       }
 
@@ -276,7 +417,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
           indicators.push('public/')
           framework = 'symfony'
           confidence = 'high'
-          return createResult(framework, confidence, indicators)
+          return createResult(framework, confidence, indicators, null, projectConfig)
         }
       }
 
@@ -287,7 +428,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
           indicators.push('public/')
           framework = 'laravel'
           confidence = 'high'
-          return createResult(framework, confidence, indicators)
+          return createResult(framework, confidence, indicators, null, projectConfig)
         }
       }
 
@@ -298,7 +439,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
           indicators.push('public/')
           framework = 'codeigniter'
           confidence = 'high'
-          return createResult(framework, confidence, indicators)
+          return createResult(framework, confidence, indicators, null, projectConfig)
         }
       }
 
@@ -309,7 +450,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
           indicators.push('webroot/ or public/')
           framework = 'cakephp'
           confidence = 'high'
-          return createResult(framework, confidence, indicators)
+          return createResult(framework, confidence, indicators, null, projectConfig)
         }
       }
 
@@ -320,7 +461,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
           indicators.push('web/ or public/')
           framework = 'yii'
           confidence = 'high'
-          return createResult(framework, confidence, indicators)
+          return createResult(framework, confidence, indicators, null, projectConfig)
         }
       }
 
@@ -331,7 +472,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
           indicators.push('public/')
           framework = 'laminas'
           confidence = 'high'
-          return createResult(framework, confidence, indicators)
+          return createResult(framework, confidence, indicators, null, projectConfig)
         }
       }
     } catch {
@@ -359,7 +500,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
           indicators.push('.next/')
           framework = 'nextjs'
           confidence = 'high'
-          return createResult(framework, confidence, indicators)
+          return createResult(framework, confidence, indicators, null, projectConfig)
         }
       }
 
@@ -370,7 +511,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
           indicators.push('.nuxt/')
           framework = 'nuxt'
           confidence = 'high'
-          return createResult(framework, confidence, indicators)
+          return createResult(framework, confidence, indicators, null, projectConfig)
         }
       }
 
@@ -418,7 +559,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
           indicators.push('.svelte-kit/')
           framework = 'sveltekit'
           confidence = 'high'
-          return createResult(framework, confidence, indicators)
+          return createResult(framework, confidence, indicators, null, projectConfig)
         }
       }
 
@@ -438,7 +579,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
           indicators.push('app/')
           framework = 'remix'
           confidence = 'high'
-          return createResult(framework, confidence, indicators)
+          return createResult(framework, confidence, indicators, null, projectConfig)
         }
       }
 
@@ -449,7 +590,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
           indicators.push('.astro/')
           framework = 'astro'
           confidence = 'high'
-          return createResult(framework, confidence, indicators)
+          return createResult(framework, confidence, indicators, null, projectConfig)
         }
       }
 
@@ -473,14 +614,14 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
       indicators.push('manage.py and settings.py (Django)')
       framework = 'django'
       confidence = 'high'
-      return createResult(framework, confidence, indicators)
+      return createResult(framework, confidence, indicators, null, projectConfig)
     }
     // Django alternative: check for django/ directory
     if (existsSync(join(projectPath, 'manage.py')) && existsSync(join(projectPath, 'django'))) {
       indicators.push('manage.py and django/ (Django)')
       framework = 'django'
       confidence = 'high'
-      return createResult(framework, confidence, indicators)
+      return createResult(framework, confidence, indicators, null, projectConfig)
     }
 
     // Flask
@@ -494,7 +635,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
             indicators.push('app.py or application.py')
             framework = 'flask'
             confidence = 'high'
-            return createResult(framework, confidence, indicators)
+            return createResult(framework, confidence, indicators, null, projectConfig)
           }
         }
         // FastAPI
@@ -502,7 +643,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
           indicators.push('requirements.txt: FastAPI')
           framework = 'fastapi'
           confidence = 'high'
-          return createResult(framework, confidence, indicators)
+          return createResult(framework, confidence, indicators, null, projectConfig)
         }
       } catch {
         // Ignore read errors
@@ -523,7 +664,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
             indicators.push('config/application.rb or config/routes.rb')
             framework = 'rails'
             confidence = 'high'
-            return createResult(framework, confidence, indicators)
+            return createResult(framework, confidence, indicators, null, projectConfig)
           }
         }
         // Sinatra
@@ -533,7 +674,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
             indicators.push('app.rb or main.rb')
             framework = 'sinatra'
             confidence = 'high'
-            return createResult(framework, confidence, indicators)
+            return createResult(framework, confidence, indicators, null, projectConfig)
           }
         }
       } catch {
@@ -562,7 +703,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
                 indicators.push('go.mod and main.go with HTTP server')
                 framework = 'go'
                 confidence = 'high'
-                return createResult(framework, confidence, indicators)
+                return createResult(framework, confidence, indicators, null, projectConfig)
               }
             } catch {
               // Ignore read errors
@@ -577,7 +718,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
                 indicators.push('go.mod and server.go with HTTP server')
                 framework = 'go'
                 confidence = 'high'
-                return createResult(framework, confidence, indicators)
+                return createResult(framework, confidence, indicators, null, projectConfig)
               }
             } catch {
               // Ignore read errors
@@ -602,7 +743,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
           indicators.push('pom.xml: spring-boot')
           framework = 'spring'
           confidence = 'high'
-          return createResult(framework, confidence, indicators)
+          return createResult(framework, confidence, indicators, null, projectConfig)
         }
       } catch {
         // Ignore read errors
@@ -616,7 +757,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
           indicators.push('build.gradle: spring-boot')
           framework = 'spring'
           confidence = 'high'
-          return createResult(framework, confidence, indicators)
+          return createResult(framework, confidence, indicators, null, projectConfig)
         }
       } catch {
         // Ignore read errors
@@ -641,7 +782,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
               indicators.push('Program.cs or Startup.cs')
               framework = 'aspnet'
               confidence = 'high'
-              return createResult(framework, confidence, indicators)
+              return createResult(framework, confidence, indicators, null, projectConfig)
             }
           }
         } catch {
@@ -662,11 +803,11 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
         indicators.push('_posts/')
         framework = 'jekyll'
         confidence = 'high'
-        return createResult(framework, confidence, indicators)
+        return createResult(framework, confidence, indicators, null, projectConfig)
       }
       framework = 'jekyll'
       confidence = 'medium'
-      return createResult(framework, confidence, indicators)
+      return createResult(framework, confidence, indicators, null, projectConfig)
     }
 
     // Hugo
@@ -678,13 +819,13 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
         indicators.push('content/ and layouts/')
         framework = 'hugo'
         confidence = 'high'
-        return createResult(framework, confidence, indicators)
+        return createResult(framework, confidence, indicators, null, projectConfig)
       }
       if (existsSync(join(projectPath, 'content'))) {
         indicators.push('content/')
         framework = 'hugo'
         confidence = 'high'
-        return createResult(framework, confidence, indicators)
+        return createResult(framework, confidence, indicators, null, projectConfig)
       }
     }
 
@@ -693,7 +834,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
       indicators.push('gatsby-config.js/ts (Gatsby)')
       framework = 'gatsby'
       confidence = 'high'
-      return createResult(framework, confidence, indicators)
+      return createResult(framework, confidence, indicators, null, projectConfig)
     }
 
     // 11ty (Eleventy)
@@ -705,11 +846,11 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
         indicators.push('_data/')
         framework = 'eleventy'
         confidence = 'high'
-        return createResult(framework, confidence, indicators)
+        return createResult(framework, confidence, indicators, null, projectConfig)
       }
       framework = 'eleventy'
       confidence = 'high'
-      return createResult(framework, confidence, indicators)
+      return createResult(framework, confidence, indicators, null, projectConfig)
     }
 
     // VitePress
@@ -717,14 +858,14 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
       indicators.push('vitepress.config.js/ts (VitePress)')
       framework = 'vitepress'
       confidence = 'high'
-      return createResult(framework, confidence, indicators)
+      return createResult(framework, confidence, indicators, null, projectConfig)
     }
     // VitePress in docs directory
     if (existsSync(join(projectPath, 'docs', '.vitepress', 'config.js')) || existsSync(join(projectPath, 'docs', '.vitepress', 'config.ts'))) {
       indicators.push('docs/.vitepress/config.js/ts (VitePress)')
       framework = 'vitepress'
       confidence = 'high'
-      return createResult(framework, confidence, indicators)
+      return createResult(framework, confidence, indicators, null, projectConfig)
     }
 
     // Docusaurus
@@ -732,7 +873,7 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
       indicators.push('docusaurus.config.js/ts (Docusaurus)')
       framework = 'docusaurus'
       confidence = 'high'
-      return createResult(framework, confidence, indicators)
+      return createResult(framework, confidence, indicators, null, projectConfig)
     }
   }
 
@@ -768,6 +909,20 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
     }
   }
 
-  return createResult(framework, confidence, indicators, detectedVersion)
+  // Ajouter les configurations aux indicateurs
+  if (projectConfig.language === 'typescript') {
+    indicators.push('TypeScript detected')
+  }
+  if (projectConfig.cssInJs.length > 0) {
+    indicators.push(`CSS-in-JS: ${projectConfig.cssInJs.join(', ')}`)
+  }
+  if (projectConfig.stateManagement.length > 0) {
+    indicators.push(`State Management: ${projectConfig.stateManagement.join(', ')}`)
+  }
+  if (projectConfig.buildTool) {
+    indicators.push(`Build Tool: ${projectConfig.buildTool}`)
+  }
+
+  return createResult(framework, confidence, indicators, detectedVersion, projectConfig)
 }
 
