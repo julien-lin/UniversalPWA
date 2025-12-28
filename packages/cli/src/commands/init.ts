@@ -22,6 +22,8 @@ export interface InitOptions {
   skipServiceWorker?: boolean
   skipInjection?: boolean
   outputDir?: string
+  forceScan?: boolean
+  noCache?: boolean
 }
 
 export interface InitResult {
@@ -89,11 +91,13 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
 
     console.log(chalk.blue('🔍 Scanning project...'))
     
-    // Scan project
+    // Scan project (with cache support)
     const scanResult = await scanProject({
       projectPath: result.projectPath,
       includeAssets: true,
       includeArchitecture: true,
+      useCache: options.noCache !== true,
+      forceScan: options.forceScan === true,
     })
 
     result.framework = scanResult.framework.framework

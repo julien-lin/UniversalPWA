@@ -47,10 +47,12 @@ program
   .option('-i, --icon-source <path>', 'Source image for icons')
   .option('-t, --theme-color <color>', 'Theme color (hex)')
   .option('-b, --background-color <color>', 'Background color (hex)')
-  .option('--skip-icons', 'Skip icon generation')
-  .option('--skip-service-worker', 'Skip service worker generation')
-  .option('--skip-injection', 'Skip HTML meta-tag injection')
-  .option('-o, --output-dir <dir>', 'Output directory', 'public')
+      .option('--skip-icons', 'Skip icon generation')
+      .option('--skip-service-worker', 'Skip service worker generation')
+      .option('--skip-injection', 'Skip HTML meta-tag injection')
+      .option('-o, --output-dir <dir>', 'Output directory', 'public')
+      .option('--force-scan', 'Force scan (bypass cache)')
+      .option('--no-cache', 'Disable cache')
   .action(async (options: {
     projectPath?: string
     name?: string
@@ -62,6 +64,8 @@ program
     skipServiceWorker?: boolean
     skipInjection?: boolean
     outputDir?: string
+    forceScan?: boolean
+    noCache?: boolean
   }) => {
     try {
       const projectPath = options.projectPath ?? process.cwd()
@@ -133,6 +137,8 @@ program
         skipServiceWorker: finalOptions.skipServiceWorker,
         skipInjection: finalOptions.skipInjection,
         outputDir: finalOptions.outputDir,
+        forceScan: options.forceScan,
+        noCache: options.noCache,
       })
       process.exit(result.success ? 0 : 1)
     } catch (error) {

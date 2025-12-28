@@ -23,7 +23,7 @@ describe('scanner orchestrator', () => {
       mkdirSync(join(TEST_DIR, 'wp-content'), { recursive: true })
       writeFileSync(join(TEST_DIR, 'index.html'), '<html><body></body></html>')
 
-      const result = await scanProject({ projectPath: TEST_DIR })
+      const result = await scanProject({ projectPath: TEST_DIR, useCache: false })
 
       expect(result.framework.framework).toBe('wordpress')
       expect(result.framework.confidence).toBe('high')
@@ -45,7 +45,7 @@ describe('scanner orchestrator', () => {
       mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
       writeFileSync(join(TEST_DIR, 'public', 'index.php'), '<?php')
 
-      const result = await scanProject({ projectPath: TEST_DIR })
+      const result = await scanProject({ projectPath: TEST_DIR, useCache: false })
 
       expect(result.framework.framework).toBe('symfony')
       expect(result.framework.confidence).toBe('high')
@@ -66,7 +66,7 @@ describe('scanner orchestrator', () => {
       mkdirSync(join(TEST_DIR, 'src'), { recursive: true })
       writeFileSync(join(TEST_DIR, 'src', 'App.jsx'), 'export const App = () => null')
 
-      const result = await scanProject({ projectPath: TEST_DIR })
+      const result = await scanProject({ projectPath: TEST_DIR, useCache: false })
 
       expect(result.framework.framework).toBe('react')
       expect(result.framework.confidence).toBe('high')
@@ -85,7 +85,7 @@ describe('scanner orchestrator', () => {
       )
       mkdirSync(join(TEST_DIR, '.next'), { recursive: true })
 
-      const result = await scanProject({ projectPath: TEST_DIR })
+      const result = await scanProject({ projectPath: TEST_DIR, useCache: false })
 
       expect(result.framework.framework).toBe('nextjs')
       expect(result.framework.confidence).toBe('high')
@@ -97,7 +97,7 @@ describe('scanner orchestrator', () => {
       writeFileSync(join(TEST_DIR, 'index.html'), '<html><body><h1>Hello</h1></body></html>')
       writeFileSync(join(TEST_DIR, 'styles.css'), 'body { margin: 0; }')
 
-      const result = await scanProject({ projectPath: TEST_DIR })
+      const result = await scanProject({ projectPath: TEST_DIR, useCache: false })
 
       expect(result.framework.framework).toBe('static')
       expect(result.framework.confidence).toBe('medium')
@@ -126,7 +126,7 @@ describe('scanner orchestrator', () => {
     })
 
     it('should handle empty project', async () => {
-      const result = await scanProject({ projectPath: TEST_DIR })
+      const result = await scanProject({ projectPath: TEST_DIR, useCache: false })
 
       expect(result.framework.framework).toBeNull()
       expect(result.framework.confidence).toBe('low')
@@ -202,7 +202,7 @@ describe('scanner orchestrator', () => {
       writeFileSync(join(TEST_DIR, 'package.json'), 'invalid json')
       writeFileSync(join(TEST_DIR, 'index.html'), '<html><body></body></html>')
 
-      const result = await scanProject({ projectPath: TEST_DIR })
+      const result = await scanProject({ projectPath: TEST_DIR, useCache: false })
 
       // Scanner should handle error and continue
       expect(result.framework).toBeDefined()
