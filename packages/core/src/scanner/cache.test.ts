@@ -10,7 +10,6 @@ import {
   cleanCache,
   removeCacheEntry,
   type ScanCache,
-  type CacheEntry,
 } from './cache.js'
 import type { ScannerResult } from './index.js'
 
