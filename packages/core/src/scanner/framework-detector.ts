@@ -4,6 +4,12 @@ import { globSync } from 'glob'
 
 export type Framework =
   | 'wordpress'
+  | 'drupal'
+  | 'joomla'
+  | 'magento'
+  | 'shopify'
+  | 'woocommerce'
+  | 'prestashop'
   | 'symfony'
   | 'laravel'
   | 'codeigniter'
@@ -49,13 +55,50 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
     indicators.push('wp-config.php')
     if (existsSync(join(projectPath, 'wp-content'))) {
       indicators.push('wp-content/')
+      // Check for WooCommerce
+      if (existsSync(join(projectPath, 'wp-content', 'plugins', 'woocommerce'))) {
+        indicators.push('wp-content/plugins/woocommerce/')
+        framework = 'woocommerce'
+        confidence = 'high'
+        return { framework, confidence, indicators }
+      }
       framework = 'wordpress'
       confidence = 'high'
       return { framework, confidence, indicators }
     }
   }
 
-  // Symfony
+  // Drupal
+  if (existsSync(join(projectPath, 'sites')) && existsSync(join(projectPath, 'modules'))) {
+    indicators.push('sites/ and modules/ (Drupal)')
+    if (existsSync(join(projectPath, 'themes'))) {
+      indicators.push('themes/')
+      framework = 'drupal'
+      confidence = 'high'
+      return { framework, confidence, indicators }
+    }
+  }
+
+  // Joomla
+  if (existsSync(join(projectPath, 'configuration.php'))) {
+    indicators.push('configuration.php (Joomla)')
+    if (existsSync(join(projectPath, 'administrator'))) {
+      indicators.push('administrator/')
+      framework = 'joomla'
+      confidence = 'high'
+      return { framework, confidence, indicators }
+    }
+  }
+
+  // Shopify (détection via fichiers de thème - avant composer.json pour éviter conflits)
+  if (existsSync(join(projectPath, 'theme.liquid')) || existsSync(join(projectPath, 'config', 'settings_schema.json'))) {
+    indicators.push('theme.liquid or config/settings_schema.json (Shopify)')
+    framework = 'shopify'
+    confidence = 'high'
+    return { framework, confidence, indicators }
+  }
+
+  // PHP frameworks & CMS via composer.json
   const composerPath = join(projectPath, 'composer.json')
   if (existsSync(composerPath)) {
     try {
@@ -68,6 +111,29 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
         ...(composerContent['require-dev'] ?? {}),
       }
 
+      // Magento (priorité haute car e-commerce spécifique)
+      if (dependencies['magento/product-community-edition'] || dependencies['magento/product-enterprise-edition']) {
+        indicators.push('composer.json: magento/*')
+        if (existsSync(join(projectPath, 'app')) && existsSync(join(projectPath, 'pub'))) {
+          indicators.push('app/ and pub/')
+          framework = 'magento'
+          confidence = 'high'
+          return { framework, confidence, indicators }
+        }
+      }
+
+      // PrestaShop (priorité haute car e-commerce spécifique)
+      if (dependencies['prestashop/prestashop']) {
+        indicators.push('composer.json: prestashop/prestashop')
+        if (existsSync(join(projectPath, 'config')) && existsSync(join(projectPath, 'themes'))) {
+          indicators.push('config/ and themes/')
+          framework = 'prestashop'
+          confidence = 'high'
+          return { framework, confidence, indicators }
+        }
+      }
+
+      // Symfony
       if (dependencies['symfony/symfony'] || dependencies['symfony/framework-bundle']) {
         indicators.push('composer.json: symfony/*')
         if (existsSync(join(projectPath, 'public'))) {
