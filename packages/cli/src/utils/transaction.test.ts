@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'fs'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync, statSync, readdirSync, rmdirSync } from 'fs'
 import { join } from 'path'
 import { Transaction } from './transaction.js'
 
@@ -43,6 +43,28 @@ describe('Transaction', () => {
     expect(state.backups.length).toBe(1)
     expect(state.backups[0].originalExists).toBe(true)
     expect(state.backups[0].originalContent?.toString()).toBe(originalContent)
+  })
+
+  it('should log warning when backup read fails', () => {
+    const filePath = join(TEST_DIR, 'test.txt')
+    writeFileSync(filePath, 'content')
+
+    const transaction = new Transaction({
+      projectPath: TEST_DIR,
+      verbose: true,
+    })
+
+    const fs = require('fs')
+    const readSpy = vi.spyOn(fs, 'readFileSync').mockImplementation(() => {
+      throw new Error('read fail')
+    })
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => { })
+
+    expect(() => transaction.backupFile('test.txt')).not.toThrow()
+    expect(consoleSpy).toHaveBeenCalled()
+
+    readSpy.mockRestore()
+    consoleSpy.mockRestore()
   })
 
   it('should track created file', () => {
@@ -162,6 +184,21 @@ describe('Transaction', () => {
     expect(transaction.isRolledBackState()).toBe(false)
   })
 
+  it('should return early if already committed', () => {
+    const transaction = new Transaction({
+      projectPath: TEST_DIR,
+      verbose: false,
+    })
+
+    // First commit
+    transaction.commit()
+    expect(transaction.isCommittedState()).toBe(true)
+
+    // Second commit should return early (line 250-251)
+    expect(() => transaction.commit()).not.toThrow()
+    expect(transaction.isCommittedState()).toBe(true)
+  })
+
   it('should not allow rollback after commit', () => {
     const transaction = new Transaction({
       projectPath: TEST_DIR,
@@ -171,6 +208,21 @@ describe('Transaction', () => {
     transaction.commit()
 
     expect(() => transaction.rollback()).toThrow('Cannot rollback a committed transaction')
+  })
+
+  it('should return early if already rolled back', () => {
+    const transaction = new Transaction({
+      projectPath: TEST_DIR,
+      verbose: false,
+    })
+
+    // First rollback
+    transaction.rollback()
+    expect(transaction.isRolledBackState()).toBe(true)
+
+    // Second rollback should return early (line 218-219)
+    expect(() => transaction.rollback()).not.toThrow()
+    expect(transaction.isRolledBackState()).toBe(true)
   })
 
   it('should not allow commit after rollback', () => {
@@ -236,6 +288,377 @@ describe('Transaction', () => {
     const state = transaction.getState()
     expect(state.backups.length).toBe(2)
     expect(state.createdFiles.length).toBe(1)
+  })
+
+  describe('removeCreatedFiles - error handling and verbose logging', () => {
+    it('should handle errors when removing created files', () => {
+      const filePath = join(TEST_DIR, 'new-file.txt')
+      writeFileSync(filePath, 'content')
+
+      const transaction = new Transaction({
+        projectPath: TEST_DIR,
+        verbose: true,
+      })
+
+      transaction.trackCreatedFile('new-file.txt')
+
+      // Mock rmSync to throw error
+      const fs = require('fs')
+      const originalRmSync = fs.rmSync
+      const rmSyncSpy = vi.spyOn(fs, 'rmSync').mockImplementation(() => {
+        throw new Error('Permission denied')
+      })
+
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => { })
+
+      transaction.rollback()
+
+      // Should log warning about error
+      expect(consoleSpy).toHaveBeenCalled()
+      expect(transaction.isRolledBackState()).toBe(true)
+
+      rmSyncSpy.mockRestore()
+      consoleSpy.mockRestore()
+    })
+
+    it('should log verbose message when removing created file', () => {
+      const filePath = join(TEST_DIR, 'new-file.txt')
+      writeFileSync(filePath, 'content')
+
+      const transaction = new Transaction({
+        projectPath: TEST_DIR,
+        verbose: true,
+      })
+
+      transaction.trackCreatedFile('new-file.txt')
+
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => { })
+
+      transaction.rollback()
+
+      // Should log verbose message about removing file
+      expect(consoleSpy).toHaveBeenCalled()
+      expect(consoleSpy.mock.calls.some((call) => call[0]?.includes('Removed created file'))).toBe(true)
+
+      consoleSpy.mockRestore()
+    })
+
+    it('should skip file removal if file does not exist', () => {
+      const transaction = new Transaction({
+        projectPath: TEST_DIR,
+        verbose: false,
+      })
+
+      // Track a file that doesn't exist
+      transaction.trackCreatedFile('non-existent-file.txt')
+
+      // Rollback should not throw error
+      expect(() => transaction.rollback()).not.toThrow()
+      expect(transaction.isRolledBackState()).toBe(true)
+    })
+
+    it('should log warning if existsSync throws during file removal', () => {
+      const transaction = new Transaction({
+        projectPath: TEST_DIR,
+        verbose: true,
+      })
+
+      transaction.trackCreatedFile('will-throw.txt')
+
+      const fs = require('fs')
+      const existsSyncSpy = vi.spyOn(fs, 'existsSync').mockImplementation(() => {
+        throw new Error('Unexpected existsSync error')
+      })
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => { })
+
+      expect(() => transaction.rollback()).not.toThrow()
+      expect(consoleSpy).toHaveBeenCalled()
+      expect(transaction.isRolledBackState()).toBe(true)
+
+      existsSyncSpy.mockRestore()
+      consoleSpy.mockRestore()
+    })
+  })
+
+  describe('restoreBackups - error handling', () => {
+    it('should log warning when restore write fails', () => {
+      const filePath = join(TEST_DIR, 'test.txt')
+      writeFileSync(filePath, 'original')
+
+      const transaction = new Transaction({
+        projectPath: TEST_DIR,
+        verbose: true,
+      })
+
+      transaction.backupFile('test.txt')
+      writeFileSync(filePath, 'modified')
+
+      const fs = require('fs')
+      const writeSpy = vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {
+        throw new Error('write fail')
+      })
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => { })
+
+      expect(() => transaction.rollback()).not.toThrow()
+      expect(consoleSpy).toHaveBeenCalled()
+      expect(transaction.isRolledBackState()).toBe(true)
+
+      writeSpy.mockRestore()
+      consoleSpy.mockRestore()
+    })
+  })
+
+  describe('removeCreatedDirs - error handling and verbose logging', () => {
+    it('should handle errors when removing created directories', () => {
+      const dirPath = join(TEST_DIR, 'new-dir')
+      mkdirSync(dirPath, { recursive: true })
+
+      const transaction = new Transaction({
+        projectPath: TEST_DIR,
+        verbose: true,
+      })
+
+      transaction.trackCreatedDir('new-dir')
+
+      // Mock readdirSync to throw error
+      const fs = require('fs')
+      const readdirSyncSpy = vi.spyOn(fs, 'readdirSync').mockImplementation(() => {
+        throw new Error('Permission denied')
+      })
+
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => { })
+
+      transaction.rollback()
+
+      // Should handle error gracefully
+      expect(transaction.isRolledBackState()).toBe(true)
+
+      readdirSyncSpy.mockRestore()
+      consoleSpy.mockRestore()
+    })
+
+    it('should log verbose message when removing empty directory', () => {
+      const dirPath = join(TEST_DIR, 'empty-dir')
+      mkdirSync(dirPath, { recursive: true })
+
+      const transaction = new Transaction({
+        projectPath: TEST_DIR,
+        verbose: true,
+      })
+
+      transaction.trackCreatedDir('empty-dir')
+
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => { })
+
+      transaction.rollback()
+
+      // Should log verbose message about removing directory
+      expect(consoleSpy).toHaveBeenCalled()
+      expect(consoleSpy.mock.calls.some((call) => call[0]?.includes('Removed created dir'))).toBe(true)
+
+      consoleSpy.mockRestore()
+    })
+
+    it('should log verbose message when skipping non-empty directory', () => {
+      const dirPath = join(TEST_DIR, 'non-empty-dir')
+      mkdirSync(dirPath, { recursive: true })
+      writeFileSync(join(dirPath, 'file.txt'), 'content')
+
+      const transaction = new Transaction({
+        projectPath: TEST_DIR,
+        verbose: true,
+      })
+
+      transaction.trackCreatedDir('non-empty-dir')
+
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => { })
+
+      transaction.rollback()
+
+      // Should log verbose message about skipping non-empty directory
+      expect(consoleSpy).toHaveBeenCalled()
+      expect(consoleSpy.mock.calls.some((call) => call[0]?.includes('Skipped non-empty dir'))).toBe(true)
+
+      consoleSpy.mockRestore()
+    })
+
+    it('should handle directory that is not a directory (file instead)', () => {
+      const filePath = join(TEST_DIR, 'file-as-dir')
+      writeFileSync(filePath, 'content')
+
+      const transaction = new Transaction({
+        projectPath: TEST_DIR,
+        verbose: false,
+      })
+
+      // Track a file as if it were a directory (edge case)
+      transaction.trackCreatedDir('file-as-dir')
+
+      // Rollback should handle this gracefully
+      expect(() => transaction.rollback()).not.toThrow()
+      expect(transaction.isRolledBackState()).toBe(true)
+    })
+
+    it('should handle statSync errors gracefully', () => {
+      const dirPath = join(TEST_DIR, 'new-dir')
+      mkdirSync(dirPath, { recursive: true })
+
+      const transaction = new Transaction({
+        projectPath: TEST_DIR,
+        verbose: false,
+      })
+
+      transaction.trackCreatedDir('new-dir')
+
+      // Mock statSync to throw error
+      const fs = require('fs')
+      const statSyncSpy = vi.spyOn(fs, 'statSync').mockImplementation(() => {
+        throw new Error('Permission denied')
+      })
+
+      // Rollback should handle error gracefully
+      expect(() => transaction.rollback()).not.toThrow()
+      expect(transaction.isRolledBackState()).toBe(true)
+
+      statSyncSpy.mockRestore()
+    })
+
+    it('should handle rmdirSync errors gracefully', () => {
+      const dirPath = join(TEST_DIR, 'new-dir')
+      mkdirSync(dirPath, { recursive: true })
+
+      const transaction = new Transaction({
+        projectPath: TEST_DIR,
+        verbose: false,
+      })
+
+      transaction.trackCreatedDir('new-dir')
+
+      // Mock rmdirSync to throw error
+      const fs = require('fs')
+      const rmdirSyncSpy = vi.spyOn(fs, 'rmdirSync').mockImplementation(() => {
+        throw new Error('Permission denied')
+      })
+
+      // Rollback should handle error gracefully (error is caught and ignored)
+      expect(() => transaction.rollback()).not.toThrow()
+      expect(transaction.isRolledBackState()).toBe(true)
+
+      rmdirSyncSpy.mockRestore()
+    })
+
+    it('should skip directory removal if directory does not exist', () => {
+      const transaction = new Transaction({
+        projectPath: TEST_DIR,
+        verbose: false,
+      })
+
+      // Track a directory that doesn't exist
+      transaction.trackCreatedDir('non-existent-dir')
+
+      // Rollback should not throw error
+      expect(() => transaction.rollback()).not.toThrow()
+      expect(transaction.isRolledBackState()).toBe(true)
+    })
+
+    it('should handle outer catch block errors in removeCreatedDirs', () => {
+      const dirPath = join(TEST_DIR, 'new-dir')
+      mkdirSync(dirPath, { recursive: true })
+
+      const transaction = new Transaction({
+        projectPath: TEST_DIR,
+        verbose: true,
+      })
+
+      transaction.trackCreatedDir('new-dir')
+
+      // Mock existsSync to throw error in outer catch block
+      const fs = require('fs')
+      const existsSyncSpy = vi.spyOn(fs, 'existsSync').mockImplementation(() => {
+        throw new Error('Unexpected error')
+      })
+
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => { })
+
+      transaction.rollback()
+
+      // Should handle error gracefully and log warning
+      expect(consoleSpy).toHaveBeenCalled()
+      expect(transaction.isRolledBackState()).toBe(true)
+
+      existsSyncSpy.mockRestore()
+      consoleSpy.mockRestore()
+    })
+  })
+
+  describe('verbose logging', () => {
+    it('should log verbose messages during rollback', () => {
+      const filePath = join(TEST_DIR, 'test.txt')
+      writeFileSync(filePath, 'content')
+
+      const transaction = new Transaction({
+        projectPath: TEST_DIR,
+        verbose: true,
+      })
+
+      transaction.backupFile('test.txt')
+      transaction.trackCreatedFile('new-file.txt')
+
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => { })
+
+      transaction.rollback()
+
+      // Should log verbose messages
+      expect(consoleSpy).toHaveBeenCalled()
+      expect(consoleSpy.mock.calls.some((call) => call[0]?.includes('Rolling back transaction'))).toBe(true)
+      expect(consoleSpy.mock.calls.some((call) => call[0]?.includes('Rollback completed'))).toBe(true)
+
+      consoleSpy.mockRestore()
+    })
+
+    it('should log verbose message during commit', () => {
+      const transaction = new Transaction({
+        projectPath: TEST_DIR,
+        verbose: true,
+      })
+
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => { })
+
+      transaction.commit()
+
+      // Should log verbose message about commit
+      expect(consoleSpy).toHaveBeenCalled()
+      expect(consoleSpy.mock.calls.some((call) => call[0]?.includes('committed'))).toBe(true)
+
+      consoleSpy.mockRestore()
+    })
+
+    it('should not log when verbose is false', () => {
+      const transaction = new Transaction({
+        projectPath: TEST_DIR,
+        verbose: false,
+      })
+
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => { })
+
+      transaction.commit()
+
+      // Should not log when verbose is false
+      expect(consoleSpy).not.toHaveBeenCalled()
+
+      // Test rollback separately (without commit first)
+      const transaction2 = new Transaction({
+        projectPath: TEST_DIR,
+        verbose: false,
+      })
+
+      transaction2.rollback()
+
+      // Should not log when verbose is false
+      expect(consoleSpy).not.toHaveBeenCalled()
+
+      consoleSpy.mockRestore()
+    })
   })
 })
 

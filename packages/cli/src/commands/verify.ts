@@ -56,8 +56,12 @@ export async function verifyCommand(options: VerifyOptions = {}): Promise<Verify
 
     console.log(chalk.blue('🔍 Verifying PWA setup...'))
 
-    // Determine output directory
-    const finalOutputDir = outputDir ?? join(result.projectPath, 'public')
+    // Determine output directory (make it absolute)
+    const finalOutputDir = outputDir
+      ? outputDir.startsWith('/')
+        ? outputDir
+        : join(result.projectPath, outputDir)
+      : join(result.projectPath, 'public')
     result.outputDir = finalOutputDir
 
     // Find HTML files for validation

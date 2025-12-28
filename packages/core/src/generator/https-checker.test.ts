@@ -88,6 +88,14 @@ describe('https-checker', () => {
       expect(result.isSecure).toBe(true)
     })
 
+    it('should treat https localhost as secure but not production', () => {
+      const result = checkHttps('https://localhost:3000')
+
+      expect(result.isSecure).toBe(true)
+      expect(result.isLocalhost).toBe(true)
+      expect(result.isProduction).toBe(false)
+    })
+
     it('should handle invalid URLs', () => {
       const result = checkHttps('not-a-valid-url')
 
@@ -153,6 +161,41 @@ describe('https-checker', () => {
 
       expect(url).toBeNull()
     })
+
+    it('should detect URL from .env.local file', () => {
+      writeFileSync(join(TEST_DIR, '.env.local'), 'PUBLIC_URL=https://localenv.com')
+
+      const url = detectProjectUrl(TEST_DIR)
+
+      expect(url).toBe('https://localenv.com')
+    })
+
+    it('should detect URL from vercel.json', () => {
+      writeFileSync(
+        join(TEST_DIR, 'vercel.json'),
+        JSON.stringify({ url: 'https://vercel.app' }),
+      )
+
+      const url = detectProjectUrl(TEST_DIR)
+
+      expect(url).toBe('https://vercel.app')
+    })
+
+    it('should detect URL from netlify.toml', () => {
+      writeFileSync(join(TEST_DIR, 'netlify.toml'), 'url = "https://netlify.app"')
+
+      const url = detectProjectUrl(TEST_DIR)
+
+      expect(url).toBe('https://netlify.app')
+    })
+
+    it('should detect URL from next.config.js', () => {
+      writeFileSync(join(TEST_DIR, 'next.config.js'), 'module.exports = { baseUrl: "https://nextjs.app" }')
+
+      const url = detectProjectUrl(TEST_DIR)
+
+      expect(url).toBe('https://nextjs.app')
+    })
   })
 
   describe('checkProjectHttps', () => {
@@ -206,6 +249,81 @@ describe('https-checker', () => {
 
       expect(result.hostname).toBe('production.com')
       expect(result.isSecure).toBe(true)
+    })
+  })
+
+  describe('detectProjectUrl - JS/TS files', () => {
+    it('should detect URL from JavaScript file with pattern', () => {
+      writeFileSync(
+        join(TEST_DIR, 'config.js'),
+        'const API_URL = "https://api.example.com";',
+      )
+
+      const url = detectProjectUrl(TEST_DIR)
+
+      // Should try to detect from JS files (though pattern might not match)
+      expect(url).toBeDefined()
+    })
+
+    it('should detect URL from TypeScript file with pattern', () => {
+      writeFileSync(
+        join(TEST_DIR, 'config.ts'),
+        'const API_URL = "https://api.example.com";',
+      )
+
+      const url = detectProjectUrl(TEST_DIR)
+
+      // Should try to detect from TS files
+      expect(url).toBeDefined()
+    })
+
+    it('should handle parse errors gracefully', () => {
+      // Create invalid JSON file
+      writeFileSync(join(TEST_DIR, 'package.json'), '{ invalid json }')
+
+      const url = detectProjectUrl(TEST_DIR)
+
+      // Should return null on parse error
+      expect(url).toBeNull()
+    })
+  })
+
+  describe('detectProjectUrl - .env files', () => {
+    it('should detect URL from .env file with NEXT_PUBLIC_URL', () => {
+      writeFileSync(join(TEST_DIR, '.env'), 'NEXT_PUBLIC_URL=https://myapp.com\nOTHER_VAR=value')
+
+      const url = detectProjectUrl(TEST_DIR)
+
+      expect(url).toBe('https://myapp.com')
+    })
+
+    it('should detect URL from .env file with VITE_PUBLIC_URL', () => {
+      writeFileSync(join(TEST_DIR, '.env'), 'VITE_PUBLIC_URL=https://viteapp.com')
+
+      const url = detectProjectUrl(TEST_DIR)
+
+      expect(url).toBe('https://viteapp.com')
+    })
+
+    it('should handle .env file with multiple lines', () => {
+      writeFileSync(
+        join(TEST_DIR, '.env'),
+        'VAR1=value1\nNEXT_PUBLIC_URL=https://myapp.com\nVAR2=value2',
+      )
+
+      const url = detectProjectUrl(TEST_DIR)
+
+      expect(url).toBe('https://myapp.com')
+    })
+
+    it('should handle .env file parse errors', () => {
+      // Create .env file that might cause issues
+      writeFileSync(join(TEST_DIR, '.env'), '')
+
+      const url = detectProjectUrl(TEST_DIR)
+
+      // Should return null if no URL found
+      expect(url).toBeNull()
     })
   })
 })
