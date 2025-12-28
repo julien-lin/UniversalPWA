@@ -37,13 +37,23 @@ pnpm build
 # or
 yarn build
 
-# 2. Then initialize PWA (CLI will auto-detect dist/ directory)
+# 2. Then initialize PWA
+# In interactive mode, select "Production" when prompted
+# The CLI will auto-detect dist/ directory and suggest it
+universal-pwa init
+
+# Or explicitly specify output directory
 universal-pwa init --output-dir dist
 ```
 
 **Why?** The service worker needs to precache all your built assets (JS/CSS with hashes). If you initialize before building, the service worker won't know about the hashed filenames.
 
-The CLI automatically detects `dist/` directory for React/Vite projects if it exists. You can also explicitly specify it with `--output-dir dist`.
+**Environment Detection:**
+- The CLI automatically detects your environment:
+  - **Production**: If `dist/` or `build/` exists with recent files (< 24h)
+  - **Local**: Otherwise, defaults to `public/`
+- Detection indicators are displayed during interactive prompts
+- You can override the detection by explicitly choosing Local or Production
 
 #### Interactive Mode (Recommended)
 
@@ -53,12 +63,21 @@ Simply run without arguments to launch interactive prompts:
 universal-pwa init
 ```
 
-The CLI will guide you through:
+The CLI will guide you through a 2-phase workflow:
+
+**Phase 1: Environment Selection**
+- Choose between **Local** (development) or **Production** (build)
+- The CLI automatically detects your environment based on the presence of `dist/` or `build/` directories
+- Displays detection indicators (e.g., "dist/ directory exists with 15 built files")
+
+**Phase 2: Application Configuration**
 - App name (auto-detected from `package.json`)
-- Short name (max 12 characters)
+- Short name (max 12 characters, auto-generated from app name)
 - Icon source path (auto-detected from common locations)
-- Theme and background colors
+- Theme and background colors (suggested based on detected framework)
 - Icon generation options
+
+All prompts include smart defaults, validation, and contextual suggestions!
 
 #### Command Line Mode
 
