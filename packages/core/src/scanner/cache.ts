@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync, statSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { createHash } from 'crypto'
 import type { ScannerResult } from './index.js'
@@ -258,7 +258,8 @@ export function removeCacheEntry(projectPath: string, cache: ScanCache | null): 
   }
 
   const cacheKey = generateCacheKey(projectPath)
-  const { [cacheKey]: removed, ...remainingEntries } = cache.entries
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { [cacheKey]: _removed, ...remainingEntries } = cache.entries
 
   if (Object.keys(remainingEntries).length === 0) {
     return null // Cache vide

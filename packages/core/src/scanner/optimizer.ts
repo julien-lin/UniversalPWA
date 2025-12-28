@@ -1,6 +1,5 @@
 import { existsSync, readFileSync, statSync, mkdirSync } from 'fs'
 import { join, dirname, extname, basename } from 'path'
-import { glob } from 'glob'
 import sharp from 'sharp'
 import type { AssetDetectionResult } from './asset-detector.js'
 import type { ProjectConfiguration } from './framework-detector.js'
