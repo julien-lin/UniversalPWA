@@ -50,8 +50,19 @@ export function determineTemplateType(
   framework?: string | null,
 ): ServiceWorkerTemplateType {
   // Framework specific
-  if (framework === 'WordPress') {
+  if (framework === 'WordPress' || framework === 'WooCommerce') {
     return 'wordpress'
+  }
+
+  // CMS & E-commerce
+  if (
+    framework === 'Drupal' ||
+    framework === 'Joomla' ||
+    framework === 'Magento' ||
+    framework === 'Shopify' ||
+    framework === 'PrestaShop'
+  ) {
+    return 'php' // Use generic PHP template for CMS/e-commerce
   }
 
   // PHP frameworks

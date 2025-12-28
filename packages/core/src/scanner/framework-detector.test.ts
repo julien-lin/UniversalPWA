@@ -31,12 +31,183 @@ describe('framework-detector', () => {
       expect(result.indicators).toContain('wp-content/')
     })
 
+    it('should detect WooCommerce when WordPress has woocommerce plugin', () => {
+      writeFileSync(join(TEST_DIR, 'wp-config.php'), '<?php')
+      mkdirSync(join(TEST_DIR, 'wp-content', 'plugins', 'woocommerce'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('woocommerce')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('wp-content/plugins/woocommerce/')
+    })
+
     it('should not detect WordPress without wp-content', () => {
       writeFileSync(join(TEST_DIR, 'wp-config.php'), '<?php')
 
       const result = detectFramework(TEST_DIR)
 
       expect(result.framework).not.toBe('wordpress')
+    })
+  })
+
+  describe('Drupal', () => {
+    it('should detect Drupal with sites/, modules/, and themes/', () => {
+      mkdirSync(join(TEST_DIR, 'sites'), { recursive: true })
+      mkdirSync(join(TEST_DIR, 'modules'), { recursive: true })
+      mkdirSync(join(TEST_DIR, 'themes'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('drupal')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('sites/ and modules/ (Drupal)')
+      expect(result.indicators).toContain('themes/')
+    })
+
+    it('should not detect Drupal without themes/', () => {
+      mkdirSync(join(TEST_DIR, 'sites'), { recursive: true })
+      mkdirSync(join(TEST_DIR, 'modules'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).not.toBe('drupal')
+    })
+  })
+
+  describe('Joomla', () => {
+    it('should detect Joomla with configuration.php and administrator/', () => {
+      writeFileSync(join(TEST_DIR, 'configuration.php'), '<?php')
+      mkdirSync(join(TEST_DIR, 'administrator'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('joomla')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('configuration.php (Joomla)')
+      expect(result.indicators).toContain('administrator/')
+    })
+
+    it('should not detect Joomla without administrator/', () => {
+      writeFileSync(join(TEST_DIR, 'configuration.php'), '<?php')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).not.toBe('joomla')
+    })
+  })
+
+  describe('Magento', () => {
+    it('should detect Magento Community Edition', () => {
+      writeFileSync(
+        join(TEST_DIR, 'composer.json'),
+        JSON.stringify({
+          require: {
+            'magento/product-community-edition': '^2.4',
+          },
+        }),
+      )
+      mkdirSync(join(TEST_DIR, 'app'), { recursive: true })
+      mkdirSync(join(TEST_DIR, 'pub'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('magento')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('composer.json: magento/*')
+      expect(result.indicators).toContain('app/ and pub/')
+    })
+
+    it('should detect Magento Enterprise Edition', () => {
+      writeFileSync(
+        join(TEST_DIR, 'composer.json'),
+        JSON.stringify({
+          require: {
+            'magento/product-enterprise-edition': '^2.4',
+          },
+        }),
+      )
+      mkdirSync(join(TEST_DIR, 'app'), { recursive: true })
+      mkdirSync(join(TEST_DIR, 'pub'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('magento')
+      expect(result.confidence).toBe('high')
+    })
+
+    it('should not detect Magento without app/ and pub/', () => {
+      writeFileSync(
+        join(TEST_DIR, 'composer.json'),
+        JSON.stringify({
+          require: {
+            'magento/product-community-edition': '^2.4',
+          },
+        }),
+      )
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).not.toBe('magento')
+    })
+  })
+
+  describe('Shopify', () => {
+    it('should detect Shopify with theme.liquid', () => {
+      writeFileSync(join(TEST_DIR, 'theme.liquid'), '{% comment %}')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('shopify')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('theme.liquid or config/settings_schema.json (Shopify)')
+    })
+
+    it('should detect Shopify with config/settings_schema.json', () => {
+      mkdirSync(join(TEST_DIR, 'config'), { recursive: true })
+      writeFileSync(join(TEST_DIR, 'config', 'settings_schema.json'), '{}')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('shopify')
+      expect(result.confidence).toBe('high')
+    })
+  })
+
+  describe('PrestaShop', () => {
+    it('should detect PrestaShop with composer.json and config/, themes/', () => {
+      writeFileSync(
+        join(TEST_DIR, 'composer.json'),
+        JSON.stringify({
+          require: {
+            'prestashop/prestashop': '^8.0',
+          },
+        }),
+      )
+      mkdirSync(join(TEST_DIR, 'config'), { recursive: true })
+      mkdirSync(join(TEST_DIR, 'themes'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('prestashop')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('composer.json: prestashop/prestashop')
+      expect(result.indicators).toContain('config/ and themes/')
+    })
+
+    it('should not detect PrestaShop without config/ and themes/', () => {
+      writeFileSync(
+        join(TEST_DIR, 'composer.json'),
+        JSON.stringify({
+          require: {
+            'prestashop/prestashop': '^8.0',
+          },
+        }),
+      )
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).not.toBe('prestashop')
     })
   })
 
