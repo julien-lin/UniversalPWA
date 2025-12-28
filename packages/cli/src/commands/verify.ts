@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from 'fs'
 import { join, resolve } from 'path'
+import { glob } from 'glob'
 import chalk from 'chalk'
+import { validatePWA, type ValidationResult } from '@julien-lin/universal-pwa-core'
 
 export interface VerifyOptions {
   projectPath?: string
@@ -19,12 +21,13 @@ export interface VerifyResult {
   dockerfileFound: boolean
   dockerfileNeedsUpdate: boolean
   dockerfileSuggestions: string[]
+  validationResult?: ValidationResult // Nouveau : résultat de validation PWA complète
 }
 
 /**
  * Verify command: checks if all PWA files are present and correctly configured
  */
-export function verifyCommand(options: VerifyOptions = {}): Promise<VerifyResult> {
+export async function verifyCommand(options: VerifyOptions = {}): Promise<VerifyResult> {
   const {
     projectPath = process.cwd(),
     outputDir,
@@ -56,6 +59,67 @@ export function verifyCommand(options: VerifyOptions = {}): Promise<VerifyResult
     // Determine output directory
     const finalOutputDir = outputDir ?? join(result.projectPath, 'public')
     result.outputDir = finalOutputDir
+
+    // Find HTML files for validation
+    const htmlFiles = await glob('**/*.html', {
+      cwd: result.projectPath,
+      ignore: ['**/node_modules/**', '**/.next/**', '**/.nuxt/**', '**/dist/**'],
+      absolute: true,
+    })
+
+    // Run comprehensive PWA validation
+    console.log(chalk.blue('🔍 Running comprehensive PWA validation...'))
+    const validationResult = await validatePWA({
+      projectPath: result.projectPath,
+      outputDir: finalOutputDir,
+      htmlFiles,
+      strict: false,
+    })
+
+    result.validationResult = validationResult
+
+    // Display validation results
+    console.log(chalk.blue('\n📊 PWA Validation Results:'))
+    console.log(chalk.gray(`  Score: ${validationResult.score}/100`))
+    console.log(chalk.gray(`  Errors: ${validationResult.errors.length}`))
+    console.log(chalk.gray(`  Warnings: ${validationResult.warnings.length}`))
+
+    if (validationResult.errors.length > 0) {
+      console.log(chalk.red('\n❌ Errors:'))
+      validationResult.errors.forEach((error) => {
+        console.log(chalk.red(`  ✗ [${error.code}] ${error.message}`))
+        if (error.file) {
+          console.log(chalk.gray(`    File: ${error.file}`))
+        }
+        if (error.suggestion) {
+          console.log(chalk.yellow(`    💡 ${error.suggestion}`))
+        }
+      })
+    }
+
+    if (validationResult.warnings.length > 0) {
+      console.log(chalk.yellow('\n⚠️  Warnings:'))
+      validationResult.warnings.forEach((warning) => {
+        console.log(chalk.yellow(`  ⚠ [${warning.code}] ${warning.message}`))
+        if (warning.file) {
+          console.log(chalk.gray(`    File: ${warning.file}`))
+        }
+        if (warning.suggestion) {
+          console.log(chalk.gray(`    💡 ${warning.suggestion}`))
+        }
+      })
+    }
+
+    if (validationResult.suggestions.length > 0) {
+      console.log(chalk.blue('\n💡 Suggestions:'))
+      validationResult.suggestions.forEach((suggestion) => {
+        console.log(chalk.gray(`  • ${suggestion}`))
+      })
+    }
+
+    // Add validation errors and warnings to result
+    result.errors.push(...validationResult.errors.map((e) => e.message))
+    result.warnings.push(...validationResult.warnings.map((w) => w.message))
 
     // Required PWA files
     const requiredFiles = [
@@ -163,13 +227,8 @@ export function verifyCommand(options: VerifyOptions = {}): Promise<VerifyResult
       }
     }
 
-    // Check if HTML files reference PWA files
-    console.log(chalk.blue('📄 Checking HTML files...'))
-    // This would require parsing HTML files, simplified for now
-    // Could be enhanced to check for manifest link and service worker registration
-
-    // Determine success
-    result.success = result.filesMissing.length === 0 && result.errors.length === 0
+    // Determine success based on validation result
+    result.success = validationResult.isValid && result.filesMissing.length === 0
 
     // Summary
     console.log(chalk.blue('\n📊 Summary:'))
@@ -177,11 +236,24 @@ export function verifyCommand(options: VerifyOptions = {}): Promise<VerifyResult
     console.log(chalk.gray(`  Files missing: ${result.filesMissing.length}`))
     console.log(chalk.gray(`  Warnings: ${result.warnings.length}`))
     console.log(chalk.gray(`  Errors: ${result.errors.length}`))
+    console.log(chalk.gray(`  PWA Score: ${validationResult.score}/100`))
 
-    if (result.success) {
-      console.log(chalk.green('\n✅ PWA setup is complete!'))
+    // Display detailed validation breakdown
+    console.log(chalk.blue('\n📋 Validation Details:'))
+    console.log(chalk.gray(`  Manifest: ${validationResult.details.manifest.exists ? '✓' : '✗'} ${validationResult.details.manifest.valid ? 'Valid' : 'Invalid'}`))
+    console.log(chalk.gray(`  Icons: ${validationResult.details.icons.exists ? '✓' : '✗'} ${validationResult.details.icons.has192x192 ? '192✓' : '192✗'} ${validationResult.details.icons.has512x512 ? '512✓' : '512✗'}`))
+    console.log(chalk.gray(`  Service Worker: ${validationResult.details.serviceWorker.exists ? '✓' : '✗'} ${validationResult.details.serviceWorker.valid ? 'Valid' : 'Invalid'}`))
+    console.log(chalk.gray(`  Meta Tags: ${validationResult.details.metaTags.valid ? '✓ Valid' : '✗ Invalid'}`))
+    console.log(chalk.gray(`  HTTPS: ${validationResult.details.https.isSecure ? '✓ Secure' : '⚠ Not verified'}`))
+
+    if (result.success && validationResult.score >= 90) {
+      console.log(chalk.green('\n✅ PWA setup is complete and highly compliant!'))
+    } else if (result.success && validationResult.score >= 70) {
+      console.log(chalk.yellow('\n⚠️  PWA setup is complete but could be improved.'))
+    } else if (result.success) {
+      console.log(chalk.yellow('\n⚠️  PWA setup is complete but has compliance issues.'))
     } else {
-      console.log(chalk.red('\n❌ PWA setup has issues that need to be fixed.'))
+      console.log(chalk.red('\n❌ PWA setup has critical issues that need to be fixed.'))
       if (result.dockerfileNeedsUpdate) {
         console.log(chalk.yellow('\n💡 Tip: Update your Dockerfile to copy PWA files.'))
       }
