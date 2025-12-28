@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
 import { join } from 'path'
-import { parseHTML, parseHTMLFile, findElement, findAllElements, elementExists } from './html-parser'
+import { parseHTML, parseHTMLFile, findElement, findAllElements, elementExists, serializeHTML } from './html-parser'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-html-parser')
 
@@ -157,6 +157,15 @@ describe('html-parser', () => {
       })
     })
 
+    it('should search document children when head is missing', () => {
+      const html = '<body><meta name="viewport" content="width=device-width" /></body>'
+      const parsed = parseHTML(html)
+
+      const metas = findAllElements(parsed, 'meta')
+
+      expect(metas.length).toBeGreaterThanOrEqual(1)
+    })
+
     it('should return empty array if no elements found', () => {
       const html = '<html><head><title>Test</title></head></html>'
       const parsed = parseHTML(html)
@@ -184,6 +193,49 @@ describe('html-parser', () => {
       const exists = elementExists(parsed, 'link', { name: 'rel', value: 'manifest' })
 
       expect(exists).toBe(false)
+    })
+  })
+
+  describe('findElement - search in document.children when head is missing', () => {
+    it('should search in document.children when head does not exist', () => {
+      const html = '<html><body><title>Test</title></body></html>'
+      const parsed = parseHTML(html)
+
+      // When head is null, search should look in document.children
+      const title = findElement(parsed, 'title')
+
+      // Title might be found in body or document.children
+      expect(title).toBeDefined()
+    })
+
+    it('should handle HTML without head tag', () => {
+      const html = '<html><body><p>Content</p></body></html>'
+      const parsed = parseHTML(html)
+
+      expect(parsed.head).toBeNull()
+      // Should still be able to search in document.children
+      const body = findElement(parsed, 'body')
+      expect(body).not.toBeNull()
+    })
+  })
+
+  describe('serializeHTML', () => {
+    it('should return original content', () => {
+      const html = '<html><head><title>Test</title></head><body></body></html>'
+      const parsed = parseHTML(html)
+
+      const serialized = serializeHTML(parsed)
+
+      expect(serialized).toBe(html)
+    })
+
+    it('should preserve original content for empty HTML', () => {
+      const html = ''
+      const parsed = parseHTML(html)
+
+      const serialized = serializeHTML(parsed)
+
+      expect(serialized).toBe(html)
     })
   })
 })

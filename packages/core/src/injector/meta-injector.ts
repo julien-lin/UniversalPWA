@@ -100,7 +100,7 @@ export function injectMetaTags(htmlContent: string, options: MetaInjectorOptions
   // Inject mobile-web-app-capable (replaces deprecated apple-mobile-web-app-capable)
   if (options.appleMobileWebAppCapable !== undefined) {
     const content = options.appleMobileWebAppCapable ? 'yes' : 'no'
-    
+
     // First, remove deprecated apple-mobile-web-app-capable if it exists
     // Search for meta tag with name="apple-mobile-web-app-capable"
     const deprecatedMeta = findElement(parsed, 'meta', { name: 'name', value: 'apple-mobile-web-app-capable' })
@@ -111,7 +111,7 @@ export function injectMetaTags(htmlContent: string, options: MetaInjectorOptions
         result.warnings.push('Removed deprecated <meta name="apple-mobile-web-app-capable">')
       }
     }
-    
+
     // Use the new standard meta tag
     if (!elementExists(parsed, 'meta', { name: 'mobile-web-app-capable', value: content })) {
       injectMetaTag(head, 'mobile-web-app-capable', content)
@@ -143,6 +143,7 @@ export function injectMetaTags(htmlContent: string, options: MetaInjectorOptions
 
   // Ensure body exists before injecting scripts
   let body = parsed.body
+  const originalBodyExists = !!body
   if (!body) {
     // Create body element if missing
     if (parsed.html) {
@@ -177,7 +178,7 @@ export function injectMetaTags(htmlContent: string, options: MetaInjectorOptions
     if (!htmlContent.includes('navigator.serviceWorker')) {
       // Escape path to prevent XSS injection
       const escapedSwPath = escapeJavaScriptString(swPath)
-      
+
       // Inject service worker registration and PWA install handler script
       const swScript = `\n<script>
 // Service Worker Registration
@@ -262,7 +263,7 @@ window.isPWAInstallable = function() {
       // Inject before </body> tag (more reliable than string replacement)
       // Use last occurrence to handle malformed HTML with multiple </body> tags
       const lastBodyIndex = modifiedHtml.lastIndexOf('</body>')
-      if (lastBodyIndex !== -1) {
+      if (lastBodyIndex !== -1 && originalBodyExists) {
         modifiedHtml = modifiedHtml.slice(0, lastBodyIndex) + swScript + '\n' + modifiedHtml.slice(lastBodyIndex)
       } else if (modifiedHtml.includes('</html>')) {
         // If no </body> but has </html>, inject before </html>
@@ -336,7 +337,7 @@ window.isPWAInstallable = function() {
 </script>`
         // Inject before </body> tag (use last occurrence for reliability)
         const lastBodyIndex = modifiedHtml.lastIndexOf('</body>')
-        if (lastBodyIndex !== -1) {
+        if (lastBodyIndex !== -1 && originalBodyExists) {
           modifiedHtml = modifiedHtml.slice(0, lastBodyIndex) + installScript + '\n' + modifiedHtml.slice(lastBodyIndex)
         } else if (modifiedHtml.includes('</html>')) {
           const htmlIndex = modifiedHtml.lastIndexOf('</html>')

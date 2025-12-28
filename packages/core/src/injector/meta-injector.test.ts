@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { injectMetaTags, injectMetaTagsInFile, type MetaInjectorOptions } from './meta-injector'
+import { parseHTMLFile } from './html-parser.js'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-meta-injector')
 
@@ -266,6 +267,125 @@ describe('meta-injector', () => {
       const modifiedContent = readFileSync(htmlPath, 'utf-8')
       expect(modifiedContent).toContain('rel="manifest"')
       expect(modifiedContent).toContain('name="theme-color"')
+    })
+  })
+
+  describe('PWA install handler script injection', () => {
+    it('should inject PWA install handler script when serviceWorkerPath is provided', () => {
+      const html = '<html><head><title>Test</title></head><body></body></html>'
+      const options: MetaInjectorOptions = {
+        serviceWorkerPath: '/sw.js',
+      }
+
+      const { html: modifiedHtml, result } = injectMetaTags(html, options)
+
+      expect(modifiedHtml).toContain('window.addEventListener(\'beforeinstallprompt\'')
+      expect(modifiedHtml).toContain('window.installPWA')
+      expect(modifiedHtml).toContain('window.isPWAInstalled')
+      expect(modifiedHtml).toContain('window.isPWAInstallable')
+      expect(result.injected.some((i) => i.includes('PWA install handler'))).toBe(true)
+    })
+
+    it('should inject install script before </body> tag', () => {
+      const html = '<html><head><title>Test</title></head><body><p>Content</p></body></html>'
+      const options: MetaInjectorOptions = {
+        serviceWorkerPath: '/sw.js',
+      }
+
+      const { html: modifiedHtml } = injectMetaTags(html, options)
+
+      const bodyIndex = modifiedHtml.lastIndexOf('</body>')
+      const scriptIndex = modifiedHtml.indexOf('window.addEventListener(\'beforeinstallprompt\'')
+      expect(scriptIndex).toBeLessThan(bodyIndex)
+    })
+
+    it('should inject install script before </html> if no </body> tag', () => {
+      const html = '<html><head><title>Test</title></head></html>'
+      const options: MetaInjectorOptions = {
+        serviceWorkerPath: '/sw.js',
+      }
+
+      const { html: modifiedHtml, result } = injectMetaTags(html, options)
+
+      expect(modifiedHtml).toContain('window.addEventListener(\'beforeinstallprompt\'')
+      expect(result.warnings.some((w) => w.includes('(no </body> found)'))).toBe(true)
+    })
+
+    it('should inject install script at end if no </body> or </html> tag', () => {
+      const html = '<head><title>Test</title></head>'
+      const options: MetaInjectorOptions = {
+        serviceWorkerPath: '/sw.js',
+      }
+
+      const { html: modifiedHtml, result } = injectMetaTags(html, options)
+
+      expect(modifiedHtml).toContain('window.addEventListener(\'beforeinstallprompt\'')
+      expect(result.warnings.some((w) => w.includes('(no </body> or </html> found)'))).toBe(true)
+    })
+
+    it('should skip install script if already exists', () => {
+      const html = '<html><head><title>Test</title></head><body><script>navigator.serviceWorker.register</script><script>beforeinstallprompt</script></body></html>'
+      const options: MetaInjectorOptions = {
+        serviceWorkerPath: '/sw.js',
+      }
+
+      const { result } = injectMetaTags(html, options)
+
+      expect(result.skipped.some((s) => s.includes('PWA install handler'))).toBe(true)
+    })
+
+    it('should skip install script if serviceWorker registration already exists', () => {
+      const html = '<html><head><title>Test</title></head><body><script>navigator.serviceWorker.register</script></body></html>'
+      const options: MetaInjectorOptions = {
+        serviceWorkerPath: '/sw.js',
+      }
+
+      const { result } = injectMetaTags(html, options)
+
+      expect(result.skipped.some((s) => s.includes('Service Worker registration'))).toBe(true)
+    })
+  })
+
+  describe('injectLinkTag and injectMetaTag helpers', () => {
+    it('should handle head without children array', () => {
+      const html = '<html><head></head><body></body></html>'
+
+      // Test that injectLinkTag and injectMetaTag work with head without children
+      const options: MetaInjectorOptions = {
+        manifestPath: '/manifest.json',
+        themeColor: '#ffffff',
+      }
+
+      const { result } = injectMetaTags(html, options)
+
+      expect(result.injected.length).toBeGreaterThan(0)
+    })
+  })
+
+  describe('updateMetaContent', () => {
+    it('should update meta tag content when attribs exist', () => {
+      const html = '<html><head><meta name="theme-color" content="#000000" /></head><body></body></html>'
+      const options: MetaInjectorOptions = {
+        themeColor: '#ffffff',
+      }
+
+      const { html: modifiedHtml } = injectMetaTags(html, options)
+
+      expect(modifiedHtml).toContain('content="#ffffff"')
+      expect(modifiedHtml).not.toContain('content="#000000"')
+    })
+
+    it('should handle meta tag without attribs', () => {
+      // This tests the else branch in updateMetaContent
+      const html = '<html><head><meta name="theme-color" /></head><body></body></html>'
+      const options: MetaInjectorOptions = {
+        themeColor: '#ffffff',
+      }
+
+      const { html: modifiedHtml } = injectMetaTags(html, options)
+
+      // Should still inject/update theme-color
+      expect(modifiedHtml).toContain('theme-color')
     })
   })
 })
