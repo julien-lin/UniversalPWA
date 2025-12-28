@@ -166,7 +166,8 @@ describe('init command', () => {
       skipInjection: true,
     })
 
-    expect(result.warnings.some((w) => w.includes('Icon source not found'))).toBe(true)
+    // Check for warning with error code format
+    expect(result.warnings.some((w) => w.includes('Icon source file not found') || w.includes('E3001'))).toBe(true)
   })
 
   it('should handle injection errors gracefully', async () => {

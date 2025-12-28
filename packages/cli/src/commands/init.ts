@@ -10,6 +10,8 @@ import { glob } from 'glob'
 import { join, resolve, relative, normalize } from 'path'
 import type { Framework } from '@julien-lin/universal-pwa-core'
 import type { Architecture } from '@julien-lin/universal-pwa-core'
+import { Transaction } from '../utils/transaction.js'
+import { ErrorCode, formatError, detectErrorCode } from '../utils/error-codes.js'
 
 export interface InitOptions {
   projectPath?: string
@@ -82,10 +84,16 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     errors: [],
   }
 
+  // Initialize transaction for rollback support
+  let transaction: Transaction | null = null
+
   try {
     // Check that path exists
     if (!existsSync(result.projectPath)) {
-      result.errors.push(`Project path does not exist: ${result.projectPath}`)
+      const errorCode = ErrorCode.PROJECT_PATH_NOT_FOUND
+      const errorMessage = formatError(errorCode, result.projectPath)
+      result.errors.push(errorMessage)
+      console.log(chalk.red(`✗ ${errorMessage}`))
       return result
     }
 
@@ -136,6 +144,30 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
       } else {
         // Fallback to public/ (will be created if needed)
         finalOutputDir = publicDir
+      }
+    }
+
+    // Initialize transaction after output directory is determined
+    transaction = new Transaction({
+      projectPath: result.projectPath,
+      outputDir: relative(result.projectPath, finalOutputDir) || undefined,
+      verbose: false,
+    })
+
+    // Backup existing files before modification
+    const existingManifestPath = join(finalOutputDir, 'manifest.json')
+    const existingSwPath = join(finalOutputDir, 'sw.js')
+    
+    if (existsSync(existingManifestPath)) {
+      const manifestRelative = relative(result.projectPath, existingManifestPath)
+      if (manifestRelative && !manifestRelative.startsWith('..')) {
+        transaction.backupFile(manifestRelative)
+      }
+    }
+    if (existsSync(existingSwPath)) {
+      const swRelative = relative(result.projectPath, existingSwPath)
+      if (swRelative && !swRelative.startsWith('..')) {
+        transaction.backupFile(swRelative)
       }
     }
 
@@ -197,7 +229,10 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
           console.log(chalk.red(`✗ Failed to generate icons: ${errorMessage}`))
         }
       } else {
-        result.warnings.push(`Icon source not found: ${iconSourcePath}`)
+        const errorCode = ErrorCode.ICON_SOURCE_NOT_FOUND
+        const warningMessage = formatError(errorCode, iconSourcePath)
+        result.warnings.push(warningMessage)
+        console.log(chalk.yellow(`⚠ ${warningMessage}`))
       }
     }
 
@@ -220,53 +255,93 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     finalShortName = String(finalShortName).trim().substring(0, 12) || 'PWA'
     
     let manifestPath: string | undefined
-    if (iconPaths.length > 0) {
-      // Manifest with generated icons
-      const manifestWithIcons = generateManifest({
-        name: appName,
-        shortName: finalShortName,
-        startUrl: '/',
-        scope: '/',
-        display: 'standalone',
-        themeColor: themeColor ?? '#ffffff',
-        backgroundColor: backgroundColor ?? '#000000',
-        icons: iconPaths.map((src) => ({
-          src,
-          sizes: src.match(/(\d+)x(\d+)/)?.[0] ?? '192x192',
-          type: 'image/png',
-        })),
-      })
+    try {
+      if (iconPaths.length > 0) {
+        // Manifest with generated icons
+        const manifestWithIcons = generateManifest({
+          name: appName,
+          shortName: finalShortName,
+          startUrl: '/',
+          scope: '/',
+          display: 'standalone',
+          themeColor: themeColor ?? '#ffffff',
+          backgroundColor: backgroundColor ?? '#000000',
+          icons: iconPaths.map((src) => ({
+            src,
+            sizes: src.match(/(\d+)x(\d+)/)?.[0] ?? '192x192',
+            type: 'image/png',
+          })),
+        })
+        
+        manifestPath = generateAndWriteManifest(manifestWithIcons, finalOutputDir)
+        result.manifestPath = manifestPath
+        
+        // Track manifest if it's new (not backed up)
+        const manifestRelative = relative(result.projectPath, manifestPath)
+        if (manifestRelative && !manifestRelative.startsWith('..')) {
+          const wasBackedUp = transaction.getState().backups.some(b => {
+            const backupRelative = relative(result.projectPath, b.path)
+            return backupRelative === manifestRelative
+          })
+          if (!wasBackedUp) {
+            transaction.trackCreatedFile(manifestRelative)
+          }
+        }
+        
+        console.log(chalk.green(`✓ Manifest generated: ${manifestPath}`))
+      } else {
+        // Minimal manifest without icons (use placeholder icon)
+        // Note: Manifest requires at least one icon according to Zod schema
+        // Create manifest with placeholder icon that must be replaced
+        result.warnings.push('No icons provided. Manifest generated with placeholder icon. Please provide an icon source with --icon-source for production.')
+        console.log(chalk.yellow('⚠ Generating manifest with placeholder icon'))
+        
+        // Create manifest with placeholder icon
+        // finalShortName is already validated above
+        const manifestMinimal = generateManifest({
+          name: appName,
+          shortName: finalShortName,
+          startUrl: '/',
+          scope: '/',
+          display: 'standalone',
+          themeColor: themeColor ?? '#ffffff',
+          backgroundColor: backgroundColor ?? '#000000',
+          icons: [{
+            src: '/icon-192x192.png', // Placeholder - user must add a real icon
+            sizes: '192x192',
+            type: 'image/png',
+          }],
+        })
+        
+        manifestPath = generateAndWriteManifest(manifestMinimal, finalOutputDir)
+        result.manifestPath = manifestPath
+        
+        // Track manifest if it's new (not backed up)
+        const manifestRelative = relative(result.projectPath, manifestPath)
+        if (manifestRelative && !manifestRelative.startsWith('..')) {
+          const wasBackedUp = transaction.getState().backups.some(b => {
+            const backupRelative = relative(result.projectPath, b.path)
+            return backupRelative === manifestRelative
+          })
+          if (!wasBackedUp) {
+            transaction.trackCreatedFile(manifestRelative)
+          }
+        }
+        
+        console.log(chalk.green(`✓ Manifest generated: ${manifestPath}`))
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorCode = detectErrorCode(error)
+      const formattedError = formatError(errorCode, errorMessage)
+      result.errors.push(formattedError)
+      console.log(chalk.red(`✗ ${formattedError}`))
       
-      manifestPath = generateAndWriteManifest(manifestWithIcons, finalOutputDir)
-      result.manifestPath = manifestPath
-      console.log(chalk.green(`✓ Manifest generated: ${manifestPath}`))
-    } else {
-      // Minimal manifest without icons (use placeholder icon)
-      // Note: Manifest requires at least one icon according to Zod schema
-      // Create manifest with placeholder icon that must be replaced
-      result.warnings.push('No icons provided. Manifest generated with placeholder icon. Please provide an icon source with --icon-source for production.')
-      console.log(chalk.yellow('⚠ Generating manifest with placeholder icon'))
-      
-      // Create manifest with placeholder icon
-      // finalShortName is already validated above
-      const manifestMinimal = generateManifest({
-        name: appName,
-        shortName: finalShortName,
-        startUrl: '/',
-        scope: '/',
-        display: 'standalone',
-        themeColor: themeColor ?? '#ffffff',
-        backgroundColor: backgroundColor ?? '#000000',
-        icons: [{
-          src: '/icon-192x192.png', // Placeholder - user must add a real icon
-          sizes: '192x192',
-          type: 'image/png',
-        }],
-      })
-      
-      manifestPath = generateAndWriteManifest(manifestMinimal, finalOutputDir)
-      result.manifestPath = manifestPath
-      console.log(chalk.green(`✓ Manifest generated: ${manifestPath}`))
+      // Rollback on critical error
+      if (transaction) {
+        transaction.rollback()
+      }
+      return result
     }
 
     // Generate service worker with adaptive cache strategies
@@ -318,6 +393,18 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
         console.log(chalk.green(`✓ Service worker generated: ${result.serviceWorkerPath}`))
         console.log(chalk.gray(`  Pre-cached ${swResult.count} files`))
         
+        // Track service worker if it's new (not backed up)
+        const swRelative = relative(result.projectPath, swResult.swPath)
+        if (swRelative && !swRelative.startsWith('..')) {
+          const wasBackedUp = transaction.getState().backups.some(b => {
+            const backupRelative = relative(result.projectPath, b.path)
+            return backupRelative === swRelative
+          })
+          if (!wasBackedUp) {
+            transaction.trackCreatedFile(swRelative)
+          }
+        }
+        
         // Log asset optimization suggestions if any
         if (optimizationResult.assetSuggestions.length > 0) {
           const highPrioritySuggestions = optimizationResult.assetSuggestions.filter((s) => s.priority === 'high')
@@ -330,8 +417,16 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error)
-        result.errors.push(`Failed to generate service worker: ${errorMessage}`)
-        console.log(chalk.red(`✗ Failed to generate service worker: ${errorMessage}`))
+        const errorCode = detectErrorCode(error)
+        const formattedError = formatError(errorCode, errorMessage)
+        result.errors.push(formattedError)
+        console.log(chalk.red(`✗ ${formattedError}`))
+        
+        // Rollback on critical error
+        if (transaction) {
+          transaction.rollback()
+        }
+        return result
       }
     }
 
@@ -361,6 +456,14 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
           if (!aInPublic && bInPublic) return 1
           return 0
         })
+
+        // Backup HTML files before injection
+        for (const htmlFile of htmlFiles.slice(0, 10)) {
+          const htmlRelativePath = relative(result.projectPath, htmlFile)
+          if (htmlRelativePath && !htmlRelativePath.startsWith('..')) {
+            transaction.backupFile(htmlRelativePath)
+          }
+        }
 
         let injectedCount = 0
         for (const htmlFile of htmlFiles.slice(0, 10)) {
@@ -431,7 +534,10 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
             }
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error)
-            result.warnings.push(`Failed to inject meta-tags in ${htmlFile}: ${errorMessage}`)
+            const errorCode = detectErrorCode(error)
+            const warningMessage = formatError(errorCode, `${htmlFile}: ${errorMessage}`)
+            result.warnings.push(warningMessage)
+            console.log(chalk.yellow(`⚠ ${warningMessage}`))
           }
         }
         
@@ -439,24 +545,50 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
         console.log(chalk.green(`✓ Injected meta-tags in ${injectedCount} HTML file(s)`))
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error)
-        result.errors.push(`Failed to inject meta-tags: ${errorMessage}`)
-        console.log(chalk.red(`✗ Failed to inject meta-tags: ${errorMessage}`))
+        const errorCode = detectErrorCode(error)
+        const formattedError = formatError(errorCode, errorMessage)
+        result.errors.push(formattedError)
+        console.log(chalk.red(`✗ ${formattedError}`))
+        
+        // Rollback on critical error
+        if (transaction) {
+          transaction.rollback()
+        }
+        return result
       }
     }
 
     result.success = result.errors.length === 0
     
     if (result.success) {
+      // Commit transaction if everything succeeded
+      if (transaction) {
+        transaction.commit()
+      }
       console.log(chalk.green('\n✅ PWA setup completed successfully!'))
     } else {
+      // Rollback on errors
+      if (transaction) {
+        console.log(chalk.yellow('\n🔄 Rolling back changes due to errors...'))
+        transaction.rollback()
+      }
       console.log(chalk.red(`\n❌ PWA setup completed with ${result.errors.length} error(s)`))
     }
 
     return result
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    result.errors.push(`Unexpected error: ${errorMessage}`)
-    console.log(chalk.red(`✗ Unexpected error: ${errorMessage}`))
+    const errorCode = detectErrorCode(error)
+    const formattedError = formatError(errorCode, errorMessage)
+    result.errors.push(formattedError)
+    console.log(chalk.red(`✗ ${formattedError}`))
+    
+    // Rollback on unexpected error
+    if (transaction) {
+      console.log(chalk.yellow('\n🔄 Rolling back changes due to unexpected error...'))
+      transaction.rollback()
+    }
+    
     return result
   }
 }
