@@ -28,7 +28,19 @@ export async function scanProject(options: ScannerOptions): Promise<ScannerResul
   const frameworkCandidate: unknown = detectFramework(projectPath)
   const framework: FrameworkDetectionResult = isFrameworkDetectionResult(frameworkCandidate)
     ? frameworkCandidate
-    : { framework: null, confidence: 'low', confidenceScore: 0, indicators: [], version: null }
+    : {
+        framework: null,
+        confidence: 'low',
+        confidenceScore: 0,
+        indicators: [],
+        version: null,
+        configuration: {
+          language: null,
+          cssInJs: [],
+          stateManagement: [],
+          buildTool: null,
+        },
+      }
 
   // Assets detection (asynchronous)
   const assetsCandidate: unknown = includeAssets ? await detectAssets(projectPath) : getEmptyAssets()
@@ -76,6 +88,7 @@ function isFrameworkDetectionResult(value: unknown): value is FrameworkDetection
     confidenceScore?: unknown
     indicators?: unknown
     version?: unknown
+    configuration?: unknown
   }
   const isValidVersion = (ver: unknown): boolean => {
     if (ver === null) return true
@@ -88,12 +101,28 @@ function isFrameworkDetectionResult(value: unknown): value is FrameworkDetection
       typeof vv.raw === 'string'
     )
   }
+  const isValidConfiguration = (config: unknown): boolean => {
+    if (!config || typeof config !== 'object') return false
+    const cfg = config as {
+      language?: unknown
+      cssInJs?: unknown
+      stateManagement?: unknown
+      buildTool?: unknown
+    }
+    return (
+      (cfg.language === null || cfg.language === 'typescript' || cfg.language === 'javascript') &&
+      Array.isArray(cfg.cssInJs) &&
+      Array.isArray(cfg.stateManagement) &&
+      (cfg.buildTool === null || typeof cfg.buildTool === 'string')
+    )
+  }
   return (
     (v.framework === null || typeof v.framework === 'string') &&
     (v.confidence === 'low' || v.confidence === 'medium' || v.confidence === 'high') &&
     (typeof v.confidenceScore === 'number' && v.confidenceScore >= 0 && v.confidenceScore <= 100) &&
     Array.isArray(v.indicators) &&
-    (v.version === null || isValidVersion(v.version))
+    (v.version === null || isValidVersion(v.version)) &&
+    (v.configuration !== undefined && isValidConfiguration(v.configuration))
   )
 }
 
