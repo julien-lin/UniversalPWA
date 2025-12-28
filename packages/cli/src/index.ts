@@ -2,33 +2,18 @@
 
 import { Command } from 'commander'
 import chalk from 'chalk'
-import { readFileSync } from 'fs'
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
 import { initCommand } from './commands/init.js'
 import { previewCommand } from './commands/preview.js'
 import { verifyCommand } from './commands/verify.js'
 import { scanProject } from '@julien-lin/universal-pwa-core'
 import { promptInitOptions } from './prompts.js'
-
-// Read version from package.json
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-const packageJsonPath = join(__dirname, '../package.json')
+import packageJson from '../package.json' with { type: 'json' }
 
 interface PackageJson {
   version?: string
 }
 
-let version = '0.0.0'
-try {
-  const packageJsonContent = readFileSync(packageJsonPath, 'utf-8')
-  const packageJson = JSON.parse(packageJsonContent) as PackageJson
-  version = packageJson.version || '0.0.0'
-} catch {
-  // If package.json cannot be read, use default version
-  version = '0.0.0'
-}
+const version = (packageJson as PackageJson).version || '0.0.0'
 
 const program = new Command()
 
@@ -67,6 +52,7 @@ program
     outputDir?: string
     forceScan?: boolean
     noCache?: boolean
+    maxHtmlFiles?: number
   }) => {
     try {
       const projectPath = options.projectPath ?? process.cwd()
