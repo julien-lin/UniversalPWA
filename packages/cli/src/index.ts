@@ -89,8 +89,12 @@ program
         console.log(chalk.green(`✓ Framework detected: ${scanResult.framework.framework ?? 'Unknown'}`))
         console.log(chalk.green(`✓ Architecture: ${scanResult.architecture.architecture}`))
 
-        // Launch prompts
-        const promptAnswers = await promptInitOptions(projectPath, scanResult.framework.framework)
+        // Launch prompts with suggestions
+        const promptAnswers = await promptInitOptions(
+          projectPath,
+          scanResult.framework.framework,
+          scanResult.architecture.architecture,
+        )
 
         // Ajuster outputDir selon environnement choisi
         if (promptAnswers.environment === 'production') {

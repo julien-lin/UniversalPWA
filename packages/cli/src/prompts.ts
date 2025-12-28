@@ -4,6 +4,7 @@ import { join, extname } from 'path'
 import chalk from 'chalk'
 import type { Framework } from '@julien-lin/universal-pwa-core'
 import { detectEnvironment, type Environment } from './utils/environment-detector.js'
+import { generateSuggestions } from './utils/suggestions.js'
 
 export interface PromptAnswers {
   environment: Environment
@@ -15,86 +16,6 @@ export interface PromptAnswers {
   skipIcons?: boolean
 }
 
-interface PackageJson {
-  name?: string
-}
-
-/**
- * Détecte le nom du projet depuis package.json
- */
-function detectProjectName(projectPath: string): string | undefined {
-  try {
-    const packageJsonPath = join(projectPath, 'package.json')
-    if (existsSync(packageJsonPath)) {
-      const packageJsonContent = readFileSync(packageJsonPath, 'utf-8')
-      const packageJson = JSON.parse(packageJsonContent) as PackageJson
-      return packageJson.name || undefined
-    }
-  } catch {
-    // Ignore errors
-  }
-  return undefined
-}
-
-/**
- * Trouve une image source par défaut dans le projet
- */
-function findDefaultIconSource(projectPath: string): string | undefined {
-  const commonPaths = [
-    'public/logo.png',
-    'public/icon.png',
-    'public/favicon.png',
-    'src/assets/logo.png',
-    'src/assets/icon.png',
-    'assets/logo.png',
-    'assets/icon.png',
-    'logo.png',
-    'icon.png',
-  ]
-
-  for (const path of commonPaths) {
-    const fullPath = join(projectPath, path)
-    if (existsSync(fullPath)) {
-      return path
-    }
-  }
-  return undefined
-}
-
-/**
- * Suggestions de couleurs selon le framework
- */
-function getFrameworkThemeColor(framework: Framework | null): string {
-  const colors: Record<string, { theme: string; background: string }> = {
-    react: { theme: '#61dafb', background: '#282c34' },
-    vue: { theme: '#42b983', background: '#ffffff' },
-    angular: { theme: '#dd0031', background: '#ffffff' },
-    nextjs: { theme: '#000000', background: '#ffffff' },
-    nuxt: { theme: '#00dc82', background: '#ffffff' },
-    symfony: { theme: '#000000', background: '#ffffff' },
-    laravel: { theme: '#ff2d20', background: '#ffffff' },
-    wordpress: { theme: '#21759b', background: '#ffffff' },
-  }
-
-  const key = framework?.toLowerCase() ?? ''
-  return colors[key]?.theme ?? '#ffffff'
-}
-
-function getFrameworkBackgroundColor(framework: Framework | null): string {
-  const colors: Record<string, { theme: string; background: string }> = {
-    react: { theme: '#61dafb', background: '#282c34' },
-    vue: { theme: '#42b983', background: '#ffffff' },
-    angular: { theme: '#dd0031', background: '#ffffff' },
-    nextjs: { theme: '#000000', background: '#ffffff' },
-    nuxt: { theme: '#00dc82', background: '#ffffff' },
-    symfony: { theme: '#000000', background: '#ffffff' },
-    laravel: { theme: '#ff2d20', background: '#ffffff' },
-    wordpress: { theme: '#21759b', background: '#ffffff' },
-  }
-
-  const key = framework?.toLowerCase() ?? ''
-  return colors[key]?.background ?? '#000000'
-}
 
 /**
  * Prompts interactifs pour initialiser la PWA
@@ -102,16 +23,30 @@ function getFrameworkBackgroundColor(framework: Framework | null): string {
 export async function promptInitOptions(
   projectPath: string,
   framework: Framework | null,
+  architecture: 'spa' | 'ssr' | 'static' | null = null,
 ): Promise<PromptAnswers> {
-  const detectedName = detectProjectName(projectPath)
-  const defaultIconSource = findDefaultIconSource(projectPath)
-  const defaultName = detectedName || (framework ? `${framework} App` : 'My PWA')
-  const defaultShortName = defaultName.substring(0, 12)
+  // Générer toutes les suggestions intelligentes
+  const suggestions = generateSuggestions(projectPath, framework, architecture)
+  
+  const defaultName = suggestions.name.name
+  const defaultShortName = suggestions.name.shortName
+  const defaultIconSource = suggestions.icons.length > 0 ? suggestions.icons[0].path : undefined
 
   // Détecter l'environnement automatiquement
   const envDetection = detectEnvironment(projectPath, framework)
 
   console.log(chalk.blue('\n📋 Configuration PWA\n'))
+
+  // Afficher les suggestions si disponibles
+  if (suggestions.name.confidence === 'high') {
+    console.log(chalk.gray(`💡 Suggestion: Nom "${suggestions.name.name}" (${suggestions.name.source})`))
+  }
+  if (suggestions.icons.length > 0) {
+    console.log(chalk.gray(`💡 Suggestion: ${suggestions.icons.length} icône(s) trouvée(s)`))
+  }
+  if (suggestions.colors.confidence === 'high') {
+    console.log(chalk.gray(`💡 Suggestion: Couleurs basées sur ${framework}`))
+  }
 
   // Phase 1 : Choix de l'environnement
   const environmentAnswer = await inquirer.prompt<{ environment: Environment }>([
@@ -215,7 +150,7 @@ export async function promptInitOptions(
       type: 'input',
       name: 'themeColor',
       message: 'Couleur du thème (hex, ex: #ffffff):',
-      default: getFrameworkThemeColor(framework),
+      default: suggestions.colors.themeColor,
       validate: (input: string) => {
         if (!input || input.trim().length === 0) {
           return true // Optionnel
@@ -239,7 +174,7 @@ export async function promptInitOptions(
       type: 'input',
       name: 'backgroundColor',
       message: 'Couleur de fond (hex, ex: #000000):',
-      default: getFrameworkBackgroundColor(framework),
+      default: suggestions.colors.backgroundColor,
       validate: (input: string) => {
         if (!input || input.trim().length === 0) {
           return true // Optionnel
