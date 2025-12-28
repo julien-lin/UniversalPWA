@@ -59,6 +59,7 @@ export interface PWAValidatorOptions {
   outputDir?: string
   htmlFiles?: string[]
   strict?: boolean // Si true, les warnings sont traités comme des erreurs
+  maxHtmlFiles?: number // Optionnel : limite le nombre de fichiers HTML validés (par défaut: illimité)
 }
 
 /**
@@ -364,8 +365,12 @@ async function validateMetaTags(
     return { valid: false, errors }
   }
 
-  for (const htmlFile of htmlFiles.slice(0, 10)) {
-    // Limiter à 10 fichiers pour performance
+  // Limiter le nombre de fichiers HTML si maxHtmlFiles est défini
+  const htmlFilesToProcess = options.maxHtmlFiles && options.maxHtmlFiles > 0
+    ? htmlFiles.slice(0, options.maxHtmlFiles)
+    : htmlFiles
+
+  for (const htmlFile of htmlFilesToProcess) {
     try {
       const htmlContent = await readFile(htmlFile, 'utf-8')
 
@@ -516,7 +521,7 @@ export async function validatePWA(options: PWAValidatorOptions): Promise<Validat
   // Valider meta-tags
   const manifestPath = manifestValidation.exists ? join(finalOutputDir, 'manifest.json') : undefined
   const serviceWorkerPath = serviceWorkerValidation.exists ? join(finalOutputDir, 'sw.js') : undefined
-  const metaTagsValidation = await validateMetaTags(htmlFiles, manifestPath, serviceWorkerPath)
+  const metaTagsValidation = await validateMetaTags(htmlFiles, manifestPath, serviceWorkerPath, options.maxHtmlFiles)
 
   // Valider HTTPS
   const httpsValidation = validateHttps(projectPath)

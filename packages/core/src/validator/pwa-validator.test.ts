@@ -522,7 +522,7 @@ describe('pwa-validator', () => {
       expect(result.warnings.some((w) => w.code === 'HTML_FILES_MISSING')).toBe(true)
     })
 
-    it('should limit HTML validation to 10 files', async () => {
+    it('should validate all HTML files by default', async () => {
       mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
       // Create 15 HTML files
       for (let i = 0; i < 15; i++) {
@@ -537,9 +537,30 @@ describe('pwa-validator', () => {
         htmlFiles,
       })
 
-      // Should only validate first 10 files
+      // Should validate all 15 files
       const metaErrors = result.errors.filter((e) => e.code.startsWith('META_'))
-      expect(metaErrors.length).toBeLessThanOrEqual(10 * 3) // Max 3 errors per file
+      expect(metaErrors.length).toBeGreaterThanOrEqual(15 * 3) // At least 3 errors per file (manifest, theme-color, apple-mobile)
+    })
+
+    it('should limit HTML validation when maxHtmlFiles is set', async () => {
+      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
+      // Create 15 HTML files
+      for (let i = 0; i < 15; i++) {
+        writeFileSync(join(TEST_DIR, `index-${i}.html`), '<html><head><title>Test</title></head><body></body></html>')
+      }
+
+      const htmlFiles = Array.from({ length: 15 }, (_, i) => join(TEST_DIR, `index-${i}.html`))
+
+      const result = await validatePWA({
+        projectPath: TEST_DIR,
+        outputDir: 'public',
+        htmlFiles,
+        maxHtmlFiles: 5,
+      })
+
+      // Should only validate first 5 files
+      const metaErrors = result.errors.filter((e) => e.code.startsWith('META_'))
+      expect(metaErrors.length).toBeLessThanOrEqual(5 * 3) // Max 3 errors per file
     })
   })
 
