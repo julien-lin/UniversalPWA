@@ -964,12 +964,142 @@ describe('framework-detector', () => {
     })
   })
 
+  describe('Confidence Score', () => {
+    it('should calculate confidence score for high confidence framework', () => {
+      writeFileSync(join(TEST_DIR, 'wp-config.php'), '<?php')
+      mkdirSync(join(TEST_DIR, 'wp-content'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('wordpress')
+      expect(result.confidence).toBe('high')
+      expect(result.confidenceScore).toBeGreaterThanOrEqual(70)
+      expect(result.confidenceScore).toBeLessThanOrEqual(100)
+    })
+
+    it('should calculate confidence score for medium confidence framework', () => {
+      writeFileSync(join(TEST_DIR, 'index.html'), '<html></html>')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('static')
+      expect(result.confidence).toBe('medium')
+      expect(result.confidenceScore).toBeGreaterThanOrEqual(40)
+      expect(result.confidenceScore).toBeLessThan(70)
+    })
+
+    it('should return 0 score when no framework detected', () => {
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBeNull()
+      expect(result.confidence).toBe('low')
+      expect(result.confidenceScore).toBe(0)
+    })
+
+    it('should have higher score with more indicators', () => {
+      writeFileSync(join(TEST_DIR, 'wp-config.php'), '<?php')
+      mkdirSync(join(TEST_DIR, 'wp-content'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('wordpress')
+      expect(result.confidenceScore).toBeGreaterThan(80) // Base 80 + indicators bonus
+    })
+  })
+
+  describe('Framework Version Detection', () => {
+    it('should detect React version from package.json', () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            react: '^18.2.0',
+          },
+        }),
+      )
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('react')
+      expect(result.version).not.toBeNull()
+      expect(result.version?.major).toBe(18)
+      expect(result.version?.minor).toBe(2)
+      expect(result.version?.patch).toBe(0)
+      expect(result.version?.raw).toBe('^18.2.0')
+    })
+
+    it('should detect Vue version from package.json', () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            vue: '^3.3.4',
+          },
+        }),
+      )
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('vue')
+      expect(result.version).not.toBeNull()
+      expect(result.version?.major).toBe(3)
+      expect(result.version?.minor).toBe(3)
+      expect(result.version?.patch).toBe(4)
+    })
+
+    it('should detect Angular version from package.json', () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            '@angular/core': '^17.0.0',
+          },
+        }),
+      )
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('angular')
+      expect(result.version).not.toBeNull()
+      expect(result.version?.major).toBe(17)
+      expect(result.version?.minor).toBe(0)
+      expect(result.version?.patch).toBe(0)
+    })
+
+    it('should handle version with caret prefix', () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            react: '^19.0.0',
+          },
+        }),
+      )
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('react')
+      expect(result.version?.major).toBe(19)
+    })
+
+    it('should return null version for non-versioned frameworks', () => {
+      writeFileSync(join(TEST_DIR, 'wp-config.php'), '<?php')
+      mkdirSync(join(TEST_DIR, 'wp-content'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('wordpress')
+      expect(result.version).toBeNull()
+    })
+  })
+
   describe('Error handling', () => {
     it('should handle missing files gracefully', () => {
       const result = detectFramework(TEST_DIR)
 
       expect(result.framework).toBeNull()
       expect(result.confidence).toBe('low')
+      expect(result.confidenceScore).toBe(0)
     })
 
     it('should handle invalid JSON gracefully', () => {
