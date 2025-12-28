@@ -1,7 +1,6 @@
 import { existsSync, statSync } from 'fs'
 import { join } from 'path'
 import { glob } from 'glob'
-import type { Framework } from '@julien-lin/universal-pwa-core'
 
 export type Environment = 'local' | 'production'
 
@@ -17,7 +16,7 @@ export interface EnvironmentDetectionResult {
  */
 export function detectEnvironment(
   projectPath: string,
-  framework: Framework | null,
+  framework?: string | null,
 ): EnvironmentDetectionResult {
   const indicators: string[] = []
   let environment: Environment = 'local'
@@ -25,7 +24,6 @@ export function detectEnvironment(
   let suggestedOutputDir = 'public'
 
   const distDir = join(projectPath, 'dist')
-  const publicDir = join(projectPath, 'public')
   const buildDir = join(projectPath, 'build')
 
   // Vérifier présence de dist/ avec fichiers buildés
@@ -39,7 +37,7 @@ export function detectEnvironment(
 
       if (distFiles.length > 0) {
         indicators.push(`dist/ directory exists with ${distFiles.length} built files`)
-        
+
         // Vérifier si les fichiers sont récents (build récent = production)
         const recentFiles = distFiles.filter((file) => {
           try {

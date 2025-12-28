@@ -74,24 +74,6 @@ export function detectApiType(projectPath: string, assets: AssetDetectionResult)
     'urql',
   ]
 
-  // Chercher dans les fichiers JS/TS
-  const checkFiles = async (files: string[], patterns: string[]): Promise<boolean> => {
-    for (const file of files.slice(0, 20)) {
-      // Limiter à 20 fichiers pour performance
-      try {
-        const content = readFileSync(file, 'utf-8').toLowerCase()
-        for (const pattern of patterns) {
-          if (content.includes(pattern)) {
-            return true
-          }
-        }
-      } catch {
-        // Ignore read errors
-      }
-    }
-    return false
-  }
-
   // Vérifier package.json pour GraphQL
   const packageJsonPath = join(projectPath, 'package.json')
   if (existsSync(packageJsonPath)) {
@@ -523,7 +505,7 @@ export function generateOptimalShortName(name: string): string {
  * Détecte les couleurs dominantes depuis une image (version simplifiée)
  * Note: Pour une implémentation complète, utiliser une librairie comme 'colorthief' ou 'node-vibrant'
  */
-export async function detectDominantColors(imagePath: string): Promise<{ themeColor: string; backgroundColor: string } | null> {
+export function detectDominantColors(_imagePath: string): { themeColor: string; backgroundColor: string } | null {
   // Pour l'instant, on retourne null car cela nécessiterait une dépendance externe
   // Cette fonction peut être étendue plus tard avec une librairie de détection de couleurs
   // Pour Phase 3.2, on se concentre sur la structure, l'implémentation complète sera en Phase 3.2.3
@@ -533,16 +515,16 @@ export async function detectDominantColors(imagePath: string): Promise<{ themeCo
 /**
  * Suggère theme_color et background_color basés sur le framework ou des images
  */
-export async function suggestManifestColors(
+export function suggestManifestColors(
   projectPath: string,
   framework: string | null,
   iconSource?: string,
-): Promise<{ themeColor: string; backgroundColor: string }> {
+): { themeColor: string; backgroundColor: string } {
   // Si une icône source est fournie, essayer de détecter les couleurs
   if (iconSource) {
     const iconPath = existsSync(iconSource) ? iconSource : join(projectPath, iconSource)
     if (existsSync(iconPath)) {
-      const colors = await detectDominantColors(iconPath)
+      const colors = detectDominantColors(iconPath)
       if (colors) {
         return colors
       }
@@ -600,7 +582,7 @@ export async function optimizeProject(
   }
 
   // Suggérer couleurs pour manifest
-  const manifestColors = await suggestManifestColors(projectPath, framework, iconSource)
+  const manifestColors = suggestManifestColors(projectPath, framework, iconSource)
 
   return {
     cacheStrategies,

@@ -84,7 +84,9 @@ export function loadCache(cacheFile: string = DEFAULT_CACHE_FILE): ScanCache | n
     }
 
     const content = readFileSync(cacheFile, 'utf-8')
-    const cache: ScanCache = JSON.parse(content)
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const parsed = JSON.parse(content)
+    const cache = parsed as ScanCache
 
     // Vérifier la version
     if (cache.version !== CACHE_VERSION) {
