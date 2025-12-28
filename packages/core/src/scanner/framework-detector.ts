@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
+import { globSync } from 'glob'
 
 export type Framework =
   | 'wordpress'
@@ -9,6 +10,14 @@ export type Framework =
   | 'cakephp'
   | 'yii'
   | 'laminas'
+  | 'django'
+  | 'flask'
+  | 'fastapi'
+  | 'rails'
+  | 'sinatra'
+  | 'go'
+  | 'spring'
+  | 'aspnet'
   | 'react'
   | 'vue'
   | 'angular'
@@ -240,6 +249,193 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
       }
     } catch {
       // Ignore JSON parse errors
+    }
+  }
+
+  // Python frameworks
+  if (!framework) {
+    // Django
+    if (existsSync(join(projectPath, 'manage.py')) && existsSync(join(projectPath, 'settings.py'))) {
+      indicators.push('manage.py and settings.py (Django)')
+      framework = 'django'
+      confidence = 'high'
+      return { framework, confidence, indicators }
+    }
+    // Django alternative: check for django/ directory
+    if (existsSync(join(projectPath, 'manage.py')) && existsSync(join(projectPath, 'django'))) {
+      indicators.push('manage.py and django/ (Django)')
+      framework = 'django'
+      confidence = 'high'
+      return { framework, confidence, indicators }
+    }
+
+    // Flask
+    const requirementsPath = join(projectPath, 'requirements.txt')
+    if (existsSync(requirementsPath)) {
+      try {
+        const requirementsContent = readFileSync(requirementsPath, 'utf-8')
+        if (requirementsContent.includes('Flask') || requirementsContent.includes('flask')) {
+          indicators.push('requirements.txt: Flask')
+          if (existsSync(join(projectPath, 'app.py')) || existsSync(join(projectPath, 'application.py'))) {
+            indicators.push('app.py or application.py')
+            framework = 'flask'
+            confidence = 'high'
+            return { framework, confidence, indicators }
+          }
+        }
+        // FastAPI
+        if (requirementsContent.includes('fastapi') || requirementsContent.includes('FastAPI')) {
+          indicators.push('requirements.txt: FastAPI')
+          framework = 'fastapi'
+          confidence = 'high'
+          return { framework, confidence, indicators }
+        }
+      } catch {
+        // Ignore read errors
+      }
+    }
+  }
+
+  // Ruby frameworks
+  if (!framework) {
+    const gemfilePath = join(projectPath, 'Gemfile')
+    if (existsSync(gemfilePath)) {
+      try {
+        const gemfileContent = readFileSync(gemfilePath, 'utf-8')
+        // Rails
+        if (gemfileContent.includes("gem 'rails'") || gemfileContent.includes('gem "rails"')) {
+          indicators.push('Gemfile: rails')
+          if (existsSync(join(projectPath, 'config', 'application.rb')) || existsSync(join(projectPath, 'config', 'routes.rb'))) {
+            indicators.push('config/application.rb or config/routes.rb')
+            framework = 'rails'
+            confidence = 'high'
+            return { framework, confidence, indicators }
+          }
+        }
+        // Sinatra
+        if (gemfileContent.includes("gem 'sinatra'") || gemfileContent.includes('gem "sinatra"')) {
+          indicators.push('Gemfile: sinatra')
+          if (existsSync(join(projectPath, 'app.rb')) || existsSync(join(projectPath, 'main.rb'))) {
+            indicators.push('app.rb or main.rb')
+            framework = 'sinatra'
+            confidence = 'high'
+            return { framework, confidence, indicators }
+          }
+        }
+      } catch {
+        // Ignore read errors
+      }
+    }
+  }
+
+  // Go
+  if (!framework) {
+    if (existsSync(join(projectPath, 'go.mod'))) {
+      try {
+        const goModContent = readFileSync(join(projectPath, 'go.mod'), 'utf-8')
+        // Check if it's a web project (has HTTP server dependencies)
+        if (
+          goModContent.includes('net/http') ||
+          existsSync(join(projectPath, 'main.go')) ||
+          existsSync(join(projectPath, 'server.go'))
+        ) {
+          // Check main.go for HTTP server patterns
+          const mainGoPath = join(projectPath, 'main.go')
+          if (existsSync(mainGoPath)) {
+            try {
+              const mainGoContent = readFileSync(mainGoPath, 'utf-8')
+              if (mainGoContent.includes('http.ListenAndServe') || mainGoContent.includes('http.Server')) {
+                indicators.push('go.mod and main.go with HTTP server')
+                framework = 'go'
+                confidence = 'high'
+                return { framework, confidence, indicators }
+              }
+            } catch {
+              // Ignore read errors
+            }
+          }
+          // Also check server.go
+          const serverGoPath = join(projectPath, 'server.go')
+          if (existsSync(serverGoPath)) {
+            try {
+              const serverGoContent = readFileSync(serverGoPath, 'utf-8')
+              if (serverGoContent.includes('http.ListenAndServe') || serverGoContent.includes('http.Server')) {
+                indicators.push('go.mod and server.go with HTTP server')
+                framework = 'go'
+                confidence = 'high'
+                return { framework, confidence, indicators }
+              }
+            } catch {
+              // Ignore read errors
+            }
+          }
+        }
+      } catch {
+        // Ignore read errors
+      }
+    }
+  }
+
+  // Java - Spring Boot
+  if (!framework) {
+    const pomXmlPath = join(projectPath, 'pom.xml')
+    const buildGradlePath = join(projectPath, 'build.gradle')
+    
+    if (existsSync(pomXmlPath)) {
+      try {
+        const pomContent = readFileSync(pomXmlPath, 'utf-8')
+        if (pomContent.includes('spring-boot-starter') || pomContent.includes('org.springframework.boot')) {
+          indicators.push('pom.xml: spring-boot')
+          framework = 'spring'
+          confidence = 'high'
+          return { framework, confidence, indicators }
+        }
+      } catch {
+        // Ignore read errors
+      }
+    }
+
+    if (existsSync(buildGradlePath)) {
+      try {
+        const gradleContent = readFileSync(buildGradlePath, 'utf-8')
+        if (gradleContent.includes('spring-boot') || gradleContent.includes('org.springframework.boot')) {
+          indicators.push('build.gradle: spring-boot')
+          framework = 'spring'
+          confidence = 'high'
+          return { framework, confidence, indicators }
+        }
+      } catch {
+        // Ignore read errors
+      }
+    }
+  }
+
+  // .NET - ASP.NET Core
+  if (!framework) {
+    // Look for .csproj files
+    try {
+      const csprojMatches = globSync('*.csproj', { cwd: projectPath, absolute: false })
+      if (csprojMatches.length > 0) {
+        // Check for ASP.NET Core patterns
+        const firstCsproj = join(projectPath, csprojMatches[0])
+        try {
+          const csprojContent = readFileSync(firstCsproj, 'utf-8')
+          if (csprojContent.includes('Microsoft.AspNetCore') || csprojContent.includes('Microsoft.NET.Sdk.Web')) {
+            indicators.push(`${csprojMatches[0]}: ASP.NET Core`)
+            // Check for Program.cs or Startup.cs
+            if (existsSync(join(projectPath, 'Program.cs')) || existsSync(join(projectPath, 'Startup.cs'))) {
+              indicators.push('Program.cs or Startup.cs')
+              framework = 'aspnet'
+              confidence = 'high'
+              return { framework, confidence, indicators }
+            }
+          }
+        } catch {
+          // Ignore read errors
+        }
+      }
+    } catch {
+      // Ignore glob errors
     }
   }
 

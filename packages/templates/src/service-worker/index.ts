@@ -54,6 +54,7 @@ export function determineTemplateType(
     return 'wordpress'
   }
 
+  // PHP frameworks
   if (
     framework === 'Symfony' ||
     framework === 'Laravel' ||
@@ -64,6 +65,10 @@ export function determineTemplateType(
   ) {
     return 'php'
   }
+
+  // Backend frameworks (Python, Ruby, Go, Java, .NET) - use static or SSR template based on architecture
+  // Django, Flask, FastAPI, Rails, Sinatra, Go, Spring, ASP.NET typically serve static files
+  // They will use the architecture-based template (static/ssr/spa)
 
   // Architecture
   if (architecture === 'spa') {
