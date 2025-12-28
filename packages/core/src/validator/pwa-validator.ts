@@ -352,6 +352,7 @@ async function validateMetaTags(
   htmlFiles: string[],
   manifestPath?: string,
   serviceWorkerPath?: string,
+  maxHtmlFiles?: number,
 ): Promise<{ valid: boolean; errors: ValidationError[] }> {
   const errors: ValidationError[] = []
 
@@ -366,16 +367,16 @@ async function validateMetaTags(
   }
 
   // Limiter le nombre de fichiers HTML si maxHtmlFiles est défini
-  const htmlFilesToProcess = options.maxHtmlFiles && options.maxHtmlFiles > 0
-    ? htmlFiles.slice(0, options.maxHtmlFiles)
-    : htmlFiles
+  const maxHtmlFilesLimit = typeof maxHtmlFiles === 'number' && maxHtmlFiles > 0 ? maxHtmlFiles : undefined
+  const htmlFilesToProcess = maxHtmlFilesLimit ? htmlFiles.slice(0, maxHtmlFilesLimit) : htmlFiles
 
   for (const htmlFile of htmlFilesToProcess) {
     try {
       const htmlContent = await readFile(htmlFile, 'utf-8')
 
-      // Vérifier manifest link
-      if (manifestPath && !htmlContent.includes('manifest.json') && !htmlContent.includes('rel="manifest"')) {
+      // Vérifier manifest link (même si manifestPath est inconnu)
+      const hasManifestLink = htmlContent.includes('manifest.json') || htmlContent.includes('rel="manifest"')
+      if (!hasManifestLink) {
         errors.push({
           code: 'META_MANIFEST_MISSING',
           message: `HTML file missing manifest link: ${htmlFile}`,
@@ -385,7 +386,7 @@ async function validateMetaTags(
         })
       }
 
-      // Vérifier theme-color meta tag
+      // Vérifier theme-color meta tag (considéré critique)
       if (!htmlContent.includes('theme-color') && !htmlContent.includes('theme_color')) {
         errors.push({
           code: 'META_THEME_COLOR_MISSING',
@@ -396,7 +397,7 @@ async function validateMetaTags(
         })
       }
 
-      // Vérifier apple-mobile-web-app-capable
+      // Vérifier apple-mobile-web-app-capable (considéré critique)
       if (!htmlContent.includes('apple-mobile-web-app-capable')) {
         errors.push({
           code: 'META_APPLE_MOBILE_MISSING',
@@ -429,7 +430,8 @@ async function validateMetaTags(
   }
 
   return {
-    valid: errors.filter((e) => e.severity === 'error').length === 0,
+    // Considérer la section invalide dès qu'au moins une anomalie est détectée
+    valid: errors.length === 0,
     errors,
   }
 }
@@ -509,14 +511,14 @@ export async function validatePWA(options: PWAValidatorOptions): Promise<Validat
 
   const finalOutputDir = outputDir.startsWith('/') ? outputDir : join(projectPath, outputDir)
 
-    // Valider manifest
-    const manifestValidation = validateManifest(projectPath, finalOutputDir)
+  // Valider manifest
+  const manifestValidation = validateManifest(projectPath, finalOutputDir)
 
-    // Valider icônes
-    const iconsValidation = validateIcons(projectPath, finalOutputDir, manifestValidation.manifest)
+  // Valider icônes
+  const iconsValidation = validateIcons(projectPath, finalOutputDir, manifestValidation.manifest)
 
-    // Valider service worker
-    const serviceWorkerValidation = validateServiceWorker(projectPath, finalOutputDir)
+  // Valider service worker
+  const serviceWorkerValidation = validateServiceWorker(projectPath, finalOutputDir)
 
   // Valider meta-tags
   const manifestPath = manifestValidation.exists ? join(finalOutputDir, 'manifest.json') : undefined
@@ -535,7 +537,7 @@ export async function validatePWA(options: PWAValidatorOptions): Promise<Validat
     ...httpsValidation.errors,
   ]
 
-  const errors = allErrors.filter((e) => e.severity === 'error')
+  const errors = allErrors.filter((e) => e.severity === 'error' || e.code.startsWith('META_'))
   const warnings: ValidationWarning[] = allErrors
     .filter((e) => e.severity === 'warning' || e.severity === 'info')
     .map((error) => ({
