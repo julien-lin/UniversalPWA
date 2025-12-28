@@ -830,6 +830,140 @@ describe('framework-detector', () => {
     })
   })
 
+  describe('Jekyll', () => {
+    it('should detect Jekyll with _config.yml and _posts/', () => {
+      writeFileSync(join(TEST_DIR, '_config.yml'), 'title: My Site')
+      mkdirSync(join(TEST_DIR, '_posts'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('jekyll')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('_config.yml (Jekyll)')
+      expect(result.indicators).toContain('_posts/')
+    })
+
+    it('should detect Jekyll with _config.yml only', () => {
+      writeFileSync(join(TEST_DIR, '_config.yml'), 'title: My Site')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('jekyll')
+      expect(result.confidence).toBe('medium')
+    })
+  })
+
+  describe('Hugo', () => {
+    it('should detect Hugo with config.toml, content/, and layouts/', () => {
+      writeFileSync(join(TEST_DIR, 'config.toml'), 'title = "My Site"')
+      mkdirSync(join(TEST_DIR, 'content'), { recursive: true })
+      mkdirSync(join(TEST_DIR, 'layouts'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('hugo')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('content/ and layouts/')
+    })
+
+    it('should detect Hugo with config.yaml and content/', () => {
+      writeFileSync(join(TEST_DIR, 'config.yaml'), 'title: My Site')
+      mkdirSync(join(TEST_DIR, 'content'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('hugo')
+      expect(result.confidence).toBe('high')
+    })
+  })
+
+  describe('Gatsby', () => {
+    it('should detect Gatsby with gatsby-config.js', () => {
+      writeFileSync(join(TEST_DIR, 'gatsby-config.js'), 'module.exports = {}')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('gatsby')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('gatsby-config.js/ts (Gatsby)')
+    })
+
+    it('should detect Gatsby with gatsby-config.ts', () => {
+      writeFileSync(join(TEST_DIR, 'gatsby-config.ts'), 'export default {}')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('gatsby')
+      expect(result.confidence).toBe('high')
+    })
+  })
+
+  describe('Eleventy (11ty)', () => {
+    it('should detect Eleventy with .eleventy.js and _data/', () => {
+      writeFileSync(join(TEST_DIR, '.eleventy.js'), 'module.exports = {}')
+      mkdirSync(join(TEST_DIR, '_data'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('eleventy')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('_data/')
+    })
+
+    it('should detect Eleventy with eleventy.config.js', () => {
+      writeFileSync(join(TEST_DIR, 'eleventy.config.js'), 'module.exports = {}')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('eleventy')
+      expect(result.confidence).toBe('high')
+    })
+  })
+
+  describe('VitePress', () => {
+    it('should detect VitePress with vitepress.config.js', () => {
+      writeFileSync(join(TEST_DIR, 'vitepress.config.js'), 'export default {}')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('vitepress')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('vitepress.config.js/ts (VitePress)')
+    })
+
+    it('should detect VitePress with docs/.vitepress/config.js', () => {
+      mkdirSync(join(TEST_DIR, 'docs', '.vitepress'), { recursive: true })
+      writeFileSync(join(TEST_DIR, 'docs', '.vitepress', 'config.js'), 'export default {}')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('vitepress')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('docs/.vitepress/config.js/ts (VitePress)')
+    })
+  })
+
+  describe('Docusaurus', () => {
+    it('should detect Docusaurus with docusaurus.config.js', () => {
+      writeFileSync(join(TEST_DIR, 'docusaurus.config.js'), 'module.exports = {}')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('docusaurus')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('docusaurus.config.js/ts (Docusaurus)')
+    })
+
+    it('should detect Docusaurus with docusaurus.config.ts', () => {
+      writeFileSync(join(TEST_DIR, 'docusaurus.config.ts'), 'export default {}')
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('docusaurus')
+      expect(result.confidence).toBe('high')
+    })
+  })
+
   describe('Error handling', () => {
     it('should handle missing files gracefully', () => {
       const result = detectFramework(TEST_DIR)
