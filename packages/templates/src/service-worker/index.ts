@@ -54,7 +54,14 @@ export function determineTemplateType(
     return 'wordpress'
   }
 
-  if (framework === 'Symfony' || framework === 'Laravel') {
+  if (
+    framework === 'Symfony' ||
+    framework === 'Laravel' ||
+    framework === 'CodeIgniter' ||
+    framework === 'CakePHP' ||
+    framework === 'Yii' ||
+    framework === 'Laminas'
+  ) {
     return 'php'
   }
 

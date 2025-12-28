@@ -81,6 +81,139 @@ describe('framework-detector', () => {
     })
   })
 
+  describe('CodeIgniter', () => {
+    it('should detect CodeIgniter 4 with composer.json and public/', () => {
+      writeFileSync(
+        join(TEST_DIR, 'composer.json'),
+        JSON.stringify({
+          require: {
+            'codeigniter4/framework': '^4.0',
+          },
+        }),
+      )
+      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('codeigniter')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('composer.json: codeigniter4/framework')
+      expect(result.indicators).toContain('public/')
+    })
+  })
+
+  describe('CakePHP', () => {
+    it('should detect CakePHP with composer.json and webroot/', () => {
+      writeFileSync(
+        join(TEST_DIR, 'composer.json'),
+        JSON.stringify({
+          require: {
+            'cakephp/cakephp': '^5.0',
+          },
+        }),
+      )
+      mkdirSync(join(TEST_DIR, 'webroot'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('cakephp')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('composer.json: cakephp/cakephp')
+    })
+
+    it('should detect CakePHP with composer.json and public/', () => {
+      writeFileSync(
+        join(TEST_DIR, 'composer.json'),
+        JSON.stringify({
+          require: {
+            'cakephp/cakephp': '^5.0',
+          },
+        }),
+      )
+      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('cakephp')
+      expect(result.confidence).toBe('high')
+    })
+  })
+
+  describe('Yii', () => {
+    it('should detect Yii2 with composer.json and web/', () => {
+      writeFileSync(
+        join(TEST_DIR, 'composer.json'),
+        JSON.stringify({
+          require: {
+            'yiisoft/yii2': '^2.0',
+          },
+        }),
+      )
+      mkdirSync(join(TEST_DIR, 'web'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('yii')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('composer.json: yiisoft/*')
+    })
+
+    it('should detect Yii3 with composer.json and public/', () => {
+      writeFileSync(
+        join(TEST_DIR, 'composer.json'),
+        JSON.stringify({
+          require: {
+            'yiisoft/yii': '^3.0',
+          },
+        }),
+      )
+      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('yii')
+      expect(result.confidence).toBe('high')
+    })
+  })
+
+  describe('Laminas', () => {
+    it('should detect Laminas with composer.json and public/', () => {
+      writeFileSync(
+        join(TEST_DIR, 'composer.json'),
+        JSON.stringify({
+          require: {
+            'laminas/laminas-mvc': '^3.0',
+          },
+        }),
+      )
+      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('laminas')
+      expect(result.confidence).toBe('high')
+      expect(result.indicators).toContain('composer.json: laminas/*')
+      expect(result.indicators).toContain('public/')
+    })
+
+    it('should detect Laminas with laminas-component-installer', () => {
+      writeFileSync(
+        join(TEST_DIR, 'composer.json'),
+        JSON.stringify({
+          require: {
+            'laminas/laminas-component-installer': '^2.0',
+          },
+        }),
+      )
+      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
+
+      const result = detectFramework(TEST_DIR)
+
+      expect(result.framework).toBe('laminas')
+      expect(result.confidence).toBe('high')
+    })
+  })
+
   describe('Next.js', () => {
     it('should detect Next.js with package.json and .next/', () => {
       writeFileSync(

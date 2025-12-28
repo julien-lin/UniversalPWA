@@ -5,6 +5,10 @@ export type Framework =
   | 'wordpress'
   | 'symfony'
   | 'laravel'
+  | 'codeigniter'
+  | 'cakephp'
+  | 'yii'
+  | 'laminas'
   | 'react'
   | 'vue'
   | 'angular'
@@ -71,6 +75,50 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
         if (existsSync(join(projectPath, 'public'))) {
           indicators.push('public/')
           framework = 'laravel'
+          confidence = 'high'
+          return { framework, confidence, indicators }
+        }
+      }
+
+      // CodeIgniter
+      if (dependencies['codeigniter4/framework']) {
+        indicators.push('composer.json: codeigniter4/framework')
+        if (existsSync(join(projectPath, 'public'))) {
+          indicators.push('public/')
+          framework = 'codeigniter'
+          confidence = 'high'
+          return { framework, confidence, indicators }
+        }
+      }
+
+      // CakePHP
+      if (dependencies['cakephp/cakephp']) {
+        indicators.push('composer.json: cakephp/cakephp')
+        if (existsSync(join(projectPath, 'webroot')) || existsSync(join(projectPath, 'public'))) {
+          indicators.push('webroot/ or public/')
+          framework = 'cakephp'
+          confidence = 'high'
+          return { framework, confidence, indicators }
+        }
+      }
+
+      // Yii
+      if (dependencies['yiisoft/yii2'] || dependencies['yiisoft/yii']) {
+        indicators.push('composer.json: yiisoft/*')
+        if (existsSync(join(projectPath, 'web')) || existsSync(join(projectPath, 'public'))) {
+          indicators.push('web/ or public/')
+          framework = 'yii'
+          confidence = 'high'
+          return { framework, confidence, indicators }
+        }
+      }
+
+      // Laminas (anciennement Zend Framework)
+      if (dependencies['laminas/laminas-mvc'] || dependencies['laminas/laminas-component-installer']) {
+        indicators.push('composer.json: laminas/*')
+        if (existsSync(join(projectPath, 'public'))) {
+          indicators.push('public/')
+          framework = 'laminas'
           confidence = 'high'
           return { framework, confidence, indicators }
         }
