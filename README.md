@@ -59,16 +59,23 @@ universal-pwa init
 ```
 
 The CLI will:
-1. 🔍 Scan your project to detect the framework
-2. 📋 Prompt you with questions:
+1. 🔍 Scan your project to detect the framework and architecture
+2. 📋 Prompt you with a 2-phase workflow:
+
+   **Phase 1: Environment Selection**
+   - Choose between **Local** (development) or **Production** (build)
+   - Auto-detects environment based on `dist/` or `build/` directories
+   - Shows detection indicators (e.g., "dist/ directory exists with recent files")
+
+   **Phase 2: Application Configuration**
    - App name (auto-detected from `package.json`)
    - Short name (max 12 characters, auto-generated from app name)
    - Icon source path (auto-detected from common locations)
-   - Theme color (default: `#ffffff`)
-   - Background color (default: `#000000`)
+   - Theme color (suggested based on framework, e.g., `#61dafb` for React)
+   - Background color (suggested based on framework)
    - Whether to generate icons
 
-All prompts include smart defaults and validation!
+All prompts include smart defaults, validation, and contextual suggestions!
 
 #### Command Line Mode
 
