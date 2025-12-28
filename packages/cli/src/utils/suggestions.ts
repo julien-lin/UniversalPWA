@@ -33,7 +33,7 @@ export interface ConfigurationSuggestion {
 /**
  * Suggère un nom d'application basé sur package.json, composer.json ou le nom du répertoire
  */
-export function suggestAppName(projectPath: string, framework: Framework | null): NameSuggestion {
+export function suggestAppName(projectPath: string, _framework: Framework | null): NameSuggestion {
   // Essayer package.json (Node.js)
   const packageJsonPath = join(projectPath, 'package.json')
   if (existsSync(packageJsonPath)) {
@@ -184,9 +184,9 @@ export function suggestIconPath(projectPath: string): IconSuggestion[] {
  * Suggère des couleurs basées sur le framework ou une icône
  */
 export function suggestColors(
-  projectPath: string,
+  _projectPath: string,
   framework: Framework | null,
-  iconPath?: string,
+  _iconPath?: string,
 ): ColorSuggestion {
   // Si une icône est fournie, on pourrait analyser les couleurs (future enhancement)
   // Pour l'instant, on se base sur le framework
@@ -234,7 +234,7 @@ export function suggestColors(
 export function suggestConfiguration(
   projectPath: string,
   framework: Framework | null,
-  architecture: 'spa' | 'ssr' | 'static' | null,
+  _architecture: 'spa' | 'ssr' | 'static' | null,
 ): ConfigurationSuggestion {
   const distDir = join(projectPath, 'dist')
   const buildDir = join(projectPath, 'build')

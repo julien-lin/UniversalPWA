@@ -1,5 +1,5 @@
 import inquirer from 'inquirer'
-import { existsSync, readFileSync } from 'fs'
+import { existsSync } from 'fs'
 import { join, extname } from 'path'
 import chalk from 'chalk'
 import type { Framework } from '@julien-lin/universal-pwa-core'
