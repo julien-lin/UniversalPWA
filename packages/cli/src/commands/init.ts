@@ -1,7 +1,7 @@
-import { scanProject } from '@julien-lin/universal-pwa-core'
+import { scanProject, optimizeProject } from '@julien-lin/universal-pwa-core'
 import { generateManifest, generateAndWriteManifest } from '@julien-lin/universal-pwa-core'
 import { generateIcons } from '@julien-lin/universal-pwa-core'
-import { generateServiceWorker } from '@julien-lin/universal-pwa-core'
+import { generateServiceWorker, generateSimpleServiceWorker } from '@julien-lin/universal-pwa-core'
 import { injectMetaTagsInFile } from '@julien-lin/universal-pwa-core'
 import { checkProjectHttps } from '@julien-lin/universal-pwa-core'
 import chalk from 'chalk'
@@ -265,23 +265,65 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
       console.log(chalk.green(`✓ Manifest generated: ${manifestPath}`))
     }
 
-    // Generate service worker
+    // Generate service worker with adaptive cache strategies
     if (!skipServiceWorker) {
       console.log(chalk.blue('⚙️ Generating service worker...'))
       
       try {
-        const swResult = await generateServiceWorker({
-          projectPath: result.projectPath,
-          outputDir: finalOutputDir,
-          architecture: result.architecture,
-          framework: result.framework,
-          globDirectory: finalOutputDir,
-          globPatterns: ['**/*.{html,js,css,png,jpg,jpeg,svg,webp,woff,woff2}'],
-        })
+        // Optimize project to get adaptive cache strategies
+        const optimizationResult = await optimizeProject(
+          result.projectPath,
+          scanResult.assets,
+          scanResult.framework.configuration,
+          result.framework,
+          iconSource,
+        )
+
+        // Convert adaptive cache strategies to runtime caching format
+        const runtimeCaching = optimizationResult.cacheStrategies.map((strategy) => ({
+          urlPattern: strategy.urlPattern,
+          handler: strategy.handler,
+          options: strategy.options,
+        }))
+
+        let swResult
+        if (runtimeCaching.length > 0) {
+          // Use generateSimpleServiceWorker when we have adaptive cache strategies
+          console.log(chalk.gray(`  Detected ${optimizationResult.apiType} API, applying ${optimizationResult.cacheStrategies.length} adaptive cache strategy(ies)`))
+          swResult = await generateSimpleServiceWorker({
+            projectPath: result.projectPath,
+            outputDir: finalOutputDir,
+            architecture: result.architecture,
+            globDirectory: finalOutputDir,
+            globPatterns: ['**/*.{html,js,css,png,jpg,jpeg,svg,webp,woff,woff2}'],
+            runtimeCaching,
+          })
+        } else {
+          // Use generateServiceWorker with template when no adaptive strategies
+          swResult = await generateServiceWorker({
+            projectPath: result.projectPath,
+            outputDir: finalOutputDir,
+            architecture: result.architecture,
+            framework: result.framework,
+            globDirectory: finalOutputDir,
+            globPatterns: ['**/*.{html,js,css,png,jpg,jpeg,svg,webp,woff,woff2}'],
+          })
+        }
         
         result.serviceWorkerPath = swResult.swPath
         console.log(chalk.green(`✓ Service worker generated: ${result.serviceWorkerPath}`))
         console.log(chalk.gray(`  Pre-cached ${swResult.count} files`))
+        
+        // Log asset optimization suggestions if any
+        if (optimizationResult.assetSuggestions.length > 0) {
+          const highPrioritySuggestions = optimizationResult.assetSuggestions.filter((s) => s.priority === 'high')
+          if (highPrioritySuggestions.length > 0) {
+            console.log(chalk.yellow(`⚠ ${highPrioritySuggestions.length} high-priority asset optimization suggestion(s) found`))
+            highPrioritySuggestions.slice(0, 3).forEach((suggestion) => {
+              console.log(chalk.gray(`  - ${suggestion.suggestion}`))
+            })
+          }
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error)
         result.errors.push(`Failed to generate service worker: ${errorMessage}`)
