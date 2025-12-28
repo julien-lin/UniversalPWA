@@ -88,6 +88,27 @@ program
         // Launch prompts
         const promptAnswers = await promptInitOptions(projectPath, scanResult.framework.framework)
 
+        // Ajuster outputDir selon environnement choisi
+        if (promptAnswers.environment === 'production') {
+          // Vérifier que dist/ existe et contient des fichiers buildés
+          const { detectEnvironment } = await import('./utils/environment-detector.js')
+          const envDetection = detectEnvironment(projectPath, scanResult.framework.framework)
+          
+          if (envDetection.suggestedOutputDir === 'dist') {
+            finalOptions.outputDir = 'dist'
+          } else if (envDetection.suggestedOutputDir === 'build') {
+            finalOptions.outputDir = 'build'
+          } else {
+            finalOptions.outputDir = 'dist'
+            console.log(chalk.yellow('⚠ dist/ directory not found. Run build first:'))
+            console.log(chalk.gray('  npm run build'))
+            console.log(chalk.gray('  or'))
+            console.log(chalk.gray('  pnpm build'))
+          }
+        } else {
+          finalOptions.outputDir = 'public'
+        }
+
         // Merge prompt answers with options
         // Ensure all values are properly defined
         finalOptions = {
