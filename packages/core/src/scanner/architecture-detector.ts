@@ -61,7 +61,7 @@ export async function detectArchitecture(projectPath: string): Promise<Architect
         confidence = 'high'
       }
 
-      // Next.js/Nuxt detection (SSR by default) - Priority
+      // Next.js/Nuxt/SvelteKit/Remix/Astro detection (SSR by default) - Priority
       if (dependencies.next || packageContent.dependencies?.['next'] || packageContent.devDependencies?.['next']) {
         architecture = 'ssr'
         confidence = 'high'
@@ -70,6 +70,27 @@ export async function detectArchitecture(projectPath: string): Promise<Architect
         architecture = 'ssr'
         confidence = 'high'
         indicators.push('Nuxt detected → SSR')
+      } else if (dependencies['@sveltejs/kit'] || packageContent.dependencies?.['@sveltejs/kit'] || packageContent.devDependencies?.['@sveltejs/kit']) {
+        architecture = 'ssr'
+        confidence = 'high'
+        indicators.push('SvelteKit detected → SSR')
+      } else if (dependencies['@remix-run/node'] || dependencies['@remix-run/react'] || packageContent.dependencies?.['@remix-run/node'] || packageContent.devDependencies?.['@remix-run/node']) {
+        architecture = 'ssr'
+        confidence = 'high'
+        indicators.push('Remix detected → SSR')
+      } else if (dependencies.astro || packageContent.dependencies?.['astro'] || packageContent.devDependencies?.['astro']) {
+        architecture = 'ssr'
+        confidence = 'high'
+        indicators.push('Astro detected → SSR')
+      } else if (dependencies.svelte && !dependencies['@sveltejs/kit']) {
+        // Svelte standalone (sans SvelteKit) = SPA
+        architecture = 'spa'
+        confidence = 'high'
+        indicators.push('Svelte detected → SPA')
+      } else if (dependencies['solid-js'] || packageContent.dependencies?.['solid-js'] || packageContent.devDependencies?.['solid-js']) {
+        architecture = 'spa'
+        confidence = 'high'
+        indicators.push('SolidJS detected → SPA')
       }
     } catch {
       // Ignore JSON parse errors
