@@ -6,6 +6,11 @@ import { checkHttps, checkProjectHttps, detectProjectUrl } from './https-checker
 const TEST_DIR = join(process.cwd(), '.test-tmp-https-checker')
 
 describe('https-checker', () => {
+  // Helpers
+  const writeJSON = (rel: string, data: unknown) =>
+    writeFileSync(join(TEST_DIR, rel), JSON.stringify(data))
+  const writeEnv = (rel: string, content: string) => writeFileSync(join(TEST_DIR, rel), content)
+
   beforeEach(() => {
     try {
       if (existsSync(TEST_DIR)) {
@@ -18,46 +23,56 @@ describe('https-checker', () => {
   })
 
   describe('checkHttps', () => {
-    it('should detect HTTPS as secure', () => {
-      const result = checkHttps('https://example.com')
-
-      expect(result.isSecure).toBe(true)
-      expect(result.isProduction).toBe(true)
-      expect(result.isLocalhost).toBe(false)
-      expect(result.protocol).toBe('https')
-      expect(result.hostname).toBe('example.com')
-      expect(result.warning).toBeUndefined()
-    })
-
-    it('should detect HTTP as insecure in production', () => {
-      const result = checkHttps('http://example.com')
-
-      expect(result.isSecure).toBe(false)
-      expect(result.isProduction).toBe(false)
-      expect(result.isLocalhost).toBe(false)
-      expect(result.protocol).toBe('http')
-      expect(result.hostname).toBe('example.com')
-      expect(result.warning).toContain('HTTPS')
-      expect(result.recommendation).toBeDefined()
-    })
-
-    it('should allow HTTP on localhost by default', () => {
-      const result = checkHttps('http://localhost:3000')
-
-      expect(result.isSecure).toBe(true)
-      expect(result.isLocalhost).toBe(true)
-      expect(result.isProduction).toBe(false)
-      expect(result.protocol).toBe('http')
-      expect(result.hostname).toBe('localhost')
-      expect(result.warning).toBeUndefined()
-    })
-
-    it('should allow HTTP on 127.0.0.1 by default', () => {
-      const result = checkHttps('http://127.0.0.1:3000')
-
-      expect(result.isSecure).toBe(true)
-      expect(result.isLocalhost).toBe(true)
-      expect(result.protocol).toBe('http')
+    it.each([
+      {
+        name: 'HTTPS as secure',
+        url: 'https://example.com',
+        assert: (r: ReturnType<typeof checkHttps>) => {
+          expect(r.isSecure).toBe(true)
+          expect(r.isProduction).toBe(true)
+          expect(r.isLocalhost).toBe(false)
+          expect(r.protocol).toBe('https')
+          expect(r.hostname).toBe('example.com')
+          expect(r.warning).toBeUndefined()
+        },
+      },
+      {
+        name: 'HTTP as insecure in production',
+        url: 'http://example.com',
+        assert: (r: ReturnType<typeof checkHttps>) => {
+          expect(r.isSecure).toBe(false)
+          expect(r.isProduction).toBe(false)
+          expect(r.isLocalhost).toBe(false)
+          expect(r.protocol).toBe('http')
+          expect(r.hostname).toBe('example.com')
+          expect(r.warning).toContain('HTTPS')
+          expect(r.recommendation).toBeDefined()
+        },
+      },
+      {
+        name: 'HTTP on localhost allowed by default',
+        url: 'http://localhost:3000',
+        assert: (r: ReturnType<typeof checkHttps>) => {
+          expect(r.isSecure).toBe(true)
+          expect(r.isLocalhost).toBe(true)
+          expect(r.isProduction).toBe(false)
+          expect(r.protocol).toBe('http')
+          expect(r.hostname).toBe('localhost')
+          expect(r.warning).toBeUndefined()
+        },
+      },
+      {
+        name: 'HTTP on 127.0.0.1 allowed by default',
+        url: 'http://127.0.0.1:3000',
+        assert: (r: ReturnType<typeof checkHttps>) => {
+          expect(r.isSecure).toBe(true)
+          expect(r.isLocalhost).toBe(true)
+          expect(r.protocol).toBe('http')
+        },
+      },
+    ])('should detect $name', ({ url, assert }) => {
+      const result = checkHttps(url)
+      assert(result)
     })
 
     it('should not allow HTTP on localhost if allowHttpLocalhost is false', () => {
@@ -83,7 +98,6 @@ describe('https-checker', () => {
 
     it('should detect .local domains as localhost', () => {
       const result = checkHttps('http://myapp.local:3000')
-
       expect(result.isLocalhost).toBe(true)
       expect(result.isSecure).toBe(true)
     })
@@ -96,55 +110,44 @@ describe('https-checker', () => {
       expect(result.isProduction).toBe(false)
     })
 
-    it('should handle invalid URLs', () => {
-      const result = checkHttps('not-a-valid-url')
-
-      expect(result.isSecure).toBe(false)
-      expect(result.protocol).toBe('unknown')
-      expect(result.warning).toContain('Invalid URL')
-      expect(result.recommendation).toBeDefined()
-    })
-
-    it('should handle URLs without protocol', () => {
-      const result = checkHttps('example.com')
-
-      expect(result.isSecure).toBe(false)
-      expect(result.protocol).toBe('unknown')
+    it.each([
+      {
+        name: 'invalid URLs',
+        url: 'not-a-valid-url',
+        assert: (r: ReturnType<typeof checkHttps>) => {
+          expect(r.isSecure).toBe(false)
+          expect(r.protocol).toBe('unknown')
+          expect(r.warning).toContain('Invalid URL')
+          expect(r.recommendation).toBeDefined()
+        },
+      },
+      {
+        name: 'URLs without protocol',
+        url: 'example.com',
+        assert: (r: ReturnType<typeof checkHttps>) => {
+          expect(r.isSecure).toBe(false)
+          expect(r.protocol).toBe('unknown')
+        },
+      },
+    ])('should handle $name', ({ url, assert }) => {
+      const result = checkHttps(url)
+      assert(result)
     })
   })
 
   describe('detectProjectUrl', () => {
-    it('should detect URL from package.json homepage', () => {
-      writeFileSync(
-        join(TEST_DIR, 'package.json'),
-        JSON.stringify({
-          homepage: 'https://myapp.com',
-        }),
-      )
-
+    it.each([
+      { key: 'homepage', value: 'https://myapp.com' },
+      { key: 'url', value: 'https://myapp.com' },
+    ])('should detect URL from package.json %s', ({ key, value }) => {
+      writeJSON('package.json', { [key]: value })
       const url = detectProjectUrl(TEST_DIR)
-
-      expect(url).toBe('https://myapp.com')
-    })
-
-    it('should detect URL from package.json url', () => {
-      writeFileSync(
-        join(TEST_DIR, 'package.json'),
-        JSON.stringify({
-          url: 'https://myapp.com',
-        }),
-      )
-
-      const url = detectProjectUrl(TEST_DIR)
-
-      expect(url).toBe('https://myapp.com')
+      expect(url).toBe(value)
     })
 
     it('should detect URL from .env file', () => {
-      writeFileSync(join(TEST_DIR, '.env'), 'NEXT_PUBLIC_URL=https://myapp.com\nOTHER_VAR=value')
-
+      writeEnv('.env', 'NEXT_PUBLIC_URL=https://myapp.com\nOTHER_VAR=value')
       const url = detectProjectUrl(TEST_DIR)
-
       expect(url).toBe('https://myapp.com')
     })
 
@@ -163,18 +166,13 @@ describe('https-checker', () => {
     })
 
     it('should detect URL from .env.local file', () => {
-      writeFileSync(join(TEST_DIR, '.env.local'), 'PUBLIC_URL=https://localenv.com')
-
+      writeEnv('.env.local', 'PUBLIC_URL=https://localenv.com')
       const url = detectProjectUrl(TEST_DIR)
-
       expect(url).toBe('https://localenv.com')
     })
 
     it('should detect URL from vercel.json', () => {
-      writeFileSync(
-        join(TEST_DIR, 'vercel.json'),
-        JSON.stringify({ url: 'https://vercel.app' }),
-      )
+      writeJSON('vercel.json', { url: 'https://vercel.app' })
 
       const url = detectProjectUrl(TEST_DIR)
 
@@ -182,7 +180,7 @@ describe('https-checker', () => {
     })
 
     it('should detect URL from netlify.toml', () => {
-      writeFileSync(join(TEST_DIR, 'netlify.toml'), 'url = "https://netlify.app"')
+      writeEnv('netlify.toml', 'url = "https://netlify.app"')
 
       const url = detectProjectUrl(TEST_DIR)
 
@@ -190,7 +188,7 @@ describe('https-checker', () => {
     })
 
     it('should detect URL from next.config.js', () => {
-      writeFileSync(join(TEST_DIR, 'next.config.js'), 'module.exports = { baseUrl: "https://nextjs.app" }')
+      writeEnv('next.config.js', 'module.exports = { baseUrl: "https://nextjs.app" }')
 
       const url = detectProjectUrl(TEST_DIR)
 
@@ -209,12 +207,7 @@ describe('https-checker', () => {
     })
 
     it('should check HTTPS from detected URL in package.json', () => {
-      writeFileSync(
-        join(TEST_DIR, 'package.json'),
-        JSON.stringify({
-          homepage: 'https://myapp.com',
-        }),
-      )
+      writeJSON('package.json', { homepage: 'https://myapp.com' })
 
       const result = checkProjectHttps({
         projectPath: TEST_DIR,
@@ -235,12 +228,7 @@ describe('https-checker', () => {
     })
 
     it('should prioritize provided URL over detected URL', () => {
-      writeFileSync(
-        join(TEST_DIR, 'package.json'),
-        JSON.stringify({
-          homepage: 'http://localhost:3000',
-        }),
-      )
+      writeJSON('package.json', { homepage: 'http://localhost:3000' })
 
       const result = checkProjectHttps({
         url: 'https://production.com',
@@ -254,10 +242,7 @@ describe('https-checker', () => {
 
   describe('detectProjectUrl - JS/TS files', () => {
     it('should detect URL from JavaScript file with pattern', () => {
-      writeFileSync(
-        join(TEST_DIR, 'config.js'),
-        'const API_URL = "https://api.example.com";',
-      )
+      writeEnv('config.js', 'const API_URL = "https://api.example.com";')
 
       const url = detectProjectUrl(TEST_DIR)
 
@@ -266,10 +251,7 @@ describe('https-checker', () => {
     })
 
     it('should detect URL from TypeScript file with pattern', () => {
-      writeFileSync(
-        join(TEST_DIR, 'config.ts'),
-        'const API_URL = "https://api.example.com";',
-      )
+      writeEnv('config.ts', 'const API_URL = "https://api.example.com";')
 
       const url = detectProjectUrl(TEST_DIR)
 
@@ -279,7 +261,7 @@ describe('https-checker', () => {
 
     it('should handle parse errors gracefully', () => {
       // Create invalid JSON file
-      writeFileSync(join(TEST_DIR, 'package.json'), '{ invalid json }')
+      writeEnv('package.json', '{ invalid json }')
 
       const url = detectProjectUrl(TEST_DIR)
 
@@ -290,7 +272,7 @@ describe('https-checker', () => {
 
   describe('detectProjectUrl - .env files', () => {
     it('should detect URL from .env file with NEXT_PUBLIC_URL', () => {
-      writeFileSync(join(TEST_DIR, '.env'), 'NEXT_PUBLIC_URL=https://myapp.com\nOTHER_VAR=value')
+      writeEnv('.env', 'NEXT_PUBLIC_URL=https://myapp.com\nOTHER_VAR=value')
 
       const url = detectProjectUrl(TEST_DIR)
 
@@ -298,7 +280,7 @@ describe('https-checker', () => {
     })
 
     it('should detect URL from .env file with VITE_PUBLIC_URL', () => {
-      writeFileSync(join(TEST_DIR, '.env'), 'VITE_PUBLIC_URL=https://viteapp.com')
+      writeEnv('.env', 'VITE_PUBLIC_URL=https://viteapp.com')
 
       const url = detectProjectUrl(TEST_DIR)
 
@@ -306,10 +288,7 @@ describe('https-checker', () => {
     })
 
     it('should handle .env file with multiple lines', () => {
-      writeFileSync(
-        join(TEST_DIR, '.env'),
-        'VAR1=value1\nNEXT_PUBLIC_URL=https://myapp.com\nVAR2=value2',
-      )
+      writeEnv('.env', 'VAR1=value1\nNEXT_PUBLIC_URL=https://myapp.com\nVAR2=value2')
 
       const url = detectProjectUrl(TEST_DIR)
 
@@ -318,7 +297,7 @@ describe('https-checker', () => {
 
     it('should handle .env file parse errors', () => {
       // Create .env file that might cause issues
-      writeFileSync(join(TEST_DIR, '.env'), '')
+      writeEnv('.env', '')
 
       const url = detectProjectUrl(TEST_DIR)
 

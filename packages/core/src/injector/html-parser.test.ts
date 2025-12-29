@@ -5,6 +5,11 @@ import { parseHTML, parseHTMLFile, findElement, findAllElements, elementExists, 
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-html-parser')
 
+// Helpers
+const html = (content: string) => `<html><head>${content}</head></html>`
+const htmlWithBody = (headContent: string, bodyContent: string) =>
+  `<html><head>${headContent}</head><body>${bodyContent}</body></html>`
+
 describe('html-parser', () => {
   beforeEach(() => {
     try {
@@ -18,60 +23,41 @@ describe('html-parser', () => {
   })
 
   describe('parseHTML', () => {
-    it('should parse simple HTML with head and body', () => {
-      const html = '<html><head><title>Test</title></head><body><p>Content</p></body></html>'
-      const parsed = parseHTML(html)
-
-      expect(parsed.head).not.toBeNull()
-      expect(parsed.body).not.toBeNull()
-      expect(parsed.html).not.toBeNull()
+    it.each([
+      {
+        name: 'simple HTML',
+        input: htmlWithBody('<title>Test</title>', '<p>Content</p>'),
+        hasHead: true,
+        hasBody: true,
+      },
+      { name: 'no html tag', input: '<head><title>Test</title></head><body></body>', hasHead: true, hasBody: true },
+      { name: 'only head', input: '<head><title>Test</title></head>', hasHead: true, hasBody: false },
+      { name: 'empty HTML', input: '', hasHead: false, hasBody: false },
+    ])('should parse $name', ({ input, hasHead, hasBody }) => {
+      const parsed = parseHTML(input)
       expect(parsed.document).toBeDefined()
-    })
-
-    it('should parse HTML without explicit html tag', () => {
-      const html = '<head><title>Test</title></head><body><p>Content</p></body>'
-      const parsed = parseHTML(html)
-
-      expect(parsed.head).not.toBeNull()
-      expect(parsed.body).not.toBeNull()
-    })
-
-    it('should parse HTML with only head', () => {
-      const html = '<head><title>Test</title></head>'
-      const parsed = parseHTML(html)
-
-      expect(parsed.head).not.toBeNull()
-      expect(parsed.body).toBeNull()
-    })
-
-    it('should handle empty HTML', () => {
-      const html = ''
-      const parsed = parseHTML(html)
-
-      expect(parsed.document).toBeDefined()
-      expect(parsed.head).toBeNull()
-      expect(parsed.body).toBeNull()
+      expect(parsed.head !== null).toBe(hasHead)
+      expect(parsed.body !== null).toBe(hasBody)
     })
 
     it('should preserve original content', () => {
-      const html = '<html><head><title>Test</title></head></html>'
-      const parsed = parseHTML(html)
-
-      expect(parsed.originalContent).toBe(html)
+      const input = html('<title>Test</title>')
+      const parsed = parseHTML(input)
+      expect(parsed.originalContent).toBe(input)
     })
   })
 
   describe('parseHTMLFile', () => {
     it('should parse HTML from file', () => {
       const htmlPath = join(TEST_DIR, 'test.html')
-      const html = '<html><head><title>Test</title></head><body><p>Content</p></body></html>'
-      writeFileSync(htmlPath, html)
+      const content = htmlWithBody('<title>Test</title>', '<p>Content</p>')
+      writeFileSync(htmlPath, content)
 
       const parsed = parseHTMLFile(htmlPath)
 
       expect(parsed.head).not.toBeNull()
       expect(parsed.body).not.toBeNull()
-      expect(parsed.originalContent).toBe(html)
+      expect(parsed.originalContent).toBe(content)
     })
 
     it('should throw error for non-existent file', () => {
@@ -81,162 +67,94 @@ describe('html-parser', () => {
 
   describe('findElement', () => {
     it('should find element by tag name', () => {
-      const html = '<html><head><title>Test</title><meta charset="UTF-8" /></head></html>'
-      const parsed = parseHTML(html)
-
+      const parsed = parseHTML(html('<title>Test</title><meta charset="UTF-8" />'))
       const title = findElement(parsed, 'title')
-
-      expect(title).not.toBeNull()
       expect(title?.tagName.toLowerCase()).toBe('title')
     })
 
-    it('should find element by tag name and attribute', () => {
-      const html = '<html><head><link rel="stylesheet" href="style.css" /><link rel="manifest" href="manifest.json" /></head></html>'
-      const parsed = parseHTML(html)
-
+    it('should find element by tag and attribute', () => {
+      const parsed = parseHTML(
+        html('<link rel="stylesheet" href="style.css" /><link rel="manifest" href="manifest.json" />'),
+      )
       const manifestLink = findElement(parsed, 'link', { name: 'rel', value: 'manifest' })
-
-      expect(manifestLink).not.toBeNull()
       expect(manifestLink?.tagName.toLowerCase()).toBe('link')
     })
 
-    it('should return null if element not found', () => {
-      const html = '<html><head><title>Test</title></head></html>'
-      const parsed = parseHTML(html)
-
+    it('should return null if not found', () => {
+      const parsed = parseHTML(html('<title>Test</title>'))
       const meta = findElement(parsed, 'meta', { name: 'theme-color', value: '#ffffff' })
-
       expect(meta).toBeNull()
     })
 
     it('should be case insensitive for tag names', () => {
-      const html = '<html><head><TITLE>Test</TITLE></head></html>'
-      const parsed = parseHTML(html)
-
+      const parsed = parseHTML(html('<TITLE>Test</TITLE>'))
       const title = findElement(parsed, 'title')
-
       expect(title).not.toBeNull()
+    })
+
+    it('should search document.children when head is missing', () => {
+      const parsed = parseHTML('<html><body><title>Test</title></body></html>')
+      const title = findElement(parsed, 'title')
+      expect(title).toBeDefined()
     })
   })
 
   describe('findAllElements', () => {
-    it('should find all elements by tag name', () => {
-      const html = '<html><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width" /></head></html>'
-      const parsed = parseHTML(html)
-
+    it('should find all meta tags', () => {
+      const parsed = parseHTML(html('<meta charset="UTF-8" /><meta name="viewport" content="width=device-width" />'))
       const metas = findAllElements(parsed, 'meta')
-
-      // htmlparser2 may find more elements (html, head are also tags)
-      expect(metas.length).toBeGreaterThanOrEqual(2)
-      // Verify that meta tags are found
       const metaTags = metas.filter((m) => m.tagName.toLowerCase() === 'meta')
       expect(metaTags).toHaveLength(2)
     })
 
-    it('should find all elements by tag name and attribute name', () => {
-      const html = '<html><head><link rel="stylesheet" href="style.css" /><link rel="manifest" href="manifest.json" /></head></html>'
-      const parsed = parseHTML(html)
-
+    it('should find by tag and attribute name', () => {
+      const parsed = parseHTML(html('<link rel="stylesheet" href="style.css" /><link rel="manifest" href="manifest.json" />'))
       const links = findAllElements(parsed, 'link', { name: 'rel' })
-
       expect(links.length).toBeGreaterThanOrEqual(2)
     })
 
-    it('should find all elements by tag name and attribute value', () => {
-      const html = '<html><head><link rel="stylesheet" href="style.css" /><link rel="manifest" href="manifest.json" /></head></html>'
-      const parsed = parseHTML(html)
-
+    it('should find by tag and attribute value', () => {
+      const parsed = parseHTML(html('<link rel="stylesheet" href="style.css" /><link rel="manifest" href="manifest.json" />'))
       const manifestLinks = findAllElements(parsed, 'link', { name: 'rel', value: 'manifest' })
-
-      // Verify that at least manifest link is found
       expect(manifestLinks.length).toBeGreaterThanOrEqual(1)
-      // Verify that all found links have rel="manifest"
       manifestLinks.forEach((link) => {
         const relAttr = link.attributes?.find((attr) => attr.name.toLowerCase() === 'rel')
         expect(relAttr?.value).toBe('manifest')
       })
     })
 
-    it('should search document children when head is missing', () => {
-      const html = '<body><meta name="viewport" content="width=device-width" /></body>'
-      const parsed = parseHTML(html)
-
+    it('should search body when head is missing', () => {
+      const parsed = parseHTML('<body><meta name="viewport" content="width=device-width" /></body>')
       const metas = findAllElements(parsed, 'meta')
-
       expect(metas.length).toBeGreaterThanOrEqual(1)
     })
 
     it('should return empty array if no elements found', () => {
-      const html = '<html><head><title>Test</title></head></html>'
-      const parsed = parseHTML(html)
-
+      const parsed = parseHTML(html('<title>Test</title>'))
       const metas = findAllElements(parsed, 'meta')
-
       expect(metas).toHaveLength(0)
     })
   })
 
   describe('elementExists', () => {
-    it('should return true if element exists', () => {
-      const html = '<html><head><link rel="manifest" href="manifest.json" /></head></html>'
-      const parsed = parseHTML(html)
-
+    it.each([
+      { name: 'exists', input: html('<link rel="manifest" href="manifest.json" />'), expected: true },
+      { name: 'does not exist', input: html('<title>Test</title>'), expected: false },
+    ])('should return $expected when element $name', ({ input, expected }) => {
+      const parsed = parseHTML(input)
       const exists = elementExists(parsed, 'link', { name: 'rel', value: 'manifest' })
-
-      expect(exists).toBe(true)
-    })
-
-    it('should return false if element does not exist', () => {
-      const html = '<html><head><title>Test</title></head></html>'
-      const parsed = parseHTML(html)
-
-      const exists = elementExists(parsed, 'link', { name: 'rel', value: 'manifest' })
-
-      expect(exists).toBe(false)
-    })
-  })
-
-  describe('findElement - search in document.children when head is missing', () => {
-    it('should search in document.children when head does not exist', () => {
-      const html = '<html><body><title>Test</title></body></html>'
-      const parsed = parseHTML(html)
-
-      // When head is null, search should look in document.children
-      const title = findElement(parsed, 'title')
-
-      // Title might be found in body or document.children
-      expect(title).toBeDefined()
-    })
-
-    it('should handle HTML without head tag', () => {
-      const html = '<html><body><p>Content</p></body></html>'
-      const parsed = parseHTML(html)
-
-      expect(parsed.head).toBeNull()
-      // Should still be able to search in document.children
-      const body = findElement(parsed, 'body')
-      expect(body).not.toBeNull()
+      expect(exists).toBe(expected)
     })
   })
 
   describe('serializeHTML', () => {
-    it('should return original content', () => {
-      const html = '<html><head><title>Test</title></head><body></body></html>'
-      const parsed = parseHTML(html)
-
+    it.each([
+      { name: 'full HTML', input: htmlWithBody('<title>Test</title>', '') },
+      { name: 'empty HTML', input: '' },
+    ])('should preserve original content for $name', ({ input }) => {
+      const parsed = parseHTML(input)
       const serialized = serializeHTML(parsed)
-
-      expect(serialized).toBe(html)
-    })
-
-    it('should preserve original content for empty HTML', () => {
-      const html = ''
-      const parsed = parseHTML(html)
-
-      const serialized = serializeHTML(parsed)
-
-      expect(serialized).toBe(html)
+      expect(serialized).toBe(input)
     })
   })
 })
-

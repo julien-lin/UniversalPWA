@@ -127,7 +127,11 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     // Priority: explicit outputDir > dist/ (for React/Vite builds) > public/ > root
     let finalOutputDir: string
     if (outputDir) {
-      finalOutputDir = resolve(outputDir)
+      // If outputDir is absolute, use it directly; otherwise resolve relative to projectPath
+      finalOutputDir = outputDir.startsWith('/') || (process.platform === 'win32' && /^[A-Z]:/.test(outputDir))
+        ? resolve(outputDir)
+        : join(result.projectPath, outputDir)
+      console.log(chalk.gray(`  Using output directory: ${finalOutputDir}`))
     } else {
       // Auto-detect: prefer dist/ for React/Vite projects (production builds)
       const distDir = join(result.projectPath, 'dist')

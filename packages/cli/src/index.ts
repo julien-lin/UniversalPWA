@@ -5,6 +5,7 @@ import chalk from 'chalk'
 import { initCommand } from './commands/init.js'
 import { previewCommand } from './commands/preview.js'
 import { verifyCommand } from './commands/verify.js'
+import { removeCommand } from './commands/remove.js'
 import { scanProject } from '@julien-lin/universal-pwa-core'
 import { promptInitOptions } from './prompts.js'
 import packageJson from '../package.json' with { type: 'json' }
@@ -212,6 +213,37 @@ program
         projectPath: options.projectPath,
         outputDir: options.outputDir,
         checkDocker: options.docker !== false,
+      })
+      process.exit(result.success ? 0 : 1)
+    } catch (error) {
+      console.error(chalk.red(`Error: ${error instanceof Error ? error.message : String(error)}`))
+      process.exit(1)
+    }
+  })
+
+// Commande remove
+program
+  .command('remove')
+  .description('Remove PWA files and restore HTML files')
+  .option('-p, --project-path <path>', 'Project path', process.cwd())
+  .option('-o, --output-dir <dir>', 'Output directory (auto-detected if not specified)')
+  .option('--skip-html-restore', 'Skip HTML file restoration')
+  .option('--skip-files', 'Skip PWA file removal')
+  .option('--force', 'Force removal without confirmation')
+  .action(async (options: {
+    projectPath?: string
+    outputDir?: string
+    skipHtmlRestore?: boolean
+    skipFiles?: boolean
+    force?: boolean
+  }) => {
+    try {
+      const result = await removeCommand({
+        projectPath: options.projectPath,
+        outputDir: options.outputDir,
+        skipHtmlRestore: options.skipHtmlRestore,
+        skipFiles: options.skipFiles,
+        force: options.force,
       })
       process.exit(result.success ? 0 : 1)
     } catch (error) {
