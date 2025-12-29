@@ -7,6 +7,23 @@ et ce projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+## [1.3.2] - 2025-01-XX
+
+### Added
+- **CLI**: Tests unitaires complets pour `prompts.ts` (31 tests, 84.65% coverage)
+- **CLI**: Nouveau flux interactif 2 phases (sélection environnement + configuration)
+- **CLI**: Détection automatique d'environnement (Local/Production) basée sur `dist/` ou `build/`
+- **Documentation**: Mise à jour README avec nouveau workflow 2 phases
+
+### Changed
+- **CLI**: Amélioration de l'expérience utilisateur avec suggestions contextuelles
+- **CLI**: Affichage des indicateurs de détection d'environnement
+- **Documentation**: README mis à jour pour documenter le nouveau flux interactif
+
+### Fixed
+- **CLI**: Amélioration de la validation des prompts (noms, couleurs, icônes)
+- **CLI**: Normalisation automatique des couleurs hex (3 → 6 caractères)
+
 ## [1.2.7] - 2024-12-25
 
 ### Added
