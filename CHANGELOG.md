@@ -7,6 +7,23 @@ et ce projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+## [1.3.3] - 2025-01-XX
+
+### Added
+- **CLI**: Nouvelle commande `remove` pour supprimer une PWA générée
+- **CLI**: Suppression automatique des fichiers PWA (manifest.json, sw.js, icônes, workbox-*.js)
+- **CLI**: Restauration automatique des fichiers HTML (suppression des meta-tags PWA et scripts de service worker)
+- **CLI**: Détection automatique du répertoire de sortie pour la commande `remove`
+- **CLI**: Options `--skip-html-restore` et `--skip-files` pour la commande `remove`
+
+### Fixed
+- **CLI**: Correction de la résolution de `outputDir` pour les chemins relatifs dans la commande `init`
+- **CLI**: Les fichiers PWA sont maintenant correctement générés dans `dist/` en mode production
+
+### Changed
+- **CLI**: Optimisation des tests avec helpers réutilisables
+- **CLI**: Amélioration de la gestion des transactions pour la commande `remove`
+
 ## [1.3.2] - 2025-01-XX
 
 ### Added
