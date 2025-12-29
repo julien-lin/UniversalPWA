@@ -39,6 +39,19 @@ describe('suggestions', () => {
       expect(suggestion.confidence).toBe('high')
     })
 
+    it('should use displayName over name in package.json', () => {
+      writeFileSync(
+        join(TEST_DIR, 'package.json'),
+        JSON.stringify({
+          name: 'internal-name',
+          displayName: 'Public Display Name',
+        }),
+      )
+
+      const suggestion = suggestAppName(TEST_DIR, null)
+      expect(suggestion.name).toBe('Public Display Name')
+    })
+
     it('should suggest name from composer.json', () => {
       writeFileSync(
         join(TEST_DIR, 'composer.json'),
@@ -60,32 +73,49 @@ describe('suggestions', () => {
       expect(suggestion.confidence).toBe('medium')
     })
 
-    it('should generate short name correctly', () => {
+    it('should generate short name correctly and limit to 12 chars', () => {
       writeFileSync(
         join(TEST_DIR, 'package.json'),
         JSON.stringify({
-          name: 'very-long-application-name',
+          name: 'very-long-application-name-that-exceeds-limits',
         }),
       )
 
       const suggestion = suggestAppName(TEST_DIR, null)
       expect(suggestion.shortName.length).toBeLessThanOrEqual(12)
     })
+
+    it('should handle empty package.json gracefully', () => {
+      writeFileSync(join(TEST_DIR, 'package.json'), '{}')
+
+      const suggestion = suggestAppName(TEST_DIR, null)
+      expect(suggestion.name).toBeDefined()
+      expect(suggestion.source).toBe('directory')
+    })
   })
 
   describe('suggestIconPath', () => {
-    it('should find icon in common locations', () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      writeFileSync(join(TEST_DIR, 'public', 'logo.png'), 'fake png')
+    it('should find icon in common root locations', () => {
+      writeFileSync(join(TEST_DIR, 'logo.png'), 'fake png')
 
       const suggestions = suggestIconPath(TEST_DIR)
       expect(suggestions.length).toBeGreaterThan(0)
-      expect(suggestions.some((s) => s.path.includes('logo.png'))).toBe(true)
+      expect(suggestions.some((s) => s.path === 'logo.png')).toBe(true)
+      expect(suggestions[0].confidence).toBe('high')
     })
 
-    it('should find icon-like images', () => {
+    it('should find icon in public folder', () => {
+      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
+      writeFileSync(join(TEST_DIR, 'public', 'icon.png'), 'fake png')
+
+      const suggestions = suggestIconPath(TEST_DIR)
+      expect(suggestions.length).toBeGreaterThan(0)
+      expect(suggestions.some((s) => s.path.includes('public'))).toBe(true)
+    })
+
+    it('should find icon in assets folder', () => {
       mkdirSync(join(TEST_DIR, 'assets'), { recursive: true })
-      writeFileSync(join(TEST_DIR, 'assets', 'app-icon.png'), 'fake png')
+      writeFileSync(join(TEST_DIR, 'assets', 'app-icon.svg'), '<svg></svg>')
 
       const suggestions = suggestIconPath(TEST_DIR)
       expect(suggestions.length).toBeGreaterThan(0)
@@ -94,6 +124,15 @@ describe('suggestions', () => {
     it('should return empty array if no icons found', () => {
       const suggestions = suggestIconPath(TEST_DIR)
       expect(Array.isArray(suggestions)).toBe(true)
+    })
+
+    it('should ignore icons in node_modules', () => {
+      mkdirSync(join(TEST_DIR, 'node_modules', 'some-package', 'assets'), { recursive: true })
+      writeFileSync(join(TEST_DIR, 'node_modules', 'some-package', 'assets', 'icon.png'), 'fake')
+
+      const suggestions = suggestIconPath(TEST_DIR)
+      const hasNodeModules = suggestions.some((s) => s.path.includes('node_modules'))
+      expect(hasNodeModules).toBe(false)
     })
   })
 
@@ -112,12 +151,23 @@ describe('suggestions', () => {
       expect(suggestion.confidence).toBe('high')
     })
 
+    it('should suggest Next.js colors', () => {
+      const suggestion = suggestColors(TEST_DIR, 'nextjs')
+      expect(suggestion.themeColor).toBe('#000000')
+      expect(suggestion.confidence).toBe('high')
+    })
+
     it('should suggest default colors for unknown framework', () => {
       const suggestion = suggestColors(TEST_DIR, null)
       expect(suggestion.themeColor).toBeDefined()
       expect(suggestion.backgroundColor).toBeDefined()
       expect(suggestion.source).toBe('default')
       expect(suggestion.confidence).toBe('low')
+    })
+
+    it('should be case insensitive for framework names', () => {
+      const suggestion = suggestColors(TEST_DIR, 'REACT')
+      expect(suggestion.themeColor).toBe('#61dafb')
     })
   })
 
@@ -140,20 +190,36 @@ describe('suggestions', () => {
       expect(suggestion.reason).toContain('build')
     })
 
-    it('should suggest public/ by default', () => {
+    it('should prefer dist over build', () => {
+      mkdirSync(join(TEST_DIR, 'dist'), { recursive: true })
+      mkdirSync(join(TEST_DIR, 'build'), { recursive: true })
+
       const suggestion = suggestConfiguration(TEST_DIR, null, null)
+      expect(suggestion.outputDir).toBe('dist')
+    })
+
+    it('should suggest public/ for CMS frameworks', () => {
+      const suggestion = suggestConfiguration(TEST_DIR, 'wordpress', null)
       expect(suggestion.outputDir).toBe('public')
+      expect(suggestion.reason).toContain('CMS')
+    })
+
+    it('should always suggest generating icons and service worker', () => {
+      const suggestion = suggestConfiguration(TEST_DIR, null, null)
+      expect(suggestion.skipIcons).toBe(false)
+      expect(suggestion.skipServiceWorker).toBe(false)
     })
   })
 
   describe('generateSuggestions', () => {
-    it('should generate all suggestions', () => {
+    it('should generate all suggestions together', () => {
       writeFileSync(
         join(TEST_DIR, 'package.json'),
         JSON.stringify({
           name: 'test-app',
         }),
       )
+      writeFileSync(join(TEST_DIR, 'logo.png'), 'fake')
 
       const suggestions = generateSuggestions(TEST_DIR, 'react', 'spa')
       expect(suggestions.name).toBeDefined()
@@ -163,4 +229,3 @@ describe('suggestions', () => {
     })
   })
 })
-

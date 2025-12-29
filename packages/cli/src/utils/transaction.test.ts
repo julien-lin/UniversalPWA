@@ -1,9 +1,42 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync, statSync, readdirSync, rmdirSync } from 'fs'
-import { join } from 'path'
-import { Transaction } from './transaction.js'
+import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'fs'
+import { dirname, join } from 'path'
+import { Transaction, type TransactionOptions } from './transaction.js'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-transaction')
+
+// Helpers pour réduire la duplication dans les tests
+function resolvePath(filename: string): string {
+  return join(TEST_DIR, filename)
+}
+
+export function createTestFile(filename: string, content: string): string {
+  const full = resolvePath(filename)
+  mkdirSync(dirname(full), { recursive: true })
+  writeFileSync(full, content)
+  return full
+}
+
+export function createTransaction(options?: Partial<TransactionOptions>): Transaction {
+  return new Transaction({ projectPath: TEST_DIR, verbose: false, ...options })
+}
+
+export function expectBackup(t: Transaction, filename: string, exists: boolean): void {
+  const state = t.getState()
+  const entry = state.backups.find((b) => b.path.endsWith(`/${filename}`) || b.path.endsWith(`\\${filename}`))
+  expect(entry).toBeDefined()
+  expect(entry?.originalExists).toBe(exists)
+}
+
+export function expectFileRestored(filename: string, expectedContent: string): void {
+  expect(readFileSync(resolvePath(filename), 'utf-8')).toBe(expectedContent)
+}
+
+function createTestDir(dir: string): string {
+  const full = resolvePath(dir)
+  mkdirSync(full, { recursive: true })
+  return full
+}
 
 describe('Transaction', () => {
   beforeEach(() => {
@@ -18,41 +51,28 @@ describe('Transaction', () => {
   })
 
   it('should create a transaction with unique ID', () => {
-    const transaction = new Transaction({
-      projectPath: TEST_DIR,
-      verbose: false,
-    })
+    const transaction = createTransaction()
 
     expect(transaction.getState().id).toBeDefined()
     expect(transaction.getState().id.length).toBe(8)
   })
 
   it('should backup existing file', () => {
-    const filePath = join(TEST_DIR, 'test.txt')
     const originalContent = 'original content'
-    writeFileSync(filePath, originalContent)
+    createTestFile('test.txt', originalContent)
 
-    const transaction = new Transaction({
-      projectPath: TEST_DIR,
-      verbose: false,
-    })
+    const transaction = createTransaction()
 
     transaction.backupFile('test.txt')
 
-    const state = transaction.getState()
-    expect(state.backups.length).toBe(1)
-    expect(state.backups[0].originalExists).toBe(true)
-    expect(state.backups[0].originalContent?.toString()).toBe(originalContent)
+    expectBackup(transaction, 'test.txt', true)
+    expect(transaction.getState().backups[0].originalContent?.toString()).toBe(originalContent)
   })
 
   it('should log warning when backup read fails', () => {
-    const filePath = join(TEST_DIR, 'test.txt')
-    writeFileSync(filePath, 'content')
+    createTestFile('test.txt', 'content')
 
-    const transaction = new Transaction({
-      projectPath: TEST_DIR,
-      verbose: true,
-    })
+    const transaction = createTransaction({ verbose: true })
 
     const fs = require('fs')
     const readSpy = vi.spyOn(fs, 'readFileSync').mockImplementation(() => {
@@ -68,11 +88,7 @@ describe('Transaction', () => {
   })
 
   it('should track created file', () => {
-    const transaction = new Transaction({
-      projectPath: TEST_DIR,
-      outputDir: 'output',
-      verbose: false,
-    })
+    const transaction = createTransaction({ outputDir: 'output' })
 
     transaction.trackCreatedFile('new-file.txt')
 
@@ -82,11 +98,7 @@ describe('Transaction', () => {
   })
 
   it('should track created directory', () => {
-    const transaction = new Transaction({
-      projectPath: TEST_DIR,
-      outputDir: 'output',
-      verbose: false,
-    })
+    const transaction = createTransaction({ outputDir: 'output' })
 
     transaction.trackCreatedDir('new-dir')
 
@@ -95,36 +107,28 @@ describe('Transaction', () => {
   })
 
   it('should restore file on rollback', () => {
-    const filePath = join(TEST_DIR, 'test.txt')
     const originalContent = 'original content'
-    writeFileSync(filePath, originalContent)
+    createTestFile('test.txt', originalContent)
 
-    const transaction = new Transaction({
-      projectPath: TEST_DIR,
-      verbose: false,
-    })
+    const transaction = createTransaction()
 
     transaction.backupFile('test.txt')
 
     // Modify file
-    writeFileSync(filePath, 'modified content')
+    createTestFile('test.txt', 'modified content')
 
     // Rollback
     transaction.rollback()
 
     // File should be restored
-    expect(readFileSync(filePath, 'utf-8')).toBe(originalContent)
+    expectFileRestored('test.txt', originalContent)
     expect(transaction.isRolledBackState()).toBe(true)
   })
 
   it('should remove created file on rollback', () => {
-    const filePath = join(TEST_DIR, 'new-file.txt')
-    writeFileSync(filePath, 'new content')
+    createTestFile('new-file.txt', 'new content')
 
-    const transaction = new Transaction({
-      projectPath: TEST_DIR,
-      verbose: false,
-    })
+    const transaction = createTransaction()
 
     transaction.trackCreatedFile('new-file.txt')
 
@@ -132,17 +136,13 @@ describe('Transaction', () => {
     transaction.rollback()
 
     // File should be removed
-    expect(existsSync(filePath)).toBe(false)
+    expect(existsSync(resolvePath('new-file.txt'))).toBe(false)
   })
 
   it('should remove created directory on rollback if empty', () => {
-    const dirPath = join(TEST_DIR, 'new-dir')
-    mkdirSync(dirPath, { recursive: true })
+    createTestDir('new-dir')
 
-    const transaction = new Transaction({
-      projectPath: TEST_DIR,
-      verbose: false,
-    })
+    const transaction = createTransaction()
 
     transaction.trackCreatedDir('new-dir')
 
@@ -150,18 +150,14 @@ describe('Transaction', () => {
     transaction.rollback()
 
     // Directory should be removed if empty
-    expect(existsSync(dirPath)).toBe(false)
+    expect(existsSync(resolvePath('new-dir'))).toBe(false)
   })
 
   it('should not remove non-empty directory on rollback', () => {
-    const dirPath = join(TEST_DIR, 'new-dir')
-    mkdirSync(dirPath, { recursive: true })
-    writeFileSync(join(dirPath, 'file.txt'), 'content')
+    createTestDir('new-dir')
+    createTestFile('new-dir/file.txt', 'content')
 
-    const transaction = new Transaction({
-      projectPath: TEST_DIR,
-      verbose: false,
-    })
+    const transaction = createTransaction()
 
     transaction.trackCreatedDir('new-dir')
 
@@ -169,14 +165,11 @@ describe('Transaction', () => {
     transaction.rollback()
 
     // Directory should still exist (not empty)
-    expect(existsSync(dirPath)).toBe(true)
+    expect(existsSync(resolvePath('new-dir'))).toBe(true)
   })
 
   it('should commit transaction', () => {
-    const transaction = new Transaction({
-      projectPath: TEST_DIR,
-      verbose: false,
-    })
+    const transaction = createTransaction()
 
     transaction.commit()
 
@@ -185,10 +178,7 @@ describe('Transaction', () => {
   })
 
   it('should return early if already committed', () => {
-    const transaction = new Transaction({
-      projectPath: TEST_DIR,
-      verbose: false,
-    })
+    const transaction = createTransaction()
 
     // First commit
     transaction.commit()
@@ -200,10 +190,7 @@ describe('Transaction', () => {
   })
 
   it('should not allow rollback after commit', () => {
-    const transaction = new Transaction({
-      projectPath: TEST_DIR,
-      verbose: false,
-    })
+    const transaction = createTransaction()
 
     transaction.commit()
 
@@ -211,10 +198,7 @@ describe('Transaction', () => {
   })
 
   it('should return early if already rolled back', () => {
-    const transaction = new Transaction({
-      projectPath: TEST_DIR,
-      verbose: false,
-    })
+    const transaction = createTransaction()
 
     // First rollback
     transaction.rollback()
@@ -226,10 +210,7 @@ describe('Transaction', () => {
   })
 
   it('should not allow commit after rollback', () => {
-    const transaction = new Transaction({
-      projectPath: TEST_DIR,
-      verbose: false,
-    })
+    const transaction = createTransaction()
 
     transaction.rollback()
 
@@ -250,36 +231,27 @@ describe('Transaction', () => {
   })
 
   it('should restore non-existent file by removing it on rollback', () => {
-    const filePath = join(TEST_DIR, 'new-file.txt')
     // File doesn't exist initially
 
-    const transaction = new Transaction({
-      projectPath: TEST_DIR,
-      verbose: false,
-    })
+    const transaction = createTransaction()
 
     // Backup non-existent file (will mark as not existing)
     transaction.backupFile('new-file.txt')
 
     // Now create the file (simulating it was created during transaction)
-    writeFileSync(filePath, 'new content')
+    createTestFile('new-file.txt', 'new content')
 
     // Rollback should remove the file (restore to non-existent state)
     transaction.rollback()
 
-    expect(existsSync(filePath)).toBe(false)
+    expect(existsSync(resolvePath('new-file.txt'))).toBe(false)
   })
 
   it('should handle multiple backups and created files', () => {
-    const file1 = join(TEST_DIR, 'file1.txt')
-    const file2 = join(TEST_DIR, 'file2.txt')
-    writeFileSync(file1, 'content1')
-    writeFileSync(file2, 'content2')
+    createTestFile('file1.txt', 'content1')
+    createTestFile('file2.txt', 'content2')
 
-    const transaction = new Transaction({
-      projectPath: TEST_DIR,
-      verbose: false,
-    })
+    const transaction = createTransaction()
 
     transaction.backupFile('file1.txt')
     transaction.backupFile('file2.txt')
@@ -292,19 +264,14 @@ describe('Transaction', () => {
 
   describe('removeCreatedFiles - error handling and verbose logging', () => {
     it('should handle errors when removing created files', () => {
-      const filePath = join(TEST_DIR, 'new-file.txt')
-      writeFileSync(filePath, 'content')
+      createTestFile('new-file.txt', 'content')
 
-      const transaction = new Transaction({
-        projectPath: TEST_DIR,
-        verbose: true,
-      })
+      const transaction = createTransaction({ verbose: true })
 
       transaction.trackCreatedFile('new-file.txt')
 
       // Mock rmSync to throw error
       const fs = require('fs')
-      const originalRmSync = fs.rmSync
       const rmSyncSpy = vi.spyOn(fs, 'rmSync').mockImplementation(() => {
         throw new Error('Permission denied')
       })
@@ -322,13 +289,9 @@ describe('Transaction', () => {
     })
 
     it('should log verbose message when removing created file', () => {
-      const filePath = join(TEST_DIR, 'new-file.txt')
-      writeFileSync(filePath, 'content')
+      createTestFile('new-file.txt', 'content')
 
-      const transaction = new Transaction({
-        projectPath: TEST_DIR,
-        verbose: true,
-      })
+      const transaction = createTransaction({ verbose: true })
 
       transaction.trackCreatedFile('new-file.txt')
 
@@ -344,10 +307,7 @@ describe('Transaction', () => {
     })
 
     it('should skip file removal if file does not exist', () => {
-      const transaction = new Transaction({
-        projectPath: TEST_DIR,
-        verbose: false,
-      })
+      const transaction = createTransaction()
 
       // Track a file that doesn't exist
       transaction.trackCreatedFile('non-existent-file.txt')
@@ -358,10 +318,7 @@ describe('Transaction', () => {
     })
 
     it('should log warning if existsSync throws during file removal', () => {
-      const transaction = new Transaction({
-        projectPath: TEST_DIR,
-        verbose: true,
-      })
+      const transaction = createTransaction({ verbose: true })
 
       transaction.trackCreatedFile('will-throw.txt')
 
@@ -382,16 +339,12 @@ describe('Transaction', () => {
 
   describe('restoreBackups - error handling', () => {
     it('should log warning when restore write fails', () => {
-      const filePath = join(TEST_DIR, 'test.txt')
-      writeFileSync(filePath, 'original')
+      createTestFile('test.txt', 'original')
 
-      const transaction = new Transaction({
-        projectPath: TEST_DIR,
-        verbose: true,
-      })
+      const transaction = createTransaction({ verbose: true })
 
       transaction.backupFile('test.txt')
-      writeFileSync(filePath, 'modified')
+      createTestFile('test.txt', 'modified')
 
       const fs = require('fs')
       const writeSpy = vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {
@@ -410,13 +363,9 @@ describe('Transaction', () => {
 
   describe('removeCreatedDirs - error handling and verbose logging', () => {
     it('should handle errors when removing created directories', () => {
-      const dirPath = join(TEST_DIR, 'new-dir')
-      mkdirSync(dirPath, { recursive: true })
+      createTestDir('new-dir')
 
-      const transaction = new Transaction({
-        projectPath: TEST_DIR,
-        verbose: true,
-      })
+      const transaction = createTransaction({ verbose: true })
 
       transaction.trackCreatedDir('new-dir')
 
@@ -438,13 +387,9 @@ describe('Transaction', () => {
     })
 
     it('should log verbose message when removing empty directory', () => {
-      const dirPath = join(TEST_DIR, 'empty-dir')
-      mkdirSync(dirPath, { recursive: true })
+      createTestDir('empty-dir')
 
-      const transaction = new Transaction({
-        projectPath: TEST_DIR,
-        verbose: true,
-      })
+      const transaction = createTransaction({ verbose: true })
 
       transaction.trackCreatedDir('empty-dir')
 
@@ -460,14 +405,10 @@ describe('Transaction', () => {
     })
 
     it('should log verbose message when skipping non-empty directory', () => {
-      const dirPath = join(TEST_DIR, 'non-empty-dir')
-      mkdirSync(dirPath, { recursive: true })
-      writeFileSync(join(dirPath, 'file.txt'), 'content')
+      createTestDir('non-empty-dir')
+      createTestFile('non-empty-dir/file.txt', 'content')
 
-      const transaction = new Transaction({
-        projectPath: TEST_DIR,
-        verbose: true,
-      })
+      const transaction = createTransaction({ verbose: true })
 
       transaction.trackCreatedDir('non-empty-dir')
 
@@ -483,13 +424,9 @@ describe('Transaction', () => {
     })
 
     it('should handle directory that is not a directory (file instead)', () => {
-      const filePath = join(TEST_DIR, 'file-as-dir')
-      writeFileSync(filePath, 'content')
+      createTestFile('file-as-dir', 'content')
 
-      const transaction = new Transaction({
-        projectPath: TEST_DIR,
-        verbose: false,
-      })
+      const transaction = createTransaction()
 
       // Track a file as if it were a directory (edge case)
       transaction.trackCreatedDir('file-as-dir')
@@ -500,13 +437,9 @@ describe('Transaction', () => {
     })
 
     it('should handle statSync errors gracefully', () => {
-      const dirPath = join(TEST_DIR, 'new-dir')
-      mkdirSync(dirPath, { recursive: true })
+      createTestDir('new-dir')
 
-      const transaction = new Transaction({
-        projectPath: TEST_DIR,
-        verbose: false,
-      })
+      const transaction = createTransaction()
 
       transaction.trackCreatedDir('new-dir')
 
@@ -524,13 +457,9 @@ describe('Transaction', () => {
     })
 
     it('should handle rmdirSync errors gracefully', () => {
-      const dirPath = join(TEST_DIR, 'new-dir')
-      mkdirSync(dirPath, { recursive: true })
+      createTestDir('new-dir')
 
-      const transaction = new Transaction({
-        projectPath: TEST_DIR,
-        verbose: false,
-      })
+      const transaction = createTransaction()
 
       transaction.trackCreatedDir('new-dir')
 
@@ -548,10 +477,7 @@ describe('Transaction', () => {
     })
 
     it('should skip directory removal if directory does not exist', () => {
-      const transaction = new Transaction({
-        projectPath: TEST_DIR,
-        verbose: false,
-      })
+      const transaction = createTransaction()
 
       // Track a directory that doesn't exist
       transaction.trackCreatedDir('non-existent-dir')
@@ -562,13 +488,9 @@ describe('Transaction', () => {
     })
 
     it('should handle outer catch block errors in removeCreatedDirs', () => {
-      const dirPath = join(TEST_DIR, 'new-dir')
-      mkdirSync(dirPath, { recursive: true })
+      createTestDir('new-dir')
 
-      const transaction = new Transaction({
-        projectPath: TEST_DIR,
-        verbose: true,
-      })
+      const transaction = createTransaction({ verbose: true })
 
       transaction.trackCreatedDir('new-dir')
 
@@ -593,13 +515,9 @@ describe('Transaction', () => {
 
   describe('verbose logging', () => {
     it('should log verbose messages during rollback', () => {
-      const filePath = join(TEST_DIR, 'test.txt')
-      writeFileSync(filePath, 'content')
+      createTestFile('test.txt', 'content')
 
-      const transaction = new Transaction({
-        projectPath: TEST_DIR,
-        verbose: true,
-      })
+      const transaction = createTransaction({ verbose: true })
 
       transaction.backupFile('test.txt')
       transaction.trackCreatedFile('new-file.txt')
@@ -617,10 +535,7 @@ describe('Transaction', () => {
     })
 
     it('should log verbose message during commit', () => {
-      const transaction = new Transaction({
-        projectPath: TEST_DIR,
-        verbose: true,
-      })
+      const transaction = createTransaction({ verbose: true })
 
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => { })
 
@@ -634,10 +549,7 @@ describe('Transaction', () => {
     })
 
     it('should not log when verbose is false', () => {
-      const transaction = new Transaction({
-        projectPath: TEST_DIR,
-        verbose: false,
-      })
+      const transaction = createTransaction()
 
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => { })
 
@@ -647,10 +559,7 @@ describe('Transaction', () => {
       expect(consoleSpy).not.toHaveBeenCalled()
 
       // Test rollback separately (without commit first)
-      const transaction2 = new Transaction({
-        projectPath: TEST_DIR,
-        verbose: false,
-      })
+      const transaction2 = createTransaction()
 
       transaction2.rollback()
 

@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { injectMetaTags, injectMetaTagsInFile, type MetaInjectorOptions } from './meta-injector'
-import { parseHTMLFile } from './html-parser.js'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-meta-injector')
 
@@ -19,76 +18,84 @@ describe('meta-injector', () => {
   })
 
   describe('injectMetaTags', () => {
-    it('should inject manifest link', () => {
-      const html = '<html><head><title>Test</title></head><body></body></html>'
-      const options: MetaInjectorOptions = {
-        manifestPath: '/manifest.json',
-      }
+    const baseHtml = (body = '') => '<html><head><title>Test</title></head><body>' + body + '</body></html>'
 
+    type Case = {
+      name: string
+      options: MetaInjectorOptions
+      contains: string[]
+      notContains?: string[]
+      injectedIncludes: string
+    }
+
+    it.each<Case>([
+      {
+        name: 'manifest link',
+        options: { manifestPath: '/manifest.json' },
+        contains: ['rel="manifest"', 'href="/manifest.json"'],
+        injectedIncludes: 'manifest',
+      },
+      {
+        name: 'theme-color meta tag',
+        options: { themeColor: '#ffffff' },
+        contains: ['name="theme-color"', 'content="#ffffff"'],
+        injectedIncludes: 'theme-color',
+      },
+      {
+        name: 'apple-touch-icon link',
+        options: { appleTouchIcon: '/apple-touch-icon.png' },
+        contains: ['rel="apple-touch-icon"', 'href="/apple-touch-icon.png"'],
+        injectedIncludes: 'apple-touch-icon',
+      },
+      {
+        name: 'mobile-web-app-capable (replaces deprecated apple-mobile-web-app-capable)',
+        options: { appleMobileWebAppCapable: true },
+        contains: ['name="mobile-web-app-capable"', 'content="yes"'],
+        notContains: ['name="apple-mobile-web-app-capable"'],
+        injectedIncludes: 'mobile-web-app-capable',
+      },
+      {
+        name: 'service worker registration script',
+        options: { serviceWorkerPath: '/sw.js' },
+        contains: ['navigator.serviceWorker.register', '/sw.js'],
+        injectedIncludes: 'Service Worker',
+      },
+    ])('should inject $name', ({ options, contains, notContains, injectedIncludes }) => {
+      const html = baseHtml()
       const { html: modifiedHtml, result } = injectMetaTags(html, options)
 
-      expect(modifiedHtml).toContain('rel="manifest"')
-      expect(modifiedHtml).toContain('href="/manifest.json"')
-      expect(result.injected.length).toBeGreaterThan(0)
-      expect(result.injected.some((i) => i.includes('manifest'))).toBe(true)
+      contains.forEach((s) => expect(modifiedHtml).toContain(s))
+      notContains?.forEach((s) => expect(modifiedHtml).not.toContain(s))
+      expect(result.injected.some((i) => i.includes(injectedIncludes))).toBe(true)
     })
 
-    it('should inject theme-color meta tag', () => {
-      const html = '<html><head><title>Test</title></head><body></body></html>'
-      const options: MetaInjectorOptions = {
-        themeColor: '#ffffff',
-      }
-
-      const { html: modifiedHtml, result } = injectMetaTags(html, options)
-
-      expect(modifiedHtml).toContain('name="theme-color"')
-      expect(modifiedHtml).toContain('content="#ffffff"')
-      expect(result.injected.some((i) => i.includes('theme-color'))).toBe(true)
-    })
-
-    it('should inject apple-touch-icon', () => {
-      const html = '<html><head><title>Test</title></head><body></body></html>'
-      const options: MetaInjectorOptions = {
-        appleTouchIcon: '/apple-touch-icon.png',
-      }
-
-      const { html: modifiedHtml, result } = injectMetaTags(html, options)
-
-      expect(modifiedHtml).toContain('rel="apple-touch-icon"')
-      expect(modifiedHtml).toContain('href="/apple-touch-icon.png"')
-      expect(result.injected.some((i) => i.includes('apple-touch-icon'))).toBe(true)
-    })
-
-    it('should inject mobile-web-app-capable (replaces deprecated apple-mobile-web-app-capable)', () => {
-      const html = '<html><head><title>Test</title></head><body></body></html>'
-      const options: MetaInjectorOptions = {
-        appleMobileWebAppCapable: true,
-      }
-
-      const { html: modifiedHtml, result } = injectMetaTags(html, options)
-
-      expect(modifiedHtml).toContain('name="mobile-web-app-capable"')
-      expect(modifiedHtml).toContain('content="yes"')
-      expect(modifiedHtml).not.toContain('name="apple-mobile-web-app-capable"')
-      expect(result.injected.some((i) => i.includes('mobile-web-app-capable'))).toBe(true)
-    })
-
-    it('should skip existing manifest link', () => {
-      const html = '<html><head><link rel="manifest" href="/existing.json" /></head><body></body></html>'
-      const options: MetaInjectorOptions = {
-        manifestPath: '/manifest.json',
-      }
-
+    it.each([
+      {
+        name: 'existing manifest link',
+        html: '<html><head><link rel="manifest" href="/existing.json" /></head><body></body></html>',
+        options: { manifestPath: '/manifest.json' } as MetaInjectorOptions,
+        skippedIncludes: 'manifest',
+      },
+      {
+        name: 'service worker already exists',
+        html: baseHtml('<script>navigator.serviceWorker.register</script>'),
+        options: { serviceWorkerPath: '/sw.js' } as MetaInjectorOptions,
+        skippedIncludes: 'Service Worker',
+      },
+      {
+        name: 'install script already exists',
+        html: baseHtml('<script>navigator.serviceWorker.register</script><script>beforeinstallprompt</script>'),
+        options: { serviceWorkerPath: '/sw.js' } as MetaInjectorOptions,
+        skippedIncludes: 'PWA install handler',
+      },
+    ])('should skip when $name', ({ html, options, skippedIncludes }) => {
       const { result } = injectMetaTags(html, options)
-
-      expect(result.skipped.some((s) => s.includes('manifest'))).toBe(true)
+      expect(result.skipped.some((s) => s.includes(skippedIncludes))).toBe(true)
     })
 
     it('should update existing theme-color', () => {
       const html = '<html><head><meta name="theme-color" content="#000000" /></head><body></body></html>'
-      const options: MetaInjectorOptions = {
-        themeColor: '#ffffff',
-      }
+      const options: MetaInjectorOptions = { themeColor: '#ffffff' }
 
       const { html: modifiedHtml, result } = injectMetaTags(html, options)
 
@@ -96,35 +103,11 @@ describe('meta-injector', () => {
       expect(result.injected.some((i) => i.includes('updated'))).toBe(true)
     })
 
-    it('should inject service worker registration script', () => {
-      const html = '<html><head><title>Test</title></head><body></body></html>'
-      const options: MetaInjectorOptions = {
-        serviceWorkerPath: '/sw.js',
-      }
-
-      const { html: modifiedHtml, result } = injectMetaTags(html, options)
-
-      expect(modifiedHtml).toContain('navigator.serviceWorker.register')
-      expect(modifiedHtml).toContain('/sw.js')
-      expect(result.injected.some((i) => i.includes('Service Worker'))).toBe(true)
-    })
-
-    it('should skip service worker if already exists', () => {
-      const html = '<html><head><title>Test</title></head><body><script>navigator.serviceWorker.register</script></body></html>'
-      const options: MetaInjectorOptions = {
-        serviceWorkerPath: '/sw.js',
-      }
-
-      const { result } = injectMetaTags(html, options)
-
-      expect(result.skipped.some((s) => s.includes('Service Worker'))).toBe(true)
-    })
+    // service worker cases covered by the table above
 
     it('should create head if missing', () => {
       const html = '<html><body></body></html>'
-      const options: MetaInjectorOptions = {
-        manifestPath: '/manifest.json',
-      }
+      const options: MetaInjectorOptions = { manifestPath: '/manifest.json' }
 
       const { html: modifiedHtml, result } = injectMetaTags(html, options)
 
@@ -134,7 +117,7 @@ describe('meta-injector', () => {
     })
 
     it('should inject all meta tags at once', () => {
-      const html = '<html><head><title>Test</title></head><body></body></html>'
+      const html = baseHtml()
       const options: MetaInjectorOptions = {
         manifestPath: '/manifest.json',
         themeColor: '#ffffff',
@@ -147,105 +130,59 @@ describe('meta-injector', () => {
 
       const { html: modifiedHtml, result } = injectMetaTags(html, options)
 
-      expect(modifiedHtml).toContain('rel="manifest"')
-      expect(modifiedHtml).toContain('name="theme-color"')
-      expect(modifiedHtml).toContain('rel="apple-touch-icon"')
-      expect(modifiedHtml).toContain('name="mobile-web-app-capable"')
-      expect(modifiedHtml).toContain('name="apple-mobile-web-app-status-bar-style"')
-      expect(modifiedHtml).toContain('name="apple-mobile-web-app-title"')
-      expect(modifiedHtml).toContain('navigator.serviceWorker.register')
+        ;[
+          'rel="manifest"',
+          'name="theme-color"',
+          'rel="apple-touch-icon"',
+          'name="mobile-web-app-capable"',
+          'name="apple-mobile-web-app-status-bar-style"',
+          'name="apple-mobile-web-app-title"',
+          'navigator.serviceWorker.register',
+        ].forEach((s) => expect(modifiedHtml).toContain(s))
       expect(result.injected.length).toBeGreaterThan(5)
     })
 
     describe('Security: XSS prevention', () => {
-      it('should escape service worker path to prevent XSS injection', () => {
-        const html = '<html><head><title>Test</title></head><body></body></html>'
-        const maliciousPath = "/sw.js'; alert('XSS'); //"
-        const options: MetaInjectorOptions = {
-          serviceWorkerPath: maliciousPath,
-        }
+      type XssCase = {
+        name: string
+        path: string
+        validate: (argInsideRegister: string) => void
+      }
 
+      const html = '<html><head><title>Test</title></head><body></body></html>'
+
+      it.each<XssCase>([
+        {
+          name: 'malicious payload is JSON-escaped',
+          path: "/sw.js'; alert('XSS'); //",
+          validate: (val) => {
+            expect(val).toContain('sw.js')
+            expect(val.trim()).toMatch(/^["']/)
+          },
+        },
+        {
+          name: 'backslashes are escaped',
+          path: '/sw\\test.js',
+          validate: (val) => expect(val).toContain('\\\\'),
+        },
+        {
+          name: 'newlines are escaped',
+          path: '/sw.js\nalert("XSS")',
+          validate: (val) => expect(val).toContain('\\n'),
+        },
+        {
+          name: 'quotes are escaped and kept within JSON quotes',
+          path: "/sw'; alert('XSS'); //.js",
+          validate: (val) => expect(val).toMatch(/^["'].*["']$/),
+        },
+      ])('should ensure $name', ({ path, validate }) => {
+        const options: MetaInjectorOptions = { serviceWorkerPath: path }
         const { html: modifiedHtml } = injectMetaTags(html, options)
 
-        // Path must be escaped with JSON.stringify
         expect(modifiedHtml).toContain('navigator.serviceWorker.register')
-        // JSON.stringify escapes the string, so it must be between JSON quotes
-        // Verify that path is correctly escaped (uses JSON.stringify)
         const match = modifiedHtml.match(/navigator\.serviceWorker\.register\(([^)]+)\)/)
         expect(match).not.toBeNull()
-        if (match) {
-          // Path must be a valid JSON string (escaped)
-          const pathValue = match[1]
-          // JSON.stringify adds quotes and escapes special characters
-          // Path must contain malicious path but escaped
-          expect(pathValue).toContain("sw.js")
-          // Important point: path is between JSON quotes, so malicious code cannot execute
-          // Verify it's a JSON string (starts with a quote)
-          expect(pathValue.trim()).toMatch(/^["']/)
-        }
-      })
-
-      it('should escape service worker path with backslashes', () => {
-        const html = '<html><head><title>Test</title></head><body></body></html>'
-        const pathWithBackslash = '/sw\\test.js'
-        const options: MetaInjectorOptions = {
-          serviceWorkerPath: pathWithBackslash,
-        }
-
-        const { html: modifiedHtml } = injectMetaTags(html, options)
-
-        // Backslash must be escaped
-        expect(modifiedHtml).toContain('navigator.serviceWorker.register')
-        // JSON.stringify escapes backslashes, so we should see \\ in HTML
-        const match = modifiedHtml.match(/navigator\.serviceWorker\.register\(([^)]+)\)/)
-        expect(match).not.toBeNull()
-        if (match) {
-          // Path must be escaped (backslashes are doubled)
-          expect(match[1]).toContain('\\\\')
-        }
-      })
-
-      it('should escape service worker path with newlines', () => {
-        const html = '<html><head><title>Test</title></head><body></body></html>'
-        const pathWithNewline = '/sw.js\nalert("XSS")'
-        const options: MetaInjectorOptions = {
-          serviceWorkerPath: pathWithNewline,
-        }
-
-        const { html: modifiedHtml } = injectMetaTags(html, options)
-
-        // Newlines must be escaped
-        expect(modifiedHtml).toContain('navigator.serviceWorker.register')
-        // JSON.stringify escapes newlines as \n, so we should not see literal newline
-        // HTML must not contain literal newline in script (except in JSON quotes)
-        const match = modifiedHtml.match(/navigator\.serviceWorker\.register\(([^)]+)\)/)
-        expect(match).not.toBeNull()
-        if (match) {
-          // Path must be escaped (newlines are escaped as \n)
-          expect(match[1]).toContain('\\n')
-        }
-      })
-
-      it('should escape service worker path with quotes', () => {
-        const html = '<html><head><title>Test</title></head><body></body></html>'
-        const pathWithQuotes = "/sw'; alert('XSS'); //.js"
-        const options: MetaInjectorOptions = {
-          serviceWorkerPath: pathWithQuotes,
-        }
-
-        const { html: modifiedHtml } = injectMetaTags(html, options)
-
-        // Quotes must be escaped
-        expect(modifiedHtml).toContain('navigator.serviceWorker.register')
-        // JSON.stringify escapes quotes, so path must be between JSON quotes
-        const match = modifiedHtml.match(/navigator\.serviceWorker\.register\(([^)]+)\)/)
-        expect(match).not.toBeNull()
-        if (match) {
-          // Path must be a valid JSON string (escaped)
-          const pathValue = match[1]
-          // Verify it's a JSON string (starts and ends with quotes)
-          expect(pathValue).toMatch(/^["'].*["']$/)
-        }
+        if (match) validate(match[1])
       })
     })
   })
@@ -323,27 +260,7 @@ describe('meta-injector', () => {
       expect(result.warnings.some((w) => w.includes('(no </body> or </html> found)'))).toBe(true)
     })
 
-    it('should skip install script if already exists', () => {
-      const html = '<html><head><title>Test</title></head><body><script>navigator.serviceWorker.register</script><script>beforeinstallprompt</script></body></html>'
-      const options: MetaInjectorOptions = {
-        serviceWorkerPath: '/sw.js',
-      }
-
-      const { result } = injectMetaTags(html, options)
-
-      expect(result.skipped.some((s) => s.includes('PWA install handler'))).toBe(true)
-    })
-
-    it('should skip install script if serviceWorker registration already exists', () => {
-      const html = '<html><head><title>Test</title></head><body><script>navigator.serviceWorker.register</script></body></html>'
-      const options: MetaInjectorOptions = {
-        serviceWorkerPath: '/sw.js',
-      }
-
-      const { result } = injectMetaTags(html, options)
-
-      expect(result.skipped.some((s) => s.includes('Service Worker registration'))).toBe(true)
-    })
+    // skip scenarios are covered in the parameterized tests above
   })
 
   describe('injectLinkTag and injectMetaTag helpers', () => {

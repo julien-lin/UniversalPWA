@@ -15,6 +15,63 @@ import type { ScannerResult } from './index.js'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-cache')
 
+// Helpers
+type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K]
+}
+
+const writeJSON = (filePath: string, data: unknown) => {
+  writeFileSync(filePath, JSON.stringify(data), 'utf-8')
+}
+
+const nowISO = () => new Date().toISOString()
+const hoursAgoISO = (h: number) => new Date(Date.now() - h * 60 * 60 * 1000).toISOString()
+
+const makeResult = (projectPath: string, overrides: DeepPartial<ScannerResult> = {}): ScannerResult => ({
+  framework: {
+    framework: null,
+    confidence: 'low',
+    confidenceScore: 0,
+    indicators: [],
+    version: null,
+    configuration: {
+      language: null,
+      cssInJs: [],
+      stateManagement: [],
+      buildTool: null,
+      ...(overrides.framework?.configuration as Partial<ScannerResult['framework']['configuration']> ?? {}),
+    },
+    ...(overrides.framework as Partial<ScannerResult['framework']> ?? {}),
+  },
+  assets: {
+    javascript: [],
+    css: [],
+    images: [],
+    fonts: [],
+    apiRoutes: [],
+    ...(overrides.assets as Partial<ScannerResult['assets']> ?? {}),
+  },
+  architecture: {
+    architecture: 'static',
+    buildTool: null,
+    confidence: 'low',
+    indicators: [],
+    ...(overrides.architecture as Partial<ScannerResult['architecture']> ?? {}),
+  },
+  timestamp: (overrides.timestamp as string) ?? nowISO(),
+  projectPath,
+})
+
+const withUpdatedCache = (projectPath: string, result: ScannerResult, cache: ScanCache | null) =>
+  updateCache(projectPath, result, cache)
+
+const createPackageJson = (dir: string, data: Record<string, unknown>) =>
+  writeJSON(join(dir, 'package.json'), data)
+
+const expectCacheHit = (dir: string, cache: ScanCache | null, expected: boolean) => {
+  expect(isCacheValid(dir, cache)).toBe(expected)
+}
+
 describe('cache', () => {
   beforeEach(() => {
     try {
@@ -35,150 +92,61 @@ describe('cache', () => {
 
     it('should load and save cache', () => {
       const cacheFile = join(TEST_DIR, 'cache.json')
-      const cache: ScanCache = {
-        version: '1.0.0',
-        entries: {},
-      }
-
+      const cache: ScanCache = { version: '1.0.0', entries: {} }
       saveCache(cache, cacheFile)
       expect(existsSync(cacheFile)).toBe(true)
-
       const loaded = loadCache(cacheFile)
-      expect(loaded).not.toBeNull()
+      expect(loaded)?.not.toBeNull()
       expect(loaded?.version).toBe('1.0.0')
     })
 
     it('should return null for invalid cache version', () => {
       const cacheFile = join(TEST_DIR, 'invalid-cache.json')
-      const invalidCache = {
-        version: '0.9.0',
-        entries: {},
-      }
-      writeFileSync(cacheFile, JSON.stringify(invalidCache), 'utf-8')
-
+      writeJSON(cacheFile, { version: '0.9.0', entries: {} })
       const loaded = loadCache(cacheFile)
       expect(loaded).toBeNull()
     })
   })
 
   describe('isCacheValid', () => {
-    it('should return false if cache is null', () => {
-      expect(isCacheValid(TEST_DIR, null)).toBe(false)
-    })
-
-    it('should return false if force is true', () => {
-      const cache: ScanCache = {
-        version: '1.0.0',
-        entries: {},
-      }
-      expect(isCacheValid(TEST_DIR, cache, { force: true })).toBe(false)
-    })
-
-    it('should return false if entry does not exist', () => {
-      const cache: ScanCache = {
-        version: '1.0.0',
-        entries: {},
-      }
-      expect(isCacheValid(TEST_DIR, cache)).toBe(false)
+    it.each<[
+      name: string,
+      cache: ScanCache | null,
+      options: { force?: boolean } | undefined,
+      expected: boolean
+    ]>([
+      ['cache is null', null, undefined, false],
+      ['force true', { version: '1.0.0', entries: {} }, { force: true }, false],
+      ['no entry', { version: '1.0.0', entries: {} }, undefined, false],
+    ])('should return false when %s', (_name, cache, options, expected) => {
+      expect(isCacheValid(TEST_DIR, cache, options)).toBe(expected)
     })
 
     it('should return true for valid cache entry', () => {
       const cacheFile = join(TEST_DIR, 'cache.json')
-      const packageJsonPath = join(TEST_DIR, 'package.json')
-      writeFileSync(packageJsonPath, JSON.stringify({ name: 'test' }), 'utf-8')
+      createPackageJson(TEST_DIR, { name: 'test' })
 
-      const result: ScannerResult = {
-        framework: {
-          framework: null,
-          confidence: 'low',
-          confidenceScore: 0,
-          indicators: [],
-          version: null,
-          configuration: {
-            language: null,
-            cssInJs: [],
-            stateManagement: [],
-            buildTool: null,
-          },
-        },
-        assets: {
-          javascript: [],
-          css: [],
-          images: [],
-          fonts: [],
-          apiRoutes: [],
-        },
-        architecture: {
-          architecture: 'static',
-          buildTool: null,
-          confidence: 'low',
-          indicators: [],
-        },
-        timestamp: new Date().toISOString(),
-        projectPath: TEST_DIR,
-      }
-
-      let cache: ScanCache | null = {
-        version: '1.0.0',
-        entries: {},
-      }
-
-      cache = updateCache(TEST_DIR, result, cache)
+      const result = makeResult(TEST_DIR)
+      const cache = withUpdatedCache(TEST_DIR, result, { version: '1.0.0', entries: {} })
       saveCache(cache, cacheFile)
 
       const loadedCache = loadCache(cacheFile)
-      expect(isCacheValid(TEST_DIR, loadedCache)).toBe(true)
+      expectCacheHit(TEST_DIR, loadedCache, true)
     })
 
     it('should return false if file has changed', () => {
       const cacheFile = join(TEST_DIR, 'cache.json')
-      const packageJsonPath = join(TEST_DIR, 'package.json')
-      writeFileSync(packageJsonPath, JSON.stringify({ name: 'test' }), 'utf-8')
+      createPackageJson(TEST_DIR, { name: 'test' })
 
-      const result: ScannerResult = {
-        framework: {
-          framework: null,
-          confidence: 'low',
-          confidenceScore: 0,
-          indicators: [],
-          version: null,
-          configuration: {
-            language: null,
-            cssInJs: [],
-            stateManagement: [],
-            buildTool: null,
-          },
-        },
-        assets: {
-          javascript: [],
-          css: [],
-          images: [],
-          fonts: [],
-          apiRoutes: [],
-        },
-        architecture: {
-          architecture: 'static',
-          buildTool: null,
-          confidence: 'low',
-          indicators: [],
-        },
-        timestamp: new Date().toISOString(),
-        projectPath: TEST_DIR,
-      }
-
-      let cache: ScanCache | null = {
-        version: '1.0.0',
-        entries: {},
-      }
-
-      cache = updateCache(TEST_DIR, result, cache)
+      const result = makeResult(TEST_DIR)
+      const cache = withUpdatedCache(TEST_DIR, result, { version: '1.0.0', entries: {} })
       saveCache(cache, cacheFile)
 
       // Modifier package.json
-      writeFileSync(packageJsonPath, JSON.stringify({ name: 'modified' }), 'utf-8')
+      createPackageJson(TEST_DIR, { name: 'modified' })
 
       const loadedCache = loadCache(cacheFile)
-      expect(isCacheValid(TEST_DIR, loadedCache)).toBe(false)
+      expectCacheHit(TEST_DIR, loadedCache, false)
     })
   })
 
@@ -188,43 +156,18 @@ describe('cache', () => {
     })
 
     it('should return cached result', () => {
-      const result: ScannerResult = {
+      const result = makeResult(TEST_DIR, {
         framework: {
           framework: 'react',
           confidence: 'high',
           confidenceScore: 90,
           indicators: ['package.json: react'],
-          version: null,
-          configuration: {
-            language: 'typescript',
-            cssInJs: [],
-            stateManagement: [],
-            buildTool: 'vite',
-          },
+          configuration: { language: 'typescript', buildTool: 'vite' },
         },
-        assets: {
-          javascript: [],
-          css: [],
-          images: [],
-          fonts: [],
-          apiRoutes: [],
-        },
-        architecture: {
-          architecture: 'spa',
-          buildTool: 'vite',
-          confidence: 'high',
-          indicators: [],
-        },
-        timestamp: new Date().toISOString(),
-        projectPath: TEST_DIR,
-      }
+        architecture: { architecture: 'spa', buildTool: 'vite', confidence: 'high' },
+      })
 
-      let cache: ScanCache | null = {
-        version: '1.0.0',
-        entries: {},
-      }
-
-      cache = updateCache(TEST_DIR, result, cache)
+      const cache = updateCache(TEST_DIR, result, { version: '1.0.0', entries: {} })
       const cachedResult = getCachedResult(TEST_DIR, cache)
 
       expect(cachedResult).not.toBeNull()
@@ -234,84 +177,17 @@ describe('cache', () => {
 
   describe('updateCache', () => {
     it('should create new cache entry', () => {
-      const result: ScannerResult = {
-        framework: {
-          framework: null,
-          confidence: 'low',
-          confidenceScore: 0,
-          indicators: [],
-          version: null,
-          configuration: {
-            language: null,
-            cssInJs: [],
-            stateManagement: [],
-            buildTool: null,
-          },
-        },
-        assets: {
-          javascript: [],
-          css: [],
-          images: [],
-          fonts: [],
-          apiRoutes: [],
-        },
-        architecture: {
-          architecture: 'static',
-          buildTool: null,
-          confidence: 'low',
-          indicators: [],
-        },
-        timestamp: new Date().toISOString(),
-        projectPath: TEST_DIR,
-      }
-
+      const result = makeResult(TEST_DIR)
       const cache = updateCache(TEST_DIR, result, null)
       expect(cache.entries).toBeDefined()
       expect(Object.keys(cache.entries).length).toBe(1)
     })
 
     it('should update existing cache entry', () => {
-      const result1: ScannerResult = {
-        framework: {
-          framework: null,
-          confidence: 'low',
-          confidenceScore: 0,
-          indicators: [],
-          version: null,
-          configuration: {
-            language: null,
-            cssInJs: [],
-            stateManagement: [],
-            buildTool: null,
-          },
-        },
-        assets: {
-          javascript: [],
-          css: [],
-          images: [],
-          fonts: [],
-          apiRoutes: [],
-        },
-        architecture: {
-          architecture: 'static',
-          buildTool: null,
-          confidence: 'low',
-          indicators: [],
-        },
-        timestamp: new Date().toISOString(),
-        projectPath: TEST_DIR,
-      }
-
+      const result1 = makeResult(TEST_DIR)
       let cache = updateCache(TEST_DIR, result1, null)
 
-      const result2: ScannerResult = {
-        ...result1,
-        framework: {
-          ...result1.framework,
-          framework: 'react',
-        },
-      }
-
+      const result2 = makeResult(TEST_DIR, { framework: { framework: 'react' } })
       cache = updateCache(TEST_DIR, result2, cache)
       expect(Object.keys(cache.entries).length).toBe(1) // Même clé, donc même entrée
     })
@@ -319,41 +195,12 @@ describe('cache', () => {
 
   describe('cleanCache', () => {
     it('should remove expired entries', () => {
-      const oldTimestamp = new Date(Date.now() - 1000 * 60 * 60 * 25).toISOString() // 25 heures
+      const oldTimestamp = hoursAgoISO(25)
       const cache: ScanCache = {
         version: '1.0.0',
         entries: {
-          'key1': {
-            result: {
-              framework: {
-                framework: null,
-                confidence: 'low',
-                confidenceScore: 0,
-                indicators: [],
-                version: null,
-                configuration: {
-                  language: null,
-                  cssInJs: [],
-                  stateManagement: [],
-                  buildTool: null,
-                },
-              },
-              assets: {
-                javascript: [],
-                css: [],
-                images: [],
-                fonts: [],
-                apiRoutes: [],
-              },
-              architecture: {
-                architecture: 'static',
-                buildTool: null,
-                confidence: 'low',
-                indicators: [],
-              },
-              timestamp: oldTimestamp,
-              projectPath: TEST_DIR,
-            },
+          key1: {
+            result: makeResult(TEST_DIR, { timestamp: oldTimestamp }),
             timestamp: oldTimestamp,
             fileHashes: {},
             ttl: 24 * 60 * 60,
@@ -362,45 +209,16 @@ describe('cache', () => {
       }
 
       const cleaned = cleanCache(cache, 24 * 60 * 60)
-      expect(cleaned).toBeNull() // Toutes les entrées expirées
+      expect(cleaned).toBeNull()
     })
 
     it('should keep non-expired entries', () => {
-      const recentTimestamp = new Date().toISOString()
+      const recentTimestamp = nowISO()
       const cache: ScanCache = {
         version: '1.0.0',
         entries: {
-          'key1': {
-            result: {
-              framework: {
-                framework: null,
-                confidence: 'low',
-                confidenceScore: 0,
-                indicators: [],
-                version: null,
-                configuration: {
-                  language: null,
-                  cssInJs: [],
-                  stateManagement: [],
-                  buildTool: null,
-                },
-              },
-              assets: {
-                javascript: [],
-                css: [],
-                images: [],
-                fonts: [],
-                apiRoutes: [],
-              },
-              architecture: {
-                architecture: 'static',
-                buildTool: null,
-                confidence: 'low',
-                indicators: [],
-              },
-              timestamp: recentTimestamp,
-              projectPath: TEST_DIR,
-            },
+          key1: {
+            result: makeResult(TEST_DIR, { timestamp: recentTimestamp }),
             timestamp: recentTimestamp,
             fileHashes: {},
             ttl: 24 * 60 * 60,
@@ -416,37 +234,7 @@ describe('cache', () => {
 
   describe('removeCacheEntry', () => {
     it('should remove specific entry', () => {
-      const result: ScannerResult = {
-        framework: {
-          framework: null,
-          confidence: 'low',
-          confidenceScore: 0,
-          indicators: [],
-          version: null,
-          configuration: {
-            language: null,
-            cssInJs: [],
-            stateManagement: [],
-            buildTool: null,
-          },
-        },
-        assets: {
-          javascript: [],
-          css: [],
-          images: [],
-          fonts: [],
-          apiRoutes: [],
-        },
-        architecture: {
-          architecture: 'static',
-          buildTool: null,
-          confidence: 'low',
-          indicators: [],
-        },
-        timestamp: new Date().toISOString(),
-        projectPath: TEST_DIR,
-      }
-
+      const result = makeResult(TEST_DIR)
       let cache = updateCache(TEST_DIR, result, null)
       expect(Object.keys(cache.entries).length).toBe(1)
 

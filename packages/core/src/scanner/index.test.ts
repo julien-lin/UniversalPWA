@@ -33,6 +33,26 @@ describe('scanner orchestrator', () => {
       expect(result.projectPath).toBe(TEST_DIR)
     })
 
+    it('should use cache when valid (timestamp unchanged)', async () => {
+      writeFileSync(join(TEST_DIR, 'index.html'), '<html><body></body></html>')
+
+      const first = await scanProject({ projectPath: TEST_DIR, useCache: true })
+      const second = await scanProject({ projectPath: TEST_DIR, useCache: true })
+
+      expect(second.timestamp).toBe(first.timestamp)
+      expect(second.projectPath).toBe(first.projectPath)
+      expect(second.framework.framework).toBe(first.framework.framework)
+    })
+
+    it('should bypass cache when forceScan is true (timestamp changes)', async () => {
+      writeFileSync(join(TEST_DIR, 'index.html'), '<html><body></body></html>')
+
+      const first = await scanProject({ projectPath: TEST_DIR, useCache: true })
+      const second = await scanProject({ projectPath: TEST_DIR, useCache: true, forceScan: true })
+
+      expect(second.timestamp).not.toBe(first.timestamp)
+    })
+
     it('should scan Symfony project', async () => {
       writeFileSync(
         join(TEST_DIR, 'composer.json'),

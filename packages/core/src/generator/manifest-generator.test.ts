@@ -11,6 +11,18 @@ import {
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-manifest')
 
+// Helpers
+const makeIcon = (src: string, sizes: string, type = 'image/png') => ({ src, sizes, type })
+
+const makeOptions = (overrides: Partial<ManifestGeneratorOptions> = {}): ManifestGeneratorOptions => ({
+  name: 'Test App',
+  shortName: 'Test',
+  icons: [makeIcon('/icon.png', '192x192')],
+  ...overrides,
+})
+
+const readManifest = (path: string) => JSON.parse(readFileSync(path, 'utf-8'))
+
 describe('manifest-generator', () => {
   beforeEach(() => {
     try {
@@ -24,75 +36,45 @@ describe('manifest-generator', () => {
   })
 
   describe('generateManifest', () => {
-    it('should generate minimal manifest', () => {
-      const options: ManifestGeneratorOptions = {
-        name: 'My App',
-        shortName: 'App',
-        icons: [
-          {
-            src: '/icon-192.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-        ],
-      }
+    it('should generate minimal manifest with defaults', () => {
+      const manifest = generateManifest(makeOptions())
 
-      const manifest = generateManifest(options)
-
-      expect(manifest.name).toBe('My App')
-      expect(manifest.short_name).toBe('App')
+      expect(manifest.name).toBe('Test App')
+      expect(manifest.short_name).toBe('Test')
       expect(manifest.start_url).toBe('/')
       expect(manifest.scope).toBe('/')
       expect(manifest.display).toBe('standalone')
       expect(manifest.icons).toHaveLength(1)
-      // theme_color and background_color should always be present for PWA installability
       expect(manifest.theme_color).toBe('#ffffff')
       expect(manifest.background_color).toBe('#ffffff')
     })
 
     it('should generate full manifest with all options', () => {
-      const options: ManifestGeneratorOptions = {
-        name: 'My Progressive Web App',
-        shortName: 'MyPWA',
-        description: 'A great PWA',
-        startUrl: '/app',
-        scope: '/app',
-        display: 'standalone',
-        orientation: 'portrait',
-        themeColor: '#ffffff',
-        backgroundColor: '#000000',
-        icons: [
-          {
-            src: '/icon-192.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: '/icon-512.png',
-            sizes: '512x512',
-            type: 'image/png',
-          },
-        ],
-        splashScreens: [
-          {
-            src: '/splash.png',
-            sizes: '1284x2778',
-            type: 'image/png',
-          },
-        ],
-        categories: ['productivity', 'utilities'],
-        lang: 'fr',
-        dir: 'ltr',
-      }
-
-      const manifest = generateManifest(options)
+      const manifest = generateManifest(
+        makeOptions({
+          name: 'My Progressive Web App',
+          shortName: 'MyPWA',
+          description: 'A great PWA',
+          startUrl: '/app',
+          scope: '/app',
+          display: 'fullscreen',
+          orientation: 'portrait',
+          themeColor: '#ffffff',
+          backgroundColor: '#000000',
+          icons: [makeIcon('/icon-192.png', '192x192'), makeIcon('/icon-512.png', '512x512')],
+          splashScreens: [makeIcon('/splash.png', '1284x2778')],
+          categories: ['productivity', 'utilities'],
+          lang: 'fr',
+          dir: 'ltr',
+        }),
+      )
 
       expect(manifest.name).toBe('My Progressive Web App')
       expect(manifest.short_name).toBe('MyPWA')
       expect(manifest.description).toBe('A great PWA')
       expect(manifest.start_url).toBe('/app')
       expect(manifest.scope).toBe('/app')
-      expect(manifest.display).toBe('standalone')
+      expect(manifest.display).toBe('fullscreen')
       expect(manifest.orientation).toBe('portrait')
       expect(manifest.theme_color).toBe('#ffffff')
       expect(manifest.background_color).toBe('#000000')
@@ -104,172 +86,67 @@ describe('manifest-generator', () => {
     })
 
     it('should validate manifest with Zod schema', () => {
-      const options: ManifestGeneratorOptions = {
-        name: 'Test App',
-        shortName: 'Test',
-        icons: [
-          {
-            src: '/icon.png',
-            sizes: '192x192',
-          },
-        ],
-      }
-
-      const manifest = generateManifest(options)
+      const manifest = generateManifest(makeOptions())
       const validated = ManifestSchema.parse(manifest)
-
       expect(validated).toEqual(manifest)
     })
 
-    it('should throw error for invalid theme color', () => {
-      const options: ManifestGeneratorOptions = {
-        name: 'Test App',
-        shortName: 'Test',
-        themeColor: 'invalid-color',
-        icons: [
-          {
-            src: '/icon.png',
-            sizes: '192x192',
-          },
-        ],
-      }
-
-      expect(() => generateManifest(options)).toThrow()
-    })
-
-    it('should throw error for invalid background color', () => {
-      const options: ManifestGeneratorOptions = {
-        name: 'Test App',
-        shortName: 'Test',
-        backgroundColor: 'not-a-color',
-        icons: [
-          {
-            src: '/icon.png',
-            sizes: '192x192',
-          },
-        ],
-      }
-
-      expect(() => generateManifest(options)).toThrow()
+    it.each([
+      { field: 'themeColor', value: 'invalid-color', label: 'theme color' },
+      { field: 'backgroundColor', value: 'not-a-color', label: 'background color' },
+    ])('should throw error for invalid $label', ({ field, value }) => {
+      expect(() => generateManifest(makeOptions({ [field]: value }))).toThrow()
     })
 
     it('should throw error for empty icons array', () => {
-      const options: ManifestGeneratorOptions = {
-        name: 'Test App',
-        shortName: 'Test',
-        icons: [],
-      }
-
-      expect(() => generateManifest(options)).toThrow()
+      expect(() => generateManifest(makeOptions({ icons: [] }))).toThrow()
     })
 
-    it('should truncate short_name > 12 characters to 12 characters', () => {
-      const options: ManifestGeneratorOptions = {
-        name: 'Test App',
-        shortName: 'This is too long',
-        icons: [
-          {
-            src: '/icon.png',
-            sizes: '192x192',
-          },
-        ],
-      }
-
-      const manifest = generateManifest(options)
-      // Validation automatically truncates to 12 characters
-      // "This is too long" -> trim() -> substring(0, 12) -> "This is too " -> trim() final -> "This is too" (10 chars)
+    it('should truncate short_name > 12 characters', () => {
+      const manifest = generateManifest(makeOptions({ shortName: 'This is too long' }))
       expect(manifest.short_name.length).toBeLessThanOrEqual(12)
       expect(manifest.short_name).toBe('This is too')
     })
 
-    it('should handle different display modes', () => {
-      const displays: Array<'standalone' | 'fullscreen' | 'minimal-ui' | 'browser'> = [
-        'standalone',
-        'fullscreen',
-        'minimal-ui',
-        'browser',
-      ]
-
-      displays.forEach((display) => {
-        const options: ManifestGeneratorOptions = {
-          name: 'Test App',
-          shortName: 'Test',
-          display,
-          icons: [
-            {
-              src: '/icon.png',
-              sizes: '192x192',
-            },
-          ],
-        }
-
-        const manifest = generateManifest(options)
-        expect(manifest.display).toBe(display)
-      })
+    it.each<'standalone' | 'fullscreen' | 'minimal-ui' | 'browser'>([
+      'standalone',
+      'fullscreen',
+      'minimal-ui',
+      'browser',
+    ])('should handle display mode: %s', (display) => {
+      const manifest = generateManifest(makeOptions({ display }))
+      expect(manifest.display).toBe(display)
     })
   })
 
   describe('writeManifest', () => {
-    it('should write manifest.json to output directory', () => {
-      const manifest = generateManifest({
-        name: 'Test App',
-        shortName: 'Test',
-        icons: [
-          {
-            src: '/icon.png',
-            sizes: '192x192',
-          },
-        ],
-      })
-
+    it('should write manifest.json and return path', () => {
+      const manifest = generateManifest(makeOptions())
       const manifestPath = writeManifest(manifest, TEST_DIR)
 
       expect(existsSync(manifestPath)).toBe(true)
-      const content = JSON.parse(readFileSync(manifestPath, 'utf-8'))
+      const content = readManifest(manifestPath)
       expect(content.name).toBe('Test App')
       expect(content.short_name).toBe('Test')
     })
 
     it('should write valid JSON', () => {
-      const manifest = generateManifest({
-        name: 'Test App',
-        shortName: 'Test',
-        icons: [
-          {
-            src: '/icon.png',
-            sizes: '192x192',
-          },
-        ],
-      })
-
+      const manifest = generateManifest(makeOptions())
       const manifestPath = writeManifest(manifest, TEST_DIR)
       const content = readFileSync(manifestPath, 'utf-8')
-
       expect(() => JSON.parse(content)).not.toThrow()
     })
   })
 
   describe('generateAndWriteManifest', () => {
     it('should generate and write manifest in one call', () => {
-      const options: ManifestGeneratorOptions = {
-        name: 'My App',
-        shortName: 'App',
-        icons: [
-          {
-            src: '/icon-192.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-        ],
-      }
-
+      const options = makeOptions({ name: 'My App', shortName: 'App' })
       const manifestPath = generateAndWriteManifest(options, TEST_DIR)
 
       expect(existsSync(manifestPath)).toBe(true)
-      const content = JSON.parse(readFileSync(manifestPath, 'utf-8'))
+      const content = readManifest(manifestPath)
       expect(content.name).toBe('My App')
       expect(content.short_name).toBe('App')
     })
   })
 })
-

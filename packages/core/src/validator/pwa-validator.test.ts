@@ -1,9 +1,134 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs'
 import { join } from 'path'
-import { validatePWA } from './pwa-validator.js'
+import type { Manifest } from '../generator/manifest-generator.js'
+import { validatePWA, type PWAValidatorOptions, type ValidationResult } from './pwa-validator.js'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-pwa-validator')
+const PUBLIC_DIR = join(TEST_DIR, 'public')
+const HTML_PATH = join(TEST_DIR, 'index.html')
+const EMPTY_HTML = '<html><head><title>Test</title></head><body></body></html>'
+const PWA_HTML =
+  '<html><head><link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#ffffff"><meta name="apple-mobile-web-app-capable" content="yes"></head><body><script>navigator.serviceWorker.register("/sw.js");</script></body></html>'
+
+const DEFAULT_ICONS: Manifest['icons'] = [
+  { src: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+  { src: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+]
+
+const DEFAULT_MANIFEST: Manifest = {
+  name: 'Test App',
+  short_name: 'Test',
+  start_url: '/',
+  scope: '/',
+  display: 'standalone',
+  theme_color: '#ffffff',
+  background_color: '#000000',
+  icons: DEFAULT_ICONS,
+}
+
+const MINIMAL_MANIFEST: Manifest = {
+  name: 'Test App',
+  short_name: 'Test',
+  start_url: '/',
+  scope: '/',
+  display: 'standalone',
+  icons: DEFAULT_ICONS,
+}
+
+const baseConfig = (overrides: Partial<PWAValidatorOptions> = {}): PWAValidatorOptions => ({
+  projectPath: TEST_DIR,
+  outputDir: 'public',
+  htmlFiles: [],
+  ...overrides,
+})
+
+const ensurePublicDir = () => mkdirSync(PUBLIC_DIR, { recursive: true })
+
+function createManifest(data: Partial<Manifest> = {}, base: Manifest = DEFAULT_MANIFEST): Manifest {
+  ensurePublicDir()
+  const manifest: Manifest = { ...base, ...data, icons: data.icons ?? base.icons }
+  writeFileSync(join(PUBLIC_DIR, 'manifest.json'), JSON.stringify(manifest))
+  return manifest
+}
+
+const createValidManifest = () => createManifest({}, DEFAULT_MANIFEST)
+const createMinimalManifest = () => createManifest({}, MINIMAL_MANIFEST)
+
+const createIcons = (sizes: number[] = [192, 512]) => {
+  ensurePublicDir()
+  sizes.forEach((size) => writeFileSync(join(PUBLIC_DIR, `icon-${size}x${size}.png`), 'dummy'))
+}
+
+const createServiceWorker = (
+  content = 'importScripts("workbox-sw.js"); workbox.precaching.precacheAndRoute([]);',
+) => {
+  ensurePublicDir()
+  const path = join(PUBLIC_DIR, 'sw.js')
+  writeFileSync(path, content)
+  return path
+}
+
+const createHtml = (content = EMPTY_HTML, path = HTML_PATH) => {
+  writeFileSync(path, content)
+  return path
+}
+
+const createHtmlWithPWA = (path = HTML_PATH) => createHtml(PWA_HTML, path)
+const createHtmlFiles = (count: number, content = EMPTY_HTML) =>
+  Array.from({ length: count }, (_, i) => createHtml(content, join(TEST_DIR, `index-${i}.html`)))
+
+type ScoreExpectation = { gt?: number; gte?: number; lt?: number; lte?: number }
+type ValidationExpectations = {
+  errors?: string[]
+  warnings?: string[]
+  manifest?: Partial<ValidationResult['details']['manifest']>
+  icons?: Partial<ValidationResult['details']['icons']>
+  serviceWorker?: Partial<ValidationResult['details']['serviceWorker']>
+  metaTags?: Partial<ValidationResult['details']['metaTags']>
+  https?: Partial<ValidationResult['details']['https']>
+  isValid?: boolean
+  score?: ScoreExpectation
+}
+
+async function expectValidation(
+  config: Partial<PWAValidatorOptions>,
+  expectations: ValidationExpectations = {},
+): Promise<ValidationResult> {
+  const result = await validatePWA(baseConfig(config))
+
+  const detailChecks = [
+    expectations.manifest && [expectations.manifest, result.details.manifest],
+    expectations.icons && [expectations.icons, result.details.icons],
+    expectations.serviceWorker && [expectations.serviceWorker, result.details.serviceWorker],
+    expectations.metaTags && [expectations.metaTags, result.details.metaTags],
+    expectations.https && [expectations.https, result.details.https],
+  ].filter(Boolean) as Array<[Record<string, unknown>, Record<string, unknown>]>
+
+  detailChecks.forEach(([expected, actual]) => {
+    Object.entries(expected).forEach(([key, value]) => expect(actual[key]).toBe(value))
+  })
+
+  const matchCodes = (codes: string[] | undefined, collection: { code: string }[]) =>
+    codes?.forEach((code) => expect(collection.some((item) => item.code === code)).toBe(true))
+
+  matchCodes(expectations.errors, result.errors)
+  matchCodes(expectations.warnings, result.warnings)
+
+  if (expectations.isValid !== undefined) {
+    expect(result.isValid).toBe(expectations.isValid)
+  }
+
+  if (expectations.score) {
+    const { gt, gte, lt, lte } = expectations.score
+    if (gt !== undefined) expect(result.score).toBeGreaterThan(gt)
+    if (gte !== undefined) expect(result.score).toBeGreaterThanOrEqual(gte)
+    if (lt !== undefined) expect(result.score).toBeLessThan(lt)
+    if (lte !== undefined) expect(result.score).toBeLessThanOrEqual(lte)
+  }
+
+  return result
+}
 
 describe('pwa-validator', () => {
   beforeEach(() => {
@@ -14,807 +139,261 @@ describe('pwa-validator', () => {
   })
 
   describe('validatePWA - Manifest validation', () => {
-    it('should detect missing manifest.json', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
+    it('detects missing manifest.json', async () => {
+      await expectValidation({}, {
+        manifest: { exists: false, valid: false },
+        errors: ['MANIFEST_MISSING'],
+        score: { lt: 100 },
       })
-
-      expect(result.details.manifest.exists).toBe(false)
-      expect(result.details.manifest.valid).toBe(false)
-      expect(result.errors.some((e) => e.code === 'MANIFEST_MISSING')).toBe(true)
-      expect(result.score).toBeLessThan(100)
     })
 
-    it('should validate valid manifest.json', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      const manifest = {
-        name: 'Test App',
-        short_name: 'Test',
-        start_url: '/',
-        scope: '/',
-        display: 'standalone',
-        theme_color: '#ffffff',
-        background_color: '#000000',
-        icons: [
-          { src: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
-        ],
-      }
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), JSON.stringify(manifest))
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.details.manifest.exists).toBe(true)
-      expect(result.details.manifest.valid).toBe(true)
+    it('accepts valid manifest.json', async () => {
+      createValidManifest()
+      const result = await expectValidation({}, { manifest: { exists: true, valid: true } })
       expect(result.errors.filter((e) => e.code.startsWith('MANIFEST_')).length).toBe(0)
     })
 
-    it('should detect missing name field', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      const manifest = {
-        short_name: 'Test',
-        start_url: '/',
-        display: 'standalone',
-        icons: [{ src: '/icon.png', sizes: '192x192' }],
-      }
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), JSON.stringify(manifest))
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.errors.some((e) => e.code === 'MANIFEST_NAME_MISSING')).toBe(true)
+    it.each([
+      { title: 'missing name field', data: { name: '' }, code: 'MANIFEST_NAME_MISSING' },
+      { title: 'missing short_name field', data: { short_name: '' }, code: 'MANIFEST_SHORT_NAME_MISSING' },
+      {
+        title: 'short_name too long',
+        data: { short_name: 'This is way too long for a short name' },
+        code: 'MANIFEST_SHORT_NAME_TOO_LONG',
+      },
+      { title: 'missing icons array', data: { icons: [] }, code: 'MANIFEST_ICONS_MISSING' },
+    ])('detects $title', async ({ data, code }) => {
+      createManifest(data, MINIMAL_MANIFEST)
+      await expectValidation({}, { errors: [code] })
     })
 
-    it('should detect missing short_name field', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      const manifest = {
-        name: 'Test App',
-        start_url: '/',
-        display: 'standalone',
-        icons: [{ src: '/icon.png', sizes: '192x192' }],
-      }
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), JSON.stringify(manifest))
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.errors.some((e) => e.code === 'MANIFEST_SHORT_NAME_MISSING')).toBe(true)
+    it('warns about missing theme_color', async () => {
+      createManifest({ background_color: '#000000' }, MINIMAL_MANIFEST)
+      await expectValidation({}, { warnings: ['MANIFEST_THEME_COLOR_MISSING'] })
     })
 
-    it('should detect short_name too long', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      const manifest = {
-        name: 'Test App',
-        short_name: 'This is way too long for a short name',
-        start_url: '/',
-        display: 'standalone',
-        icons: [{ src: '/icon.png', sizes: '192x192' }],
-      }
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), JSON.stringify(manifest))
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.errors.some((e) => e.code === 'MANIFEST_SHORT_NAME_TOO_LONG')).toBe(true)
+    it('warns about missing background_color', async () => {
+      createManifest({ theme_color: '#ffffff' }, MINIMAL_MANIFEST)
+      await expectValidation({}, { warnings: ['MANIFEST_BACKGROUND_COLOR_MISSING'] })
     })
 
-    it('should detect missing icons array', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      const manifest = {
-        name: 'Test App',
-        short_name: 'Test',
-        start_url: '/',
-        display: 'standalone',
-      }
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), JSON.stringify(manifest))
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.errors.some((e) => e.code === 'MANIFEST_ICONS_MISSING')).toBe(true)
-    })
-
-    it('should warn about missing theme_color', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      const manifest = {
-        name: 'Test App',
-        short_name: 'Test',
-        start_url: '/',
-        display: 'standalone',
-        background_color: '#000000',
-        icons: [{ src: '/icon.png', sizes: '192x192' }],
-      }
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), JSON.stringify(manifest))
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.warnings.some((w) => w.code === 'MANIFEST_THEME_COLOR_MISSING')).toBe(true)
-    })
-
-    it('should warn about missing background_color', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      const manifest = {
-        name: 'Test App',
-        short_name: 'Test',
-        start_url: '/',
-        display: 'standalone',
-        theme_color: '#ffffff',
-        icons: [{ src: '/icon.png', sizes: '192x192' }],
-      }
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), JSON.stringify(manifest))
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.warnings.some((w) => w.code === 'MANIFEST_BACKGROUND_COLOR_MISSING')).toBe(true)
-    })
-
-    it('should detect invalid JSON in manifest.json', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), '{ invalid json }')
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.errors.some((e) => e.code === 'MANIFEST_INVALID_JSON')).toBe(true)
+    it('detects invalid JSON in manifest.json', async () => {
+      ensurePublicDir()
+      writeFileSync(join(PUBLIC_DIR, 'manifest.json'), '{ invalid json }')
+      await expectValidation({}, { errors: ['MANIFEST_INVALID_JSON'] })
     })
   })
 
   describe('validatePWA - Icons validation', () => {
-    it('should detect missing 192x192 icon', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      const manifest = {
-        name: 'Test App',
-        short_name: 'Test',
-        start_url: '/',
-        display: 'standalone',
-        icons: [{ src: '/icon-512x512.png', sizes: '512x512', type: 'image/png' }],
-      }
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), JSON.stringify(manifest))
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.details.icons.has192x192).toBe(false)
-      expect(result.errors.some((e) => e.code === 'ICON_192X192_MISSING')).toBe(true)
+    it('detects missing 192x192 icon', async () => {
+      createManifest({ icons: [{ src: '/icon-512x512.png', sizes: '512x512', type: 'image/png' }] }, MINIMAL_MANIFEST)
+      createIcons([512])
+      await expectValidation({}, { icons: { has192x192: false }, errors: ['ICON_192X192_MISSING'] })
     })
 
-    it('should detect missing 512x512 icon', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      const manifest = {
-        name: 'Test App',
-        short_name: 'Test',
-        start_url: '/',
-        display: 'standalone',
-        icons: [{ src: '/icon-192x192.png', sizes: '192x192', type: 'image/png' }],
-      }
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), JSON.stringify(manifest))
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.details.icons.has512x512).toBe(false)
-      expect(result.errors.some((e) => e.code === 'ICON_512X512_MISSING')).toBe(true)
+    it('detects missing 512x512 icon', async () => {
+      createManifest({ icons: [{ src: '/icon-192x192.png', sizes: '192x192', type: 'image/png' }] }, MINIMAL_MANIFEST)
+      createIcons([192])
+      await expectValidation({}, { icons: { has512x512: false }, errors: ['ICON_512X512_MISSING'] })
     })
 
-    it('should validate icons when both 192x192 and 512x512 are present', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      const manifest = {
-        name: 'Test App',
-        short_name: 'Test',
-        start_url: '/',
-        display: 'standalone',
-        icons: [
-          { src: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
-        ],
-      }
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), JSON.stringify(manifest))
-
-      // Create dummy icon files
-      writeFileSync(join(TEST_DIR, 'public', 'icon-192x192.png'), 'dummy')
-      writeFileSync(join(TEST_DIR, 'public', 'icon-512x512.png'), 'dummy')
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.details.icons.has192x192).toBe(true)
-      expect(result.details.icons.has512x512).toBe(true)
-      expect(result.details.icons.valid).toBe(true)
+    it('validates icons when both 192x192 and 512x512 are present', async () => {
+      createValidManifest()
+      createIcons()
+      await expectValidation({}, { icons: { has192x192: true, has512x512: true, valid: true } })
     })
 
-    it('should detect missing icon file', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      const manifest = {
-        name: 'Test App',
-        short_name: 'Test',
-        start_url: '/',
-        display: 'standalone',
-        icons: [
-          { src: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
-        ],
-      }
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), JSON.stringify(manifest))
-      // Only create one icon file
-      writeFileSync(join(TEST_DIR, 'public', 'icon-192x192.png'), 'dummy')
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.errors.some((e) => e.code === 'ICON_FILE_MISSING')).toBe(true)
+    it('detects missing icon file', async () => {
+      createValidManifest()
+      createIcons([192])
+      await expectValidation({}, { errors: ['ICON_FILE_MISSING'] })
     })
 
-    it('should handle icons with sizes array', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      const manifest = {
-        name: 'Test App',
-        short_name: 'Test',
-        start_url: '/',
-        display: 'standalone',
-        icons: [
-          { src: '/icon-192x192.png', sizes: '192x192 384x384', type: 'image/png' },
-          { src: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
-        ],
-      }
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), JSON.stringify(manifest))
-      writeFileSync(join(TEST_DIR, 'public', 'icon-192x192.png'), 'dummy')
-      writeFileSync(join(TEST_DIR, 'public', 'icon-512x512.png'), 'dummy')
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.details.icons.has192x192).toBe(true)
-      expect(result.details.icons.has512x512).toBe(true)
+    it('handles icons with sizes array', async () => {
+      createManifest(
+        {
+          icons: [
+            { src: '/icon-192x192.png', sizes: '192x192 384x384', type: 'image/png' },
+            { src: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+          ],
+        },
+        MINIMAL_MANIFEST,
+      )
+      createIcons()
+      await expectValidation({}, { icons: { has192x192: true, has512x512: true } })
     })
   })
 
   describe('validatePWA - Service worker validation', () => {
-    it('should detect missing service worker', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.details.serviceWorker.exists).toBe(false)
-      expect(result.errors.some((e) => e.code === 'SERVICE_WORKER_MISSING')).toBe(true)
+    it('detects missing service worker', async () => {
+      await expectValidation({}, { serviceWorker: { exists: false }, errors: ['SERVICE_WORKER_MISSING'] })
     })
 
-    it('should validate service worker with Workbox', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      const swContent = `
-        importScripts('https://storage.googleapis.com/workbox-cdn/releases/7.0.0/workbox-sw.js');
-        workbox.precaching.precacheAndRoute(self.__WB_MANIFEST);
-      `
-      writeFileSync(join(TEST_DIR, 'public', 'sw.js'), swContent)
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.details.serviceWorker.exists).toBe(true)
-      expect(result.details.serviceWorker.valid).toBe(true)
+    it('validates service worker with Workbox', async () => {
+      createServiceWorker(
+        "importScripts('https://storage.googleapis.com/workbox-cdn/releases/7.0.0/workbox-sw.js');\nworkbox.precaching.precacheAndRoute(self.__WB_MANIFEST);",
+      )
+      const result = await expectValidation({}, { serviceWorker: { exists: true, valid: true } })
       expect(result.errors.filter((e) => e.code.startsWith('SERVICE_WORKER_')).length).toBe(0)
     })
 
-    it('should warn about service worker without Workbox', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      writeFileSync(join(TEST_DIR, 'public', 'sw.js'), 'console.log("custom sw");')
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.details.serviceWorker.exists).toBe(true)
-      expect(result.warnings.some((w) => w.code === 'SERVICE_WORKER_INVALID')).toBe(true)
+    it('warns about service worker without Workbox', async () => {
+      createServiceWorker('console.log("custom sw");')
+      await expectValidation({}, { serviceWorker: { exists: true }, warnings: ['SERVICE_WORKER_INVALID'] })
     })
 
-    it('should warn about service worker without precache', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      writeFileSync(join(TEST_DIR, 'public', 'sw.js'), 'importScripts("workbox-sw.js");')
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.warnings.some((w) => w.code === 'SERVICE_WORKER_NO_PRECACHE')).toBe(true)
+    it('warns about service worker without precache', async () => {
+      createServiceWorker('importScripts("workbox-sw.js");')
+      await expectValidation({}, { warnings: ['SERVICE_WORKER_NO_PRECACHE'] })
     })
   })
 
   describe('validatePWA - Meta tags validation', () => {
-    it('should detect missing manifest link in HTML', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      const manifest = {
-        name: 'Test App',
-        short_name: 'Test',
-        start_url: '/',
-        display: 'standalone',
-        icons: [{ src: '/icon.png', sizes: '192x192' }],
-      }
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), JSON.stringify(manifest))
-      writeFileSync(join(TEST_DIR, 'index.html'), '<html><head><title>Test</title></head><body></body></html>')
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [join(TEST_DIR, 'index.html')],
-      })
-
-      expect(result.errors.some((e) => e.code === 'META_MANIFEST_MISSING')).toBe(true)
+    it('detects missing manifest link in HTML', async () => {
+      const htmlFiles = [createHtml()]
+      await expectValidation({ htmlFiles }, { errors: ['META_MANIFEST_MISSING'] })
     })
 
-    it('should validate HTML with manifest link', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      const manifest = {
-        name: 'Test App',
-        short_name: 'Test',
-        start_url: '/',
-        display: 'standalone',
-        icons: [{ src: '/icon.png', sizes: '192x192' }],
-      }
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), JSON.stringify(manifest))
-      writeFileSync(
-        join(TEST_DIR, 'index.html'),
-        '<html><head><link rel="manifest" href="/manifest.json"></head><body></body></html>',
-      )
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [join(TEST_DIR, 'index.html')],
-      })
-
+    it('validates HTML with manifest link', async () => {
+      createMinimalManifest()
+      const htmlFiles = [createHtml('<html><head><link rel="manifest" href="/manifest.json"></head><body></body></html>')]
+      const result = await expectValidation({ htmlFiles }, { manifest: { exists: true } })
       expect(result.errors.filter((e) => e.code === 'META_MANIFEST_MISSING').length).toBe(0)
     })
 
-    it('should warn about missing theme-color meta tag', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      writeFileSync(join(TEST_DIR, 'index.html'), '<html><head><title>Test</title></head><body></body></html>')
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [join(TEST_DIR, 'index.html')],
-      })
-
-      expect(result.warnings.some((w) => w.code === 'META_THEME_COLOR_MISSING')).toBe(true)
+    it('warns about missing theme-color meta tag', async () => {
+      const htmlFiles = [createHtml()]
+      await expectValidation({ htmlFiles }, { warnings: ['META_THEME_COLOR_MISSING'] })
     })
 
-    it('should validate HTML with theme-color meta tag', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      writeFileSync(
-        join(TEST_DIR, 'index.html'),
-        '<html><head><meta name="theme-color" content="#ffffff"></head><body></body></html>',
-      )
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [join(TEST_DIR, 'index.html')],
-      })
-
-      expect(result.warnings.filter((w) => w.code === 'META_THEME_COLOR_MISSING').length).toBe(0)
+    it('validates HTML with theme-color meta tag', async () => {
+      const htmlFiles = [createHtml('<html><head><meta name="theme-color" content="#ffffff"></head><body></body></html>')]
+      const result = await expectValidation({ htmlFiles }, {})
+      expect(result.warnings.some((w) => w.code === 'META_THEME_COLOR_MISSING')).toBe(false)
     })
 
-    it('should warn about missing apple-mobile-web-app-capable', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      writeFileSync(join(TEST_DIR, 'index.html'), '<html><head><title>Test</title></head><body></body></html>')
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [join(TEST_DIR, 'index.html')],
-      })
-
-      expect(result.warnings.some((w) => w.code === 'META_APPLE_MOBILE_MISSING')).toBe(true)
+    it('warns about missing apple-mobile-web-app-capable', async () => {
+      const htmlFiles = [createHtml()]
+      await expectValidation({ htmlFiles }, { warnings: ['META_APPLE_MOBILE_MISSING'] })
     })
 
-    it('should validate HTML with apple-mobile-web-app-capable', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      writeFileSync(
-        join(TEST_DIR, 'index.html'),
-        '<html><head><meta name="apple-mobile-web-app-capable" content="yes"></head><body></body></html>',
-      )
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [join(TEST_DIR, 'index.html')],
-      })
-
-      expect(result.warnings.filter((w) => w.code === 'META_APPLE_MOBILE_MISSING').length).toBe(0)
+    it('validates HTML with apple-mobile-web-app-capable', async () => {
+      const htmlFiles = [createHtml('<html><head><meta name="apple-mobile-web-app-capable" content="yes"></head><body></body></html>')]
+      const result = await expectValidation({ htmlFiles }, {})
+      expect(result.warnings.some((w) => w.code === 'META_APPLE_MOBILE_MISSING')).toBe(false)
     })
 
-    it('should warn about missing service worker registration', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      writeFileSync(join(TEST_DIR, 'public', 'sw.js'), 'console.log("sw");')
-      writeFileSync(join(TEST_DIR, 'index.html'), '<html><head><title>Test</title></head><body></body></html>')
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [join(TEST_DIR, 'index.html')],
-      })
-
-      expect(result.warnings.some((w) => w.code === 'META_SERVICE_WORKER_REGISTRATION_MISSING')).toBe(true)
+    it('warns about missing service worker registration', async () => {
+      createServiceWorker('console.log("sw");')
+      const htmlFiles = [createHtml()]
+      await expectValidation({ htmlFiles }, { warnings: ['META_SERVICE_WORKER_REGISTRATION_MISSING'] })
     })
 
-    it('should validate HTML with service worker registration', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      writeFileSync(join(TEST_DIR, 'public', 'sw.js'), 'console.log("sw");')
-      writeFileSync(
-        join(TEST_DIR, 'index.html'),
-        '<html><head><title>Test</title></head><body><script>navigator.serviceWorker.register("/sw.js");</script></body></html>',
-      )
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [join(TEST_DIR, 'index.html')],
-      })
-
+    it('validates HTML with service worker registration', async () => {
+      createServiceWorker('console.log("sw");')
+      const htmlFiles = [createHtml('<html><head><title>Test</title></head><body><script>navigator.serviceWorker.register("/sw.js");</script></body></html>')]
+      const result = await expectValidation({ htmlFiles }, {})
       expect(result.warnings.filter((w) => w.code === 'META_SERVICE_WORKER_REGISTRATION_MISSING').length).toBe(0)
     })
 
-    it('should handle missing HTML files gracefully', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.warnings.some((w) => w.code === 'HTML_FILES_MISSING')).toBe(true)
+    it('handles missing HTML files gracefully', async () => {
+      await expectValidation({ htmlFiles: [] }, { warnings: ['HTML_FILES_MISSING'] })
     })
 
-    it('should validate all HTML files by default', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      // Create 15 HTML files
-      for (let i = 0; i < 15; i++) {
-        writeFileSync(join(TEST_DIR, `index-${i}.html`), '<html><head><title>Test</title></head><body></body></html>')
-      }
-
-      const htmlFiles = Array.from({ length: 15 }, (_, i) => join(TEST_DIR, `index-${i}.html`))
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles,
-      })
-
-      // Should validate all 15 files
+    it('validates all HTML files by default', async () => {
+      const htmlFiles = createHtmlFiles(15)
+      const result = await expectValidation({ htmlFiles }, {})
       const metaErrors = result.errors.filter((e) => e.code.startsWith('META_'))
-      expect(metaErrors.length).toBeGreaterThanOrEqual(15 * 3) // At least 3 errors per file (manifest, theme-color, apple-mobile)
+      expect(metaErrors.length).toBeGreaterThanOrEqual(15 * 3)
     })
 
-    it('should limit HTML validation when maxHtmlFiles is set', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      // Create 15 HTML files
-      for (let i = 0; i < 15; i++) {
-        writeFileSync(join(TEST_DIR, `index-${i}.html`), '<html><head><title>Test</title></head><body></body></html>')
-      }
-
-      const htmlFiles = Array.from({ length: 15 }, (_, i) => join(TEST_DIR, `index-${i}.html`))
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles,
-        maxHtmlFiles: 5,
-      })
-
-      // Should only validate first 5 files
+    it('limits HTML validation when maxHtmlFiles is set', async () => {
+      const htmlFiles = createHtmlFiles(15)
+      const result = await expectValidation({ htmlFiles, maxHtmlFiles: 5 }, {})
       const metaErrors = result.errors.filter((e) => e.code.startsWith('META_'))
-      expect(metaErrors.length).toBeLessThanOrEqual(5 * 3) // Max 3 errors per file
+      expect(metaErrors.length).toBeLessThanOrEqual(5 * 3)
     })
   })
 
   describe('validatePWA - HTTPS validation', () => {
-    it('should warn about HTTPS not verified', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.details.https.isSecure).toBe(false)
-      expect(result.warnings.some((w) => w.code === 'HTTPS_NOT_VERIFIED')).toBe(true)
+    it('warns about HTTPS not verified', async () => {
+      await expectValidation({}, { https: { isSecure: false }, warnings: ['HTTPS_NOT_VERIFIED'] })
     })
   })
 
   describe('validatePWA - Score calculation', () => {
-    it('should return score 0 for completely invalid PWA', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.score).toBeGreaterThanOrEqual(0)
-      expect(result.score).toBeLessThan(50) // Should be low score
+    it('returns score 0 for completely invalid PWA', async () => {
+      await expectValidation({}, { score: { gte: 0, lt: 50 } })
     })
 
-    it('should return high score for valid PWA', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      const manifest = {
-        name: 'Test App',
-        short_name: 'Test',
-        start_url: '/',
-        display: 'standalone',
-        theme_color: '#ffffff',
-        background_color: '#000000',
-        icons: [
-          { src: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
-        ],
-      }
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), JSON.stringify(manifest))
-      writeFileSync(join(TEST_DIR, 'public', 'icon-192x192.png'), 'dummy')
-      writeFileSync(join(TEST_DIR, 'public', 'icon-512x512.png'), 'dummy')
-      writeFileSync(
-        join(TEST_DIR, 'public', 'sw.js'),
-        'importScripts("workbox-sw.js"); workbox.precaching.precacheAndRoute([]);',
-      )
-      writeFileSync(
-        join(TEST_DIR, 'index.html'),
-        '<html><head><link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#ffffff"><meta name="apple-mobile-web-app-capable" content="yes"><script>navigator.serviceWorker.register("/sw.js");</script></head><body></body></html>',
-      )
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [join(TEST_DIR, 'index.html')],
-      })
-
-      expect(result.score).toBeGreaterThan(70) // Should be high score
+    it('returns high score for valid PWA', async () => {
+      createValidManifest()
+      createIcons()
+      createServiceWorker()
+      const htmlFiles = [createHtmlWithPWA()]
+      const result = await expectValidation({ htmlFiles }, { score: { gt: 70 }, isValid: true })
       expect(result.isValid).toBe(true)
     })
 
-    it('should penalize missing manifest', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.details.manifest.exists).toBe(false)
-      expect(result.score).toBeLessThan(80) // Should be penalized
+    it('penalizes missing manifest', async () => {
+      await expectValidation({}, { manifest: { exists: false }, score: { lt: 80 } })
     })
 
-    it('should penalize missing icons', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      const manifest = {
-        name: 'Test App',
-        short_name: 'Test',
-        start_url: '/',
-        display: 'standalone',
-        icons: [],
-      }
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), JSON.stringify(manifest))
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.details.icons.exists).toBe(false)
-      expect(result.score).toBeLessThan(80) // Should be penalized
+    it('penalizes missing icons', async () => {
+      createManifest({ icons: [] }, MINIMAL_MANIFEST)
+      await expectValidation({}, { icons: { exists: false }, score: { lt: 80 } })
     })
 
-    it('should penalize missing service worker', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      const manifest = {
-        name: 'Test App',
-        short_name: 'Test',
-        start_url: '/',
-        display: 'standalone',
-        icons: [{ src: '/icon.png', sizes: '192x192' }],
-      }
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), JSON.stringify(manifest))
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
-      expect(result.details.serviceWorker.exists).toBe(false)
-      expect(result.score).toBeLessThan(80) // Should be penalized
+    it('penalizes missing service worker', async () => {
+      createMinimalManifest()
+      await expectValidation({}, { serviceWorker: { exists: false }, score: { lt: 80 } })
     })
   })
 
   describe('validatePWA - Suggestions', () => {
-    it('should suggest generating manifest when missing', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
+    it('suggests generating manifest when missing', async () => {
+      const result = await expectValidation({}, {})
       expect(result.suggestions.some((s) => s.includes('manifest.json'))).toBe(true)
     })
 
-    it('should suggest generating icons when missing', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      const manifest = {
-        name: 'Test App',
-        short_name: 'Test',
-        start_url: '/',
-        display: 'standalone',
-        icons: [],
-      }
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), JSON.stringify(manifest))
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
+    it('suggests generating icons when missing', async () => {
+      createManifest({ icons: [] }, MINIMAL_MANIFEST)
+      const result = await expectValidation({}, {})
       expect(result.suggestions.some((s) => s.includes('icon'))).toBe(true)
     })
 
-    it('should suggest generating service worker when missing', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      const manifest = {
-        name: 'Test App',
-        short_name: 'Test',
-        start_url: '/',
-        display: 'standalone',
-        icons: [{ src: '/icon.png', sizes: '192x192' }],
-      }
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), JSON.stringify(manifest))
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-      })
-
+    it('suggests generating service worker when missing', async () => {
+      createMinimalManifest()
+      const result = await expectValidation({}, {})
       expect(result.suggestions.some((s) => s.includes('service worker'))).toBe(true)
     })
   })
 
   describe('validatePWA - Strict mode', () => {
-    it('should treat warnings as errors in strict mode', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
-      const manifest = {
-        name: 'Test App',
-        short_name: 'Test',
-        start_url: '/',
-        display: 'standalone',
-        icons: [{ src: '/icon.png', sizes: '192x192' }],
-        // Missing theme_color and background_color (warnings)
-      }
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), JSON.stringify(manifest))
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [],
-        strict: true,
-      })
-
-      // In strict mode, warnings should make isValid false
+    it('treats warnings as errors in strict mode', async () => {
+      createManifest({}, MINIMAL_MANIFEST)
+      const result = await expectValidation({ strict: true }, { isValid: false })
       expect(result.warnings.length).toBeGreaterThan(0)
-      // isValid should be false if there are warnings in strict mode
-      expect(result.isValid).toBe(false)
     })
   })
 
   describe('validatePWA - Complete validation', () => {
-    it('should validate complete PWA setup', async () => {
-      mkdirSync(join(TEST_DIR, 'public'), { recursive: true })
+    it('validates complete PWA setup', async () => {
+      createValidManifest()
+      createIcons()
+      createServiceWorker()
+      const htmlFiles = [createHtmlWithPWA()]
 
-      // Create valid manifest
-      const manifest = {
-        name: 'Test App',
-        short_name: 'Test',
-        start_url: '/',
-        display: 'standalone',
-        theme_color: '#ffffff',
-        background_color: '#000000',
-        icons: [
-          { src: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
-        ],
-      }
-      writeFileSync(join(TEST_DIR, 'public', 'manifest.json'), JSON.stringify(manifest))
-
-      // Create icon files
-      writeFileSync(join(TEST_DIR, 'public', 'icon-192x192.png'), 'dummy')
-      writeFileSync(join(TEST_DIR, 'public', 'icon-512x512.png'), 'dummy')
-
-      // Create service worker
-      writeFileSync(
-        join(TEST_DIR, 'public', 'sw.js'),
-        'importScripts("workbox-sw.js"); workbox.precaching.precacheAndRoute([]);',
-      )
-
-      // Create HTML with all meta tags
-      writeFileSync(
-        join(TEST_DIR, 'index.html'),
-        '<html><head><link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#ffffff"><meta name="apple-mobile-web-app-capable" content="yes"><script>navigator.serviceWorker.register("/sw.js");</script></head><body></body></html>',
-      )
-
-      const result = await validatePWA({
-        projectPath: TEST_DIR,
-        outputDir: 'public',
-        htmlFiles: [join(TEST_DIR, 'index.html')],
+      const result = await expectValidation({ htmlFiles }, {
+        isValid: true,
+        manifest: { valid: true },
+        icons: { valid: true, has192x192: true, has512x512: true },
+        serviceWorker: { valid: true },
+        metaTags: { valid: true },
+        score: { gt: 80 },
       })
 
       expect(result.isValid).toBe(true)
-      expect(result.details.manifest.valid).toBe(true)
-      expect(result.details.icons.valid).toBe(true)
-      expect(result.details.icons.has192x192).toBe(true)
-      expect(result.details.icons.has512x512).toBe(true)
-      expect(result.details.serviceWorker.valid).toBe(true)
-      expect(result.details.metaTags.valid).toBe(true)
-      expect(result.score).toBeGreaterThan(80)
     })
   })
 })
