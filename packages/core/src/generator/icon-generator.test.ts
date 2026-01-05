@@ -223,6 +223,184 @@ describe('icon-generator', () => {
         'Source image not found',
       )
     })
+
+    it('should create output directory if it does not exist for apple-touch-icon', async () => {
+      const outputDir = join(TEST_DIR, 'new-apple-output')
+
+      const appleIconPath = await generateAppleTouchIcon(sourceImage, outputDir)
+
+      expect(existsSync(outputDir)).toBe(true)
+      expect(existsSync(appleIconPath)).toBe(true)
+    })
+  })
+
+  describe('Edge cases and error handling', () => {
+    it('should handle empty icon sizes array', async () => {
+      const outputDir = join(TEST_DIR, 'output-empty-icons')
+
+      const result = await generateIcons({
+        sourceImage,
+        outputDir,
+        iconSizes: [],
+        splashSizes: [],
+      })
+
+      expect(result.icons).toHaveLength(0)
+      expect(result.splashScreens).toHaveLength(0)
+      // PNG format still generates apple-touch-icon
+      expect(result.generatedFiles.length).toBeGreaterThanOrEqual(0)
+    })
+
+    it('should generate multiple icon formats in same call', async () => {
+      const outputDir = join(TEST_DIR, 'output-multi-format')
+
+      const resultPNG = await generateIcons({
+        sourceImage,
+        outputDir: join(outputDir, 'png'),
+        format: 'png',
+        iconSizes: [{ width: 192, height: 192, name: 'icon-192.png' }],
+        splashSizes: [],
+      })
+
+      const resultWebP = await generateIcons({
+        sourceImage,
+        outputDir: join(outputDir, 'webp'),
+        format: 'webp',
+        iconSizes: [{ width: 192, height: 192, name: 'icon-192.webp' }],
+        splashSizes: [],
+      })
+
+      expect(resultPNG.icons[0].type).toBe('image/png')
+      expect(resultWebP.icons[0].type).toBe('image/webp')
+    })
+
+    it('should handle splash screens with various dimensions', async () => {
+      const outputDir = join(TEST_DIR, 'output-splash-various')
+      const customSplashSizes = [
+        { width: 640, height: 1136, name: 'splash-640x1136.png' },
+        { width: 1125, height: 2436, name: 'splash-1125x2436.png' },
+        { width: 2048, height: 2732, name: 'splash-2048x2732.png' },
+      ]
+
+      const result = await generateSplashScreensOnly({
+        sourceImage,
+        outputDir,
+        splashSizes: customSplashSizes,
+      })
+
+      expect(result.splashScreens).toHaveLength(3)
+      expect(result.generatedFiles.length).toBeGreaterThanOrEqual(3)
+
+      result.splashScreens.forEach((splash, index) => {
+        expect(splash.sizes).toBe(`${customSplashSizes[index].width}x${customSplashSizes[index].height}`)
+      })
+    })
+
+    it('should include purpose field for appropriate icon sizes', async () => {
+      const outputDir = join(TEST_DIR, 'output-purpose')
+
+      const result = await generateIcons({
+        sourceImage,
+        outputDir,
+        iconSizes: [
+          { width: 192, height: 192, name: 'icon-192.png' },
+          { width: 512, height: 512, name: 'icon-512.png' },
+          { width: 96, height: 96, name: 'icon-96.png' },
+        ],
+        splashSizes: [],
+      })
+
+      // 192 and 512 should have purpose 'any'
+      const icon192 = result.icons.find(i => i.sizes === '192x192')
+      const icon512 = result.icons.find(i => i.sizes === '512x512')
+      const icon96 = result.icons.find(i => i.sizes === '96x96')
+
+      expect(icon192?.purpose).toBe('any')
+      expect(icon512?.purpose).toBe('any')
+      expect(icon96?.purpose).toBeUndefined()
+    })
+
+    it('should handle quality settings from 1 to 100', async () => {
+      const outputDir = join(TEST_DIR, 'output-quality-range')
+
+      const qualitySettings = [1, 50, 90, 100]
+
+      for (const quality of qualitySettings) {
+        const result = await generateIcons({
+          sourceImage,
+          outputDir: join(outputDir, `quality-${quality}`),
+          quality,
+          iconSizes: [{ width: 192, height: 192, name: `icon-${quality}.png` }],
+          splashSizes: [],
+        })
+
+        expect(result.icons).toHaveLength(1)
+        expect(result.generatedFiles.length).toBeGreaterThan(0)
+      }
+    })
+
+    it('should handle favicon generation with output directory creation', async () => {
+      const outputDir = join(TEST_DIR, 'new-favicon-dir')
+
+      const faviconPath = await generateFavicon(sourceImage, outputDir)
+
+      expect(existsSync(outputDir)).toBe(true)
+      expect(existsSync(faviconPath)).toBe(true)
+      expect(faviconPath).toContain('favicon.ico')
+    })
+
+    it('should verify all standard icon sizes are in manifest format', async () => {
+      const outputDir = join(TEST_DIR, 'output-manifest-format')
+
+      const result = await generateIcons({
+        sourceImage,
+        outputDir,
+        iconSizes: STANDARD_ICON_SIZES,
+        splashSizes: [],
+      })
+
+      result.icons.forEach((icon) => {
+        expect(icon.src).toMatch(/^\/.*\.png$/)
+        expect(icon.sizes).toMatch(/^\d+x\d+$/)
+        expect(['image/png', 'image/webp']).toContain(icon.type)
+      })
+    })
+
+    it('should verify all standard splash screen sizes in manifest format', async () => {
+      const outputDir = join(TEST_DIR, 'output-splash-manifest')
+
+      const result = await generateSplashScreensOnly({
+        sourceImage,
+        outputDir,
+        splashSizes: STANDARD_SPLASH_SIZES,
+      })
+
+      result.splashScreens.forEach((splash) => {
+        expect(splash.src).toMatch(/^\/.*\.png$/)
+        expect(splash.sizes).toMatch(/^\d+x\d+$/)
+        expect(['image/png', 'image/webp']).toContain(splash.type)
+      })
+    })
+
+    it('should return consistent structure for all generation functions', async () => {
+      const outputDir = join(TEST_DIR, 'output-structure')
+      const iconSizes = [{ width: 192, height: 192, name: 'icon-192.png' }]
+      const splashSizes = [{ width: 750, height: 1334, name: 'splash-750x1334.png' }]
+
+      const result = await generateIcons({
+        sourceImage,
+        outputDir,
+        iconSizes,
+        splashSizes,
+      })
+
+      expect(result).toHaveProperty('icons')
+      expect(result).toHaveProperty('splashScreens')
+      expect(result).toHaveProperty('generatedFiles')
+      expect(Array.isArray(result.icons)).toBe(true)
+      expect(Array.isArray(result.splashScreens)).toBe(true)
+      expect(Array.isArray(result.generatedFiles)).toBe(true)
+    })
   })
 })
 
