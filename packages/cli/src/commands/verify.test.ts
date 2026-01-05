@@ -599,5 +599,224 @@ self.addEventListener('activate', () => {
     expect(consoleSpy).toHaveBeenCalled()
     consoleSpy.mockRestore()
   })
+
+  describe('Dockerfile verification', () => {
+    it('should detect Dockerfile with proper PWA file copies', async () => {
+      const publicDir = join(TEST_DIR, 'public')
+      mkdirSync(publicDir, { recursive: true })
+
+      writeFileSync(join(publicDir, 'sw.js'), '// Service worker')
+      writeFileSync(join(publicDir, 'manifest.json'), JSON.stringify({ name: 'App' }))
+      writeFileSync(join(publicDir, 'icon-192x192.png'), 'dummy')
+      writeFileSync(join(publicDir, 'icon-512x512.png'), 'dummy')
+      writeFileSync(join(publicDir, 'apple-touch-icon.png'), 'dummy')
+
+      const dockerfile = `
+        FROM nginx:alpine
+        COPY public/sw.js /usr/share/nginx/html/
+        COPY public/manifest.json /usr/share/nginx/html/
+        COPY public/icon-*.png /usr/share/nginx/html/
+        COPY public/apple-touch-icon.png /usr/share/nginx/html/
+      `
+      writeFileSync(join(TEST_DIR, 'Dockerfile'), dockerfile)
+
+      const result = await verifyCommand({
+        projectPath: TEST_DIR,
+        outputDir: 'public',
+      })
+
+      expect(result.dockerfileFound).toBe(true)
+      expect(result.dockerfileNeedsUpdate).toBe(false)
+    })
+
+    it('should suggest Dockerfile updates when PWA files are missing from copies', async () => {
+      const publicDir = join(TEST_DIR, 'public')
+      mkdirSync(publicDir, { recursive: true })
+
+      writeFileSync(join(publicDir, 'sw.js'), '// Service worker')
+      writeFileSync(join(publicDir, 'manifest.json'), JSON.stringify({ name: 'App' }))
+      writeFileSync(join(publicDir, 'icon-192x192.png'), 'dummy')
+      writeFileSync(join(publicDir, 'icon-512x512.png'), 'dummy')
+      writeFileSync(join(publicDir, 'apple-touch-icon.png'), 'dummy')
+
+      writeFileSync(join(TEST_DIR, 'Dockerfile'), `
+        FROM nginx:alpine
+        COPY public/ /usr/share/nginx/html/
+      `)
+
+      const result = await verifyCommand({
+        projectPath: TEST_DIR,
+        outputDir: 'public',
+        checkDocker: true,
+      })
+
+      expect(result.dockerfileFound).toBe(true)
+      expect(result.dockerfileNeedsUpdate).toBe(true)
+      expect(result.dockerfileSuggestions.length).toBeGreaterThan(0)
+    })
+
+    it('should skip Docker check when checkDocker is false', async () => {
+      const publicDir = join(TEST_DIR, 'public')
+      mkdirSync(publicDir, { recursive: true })
+
+      writeFileSync(join(publicDir, 'sw.js'), '// Service worker')
+      writeFileSync(join(publicDir, 'manifest.json'), JSON.stringify({ name: 'App' }))
+
+      const result = await verifyCommand({
+        projectPath: TEST_DIR,
+        outputDir: 'public',
+        checkDocker: false,
+      })
+
+      expect(result.dockerfileFound).toBe(false)
+    })
+  })
+
+  describe('Validation result integration', () => {
+    it('should include comprehensive validation results', async () => {
+      const publicDir = join(TEST_DIR, 'public')
+      mkdirSync(publicDir, { recursive: true })
+
+      writeFileSync(join(publicDir, 'manifest.json'), JSON.stringify({
+        name: 'Test App',
+        short_name: 'Test',
+        start_url: '/',
+        display: 'standalone',
+        theme_color: '#ffffff',
+        background_color: '#ffffff',
+        icons: [
+          { src: '/icon-192x192.png', sizes: '192x192' },
+          { src: '/icon-512x512.png', sizes: '512x512' },
+        ],
+      }))
+
+      writeFileSync(join(publicDir, 'sw.js'), `
+        self.addEventListener('install', () => {
+          self.skipWaiting();
+        });
+      `)
+
+      writeFileSync(join(publicDir, 'icon-192x192.png'), 'dummy')
+      writeFileSync(join(publicDir, 'icon-512x512.png'), 'dummy')
+      writeFileSync(join(publicDir, 'apple-touch-icon.png'), 'dummy')
+
+      const html = `<!DOCTYPE html>
+        <html>
+        <head>
+          <link rel="manifest" href="/manifest.json">
+          <meta name="theme-color" content="#ffffff">
+        </head>
+        <body></body>
+        </html>`
+      writeFileSync(join(TEST_DIR, 'index.html'), html)
+
+      const result = await verifyCommand({
+        projectPath: TEST_DIR,
+        outputDir: 'public',
+      })
+
+      expect(result.validationResult).toBeDefined()
+      expect(result.validationResult?.score).toBeGreaterThan(0)
+      expect(result.validationResult?.details).toBeDefined()
+    })
+
+    it('should return high score for complete PWA setup', async () => {
+      const publicDir = join(TEST_DIR, 'public')
+      mkdirSync(publicDir, { recursive: true })
+
+      // Create a fully compliant PWA
+      writeFileSync(join(publicDir, 'manifest.json'), JSON.stringify({
+        name: 'Test App',
+        short_name: 'Test',
+        start_url: '/',
+        display: 'standalone',
+        theme_color: '#ffffff',
+        background_color: '#ffffff',
+        icons: [
+          { src: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+        ],
+      }))
+
+      writeFileSync(join(publicDir, 'sw.js'), `
+        const CACHE_NAME = 'v1';
+        self.addEventListener('install', (event) => {
+          self.skipWaiting();
+        });
+        self.addEventListener('activate', () => {
+          self.clients.claim();
+        });
+      `)
+
+      writeFileSync(join(publicDir, 'icon-192x192.png'), 'dummy')
+      writeFileSync(join(publicDir, 'icon-512x512.png'), 'dummy')
+      writeFileSync(join(publicDir, 'apple-touch-icon.png'), 'dummy')
+
+      for (const size of ['72x72', '96x96', '128x128', '144x144', '152x152', '384x384']) {
+        writeFileSync(join(publicDir, `icon-${size}.png`), 'dummy')
+      }
+
+      const html = `<!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Test App</title>
+          <link rel="manifest" href="/manifest.json">
+          <meta name="theme-color" content="#ffffff">
+          <meta name="apple-mobile-web-app-capable" content="yes">
+        </head>
+        <body>
+          <h1>Test PWA</h1>
+          <script>
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.register('/sw.js');
+            }
+          </script>
+        </body>
+        </html>`
+      writeFileSync(join(TEST_DIR, 'index.html'), html)
+
+      const result = await verifyCommand({
+        projectPath: TEST_DIR,
+        outputDir: 'public',
+      })
+
+      expect(result.validationResult?.score).toBeGreaterThanOrEqual(80)
+    })
+  })
+
+  describe('Error handling', () => {
+    it('should handle validation errors gracefully', async () => {
+      const result = await verifyCommand({
+        projectPath: TEST_DIR,
+        outputDir: 'non-existent-output',
+      })
+
+      // Should complete without crashing
+      expect(result).toBeDefined()
+      expect(result.errors).toBeDefined()
+    })
+
+    it('should continue verification even if some checks fail', async () => {
+      const publicDir = join(TEST_DIR, 'public')
+      mkdirSync(publicDir, { recursive: true })
+
+      // Create incomplete manifest
+      writeFileSync(join(publicDir, 'manifest.json'), JSON.stringify({
+        name: 'Incomplete App',
+        // Missing required fields
+      }))
+
+      const result = await verifyCommand({
+        projectPath: TEST_DIR,
+        outputDir: 'public',
+      })
+
+      // Should still complete and report the issues
+      expect(result).toBeDefined()
+      expect(result.filesMissing.length).toBeGreaterThan(0)
+    })
+  })
 })
 
