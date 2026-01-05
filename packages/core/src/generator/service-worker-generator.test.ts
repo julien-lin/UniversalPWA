@@ -228,6 +228,210 @@ describe('service-worker-generator', () => {
       // Workbox can handle empty directory, but test anyway
       await expect(generateServiceWorker(options)).resolves.toBeDefined()
     })
+
+    it('should handle missing skip options gracefully', async () => {
+      const outputDir = join(TEST_DIR, 'output-no-skip')
+
+      const options: ServiceWorkerGeneratorOptions = {
+        projectPath: TEST_DIR,
+        outputDir,
+        architecture: 'static',
+        globDirectory: join(TEST_DIR, 'public'),
+        globPatterns: ['**/*.{html,js,css}'],
+        skipWaiting: undefined,
+        clientsClaim: undefined,
+      }
+
+      const result = await generateServiceWorker(options)
+
+      expect(existsSync(result.swPath)).toBe(true)
+    })
+  })
+
+  describe('Service Worker Generation - Different Strategies', () => {
+    it('should generate service worker with all runtime cache strategies', async () => {
+      const outputDir = join(TEST_DIR, 'output-strategies')
+
+      const strategies = ['NetworkFirst', 'CacheFirst', 'StaleWhileRevalidate', 'NetworkOnly', 'CacheOnly'] as const
+
+      for (const strategy of strategies) {
+        const result = await generateSimpleServiceWorker({
+          projectPath: TEST_DIR,
+          outputDir: join(outputDir, strategy),
+          architecture: 'static',
+          globDirectory: join(TEST_DIR, 'public'),
+          globPatterns: ['**/*.{html,js,css}'],
+          runtimeCaching: [
+            {
+              urlPattern: '/test/.*',
+              handler: strategy,
+              options: {
+                cacheName: `test-${strategy.toLowerCase()}`,
+              },
+            },
+          ],
+        })
+
+        expect(existsSync(result.swPath)).toBe(true)
+        const swContent = readFileSync(result.swPath, 'utf-8')
+        expect(swContent).toContain('workbox')
+      }
+    })
+
+    it('should generate service worker with multiple runtime cache entries', async () => {
+      const outputDir = join(TEST_DIR, 'output-multiple-cache')
+
+      const result = await generateSimpleServiceWorker({
+        projectPath: TEST_DIR,
+        outputDir,
+        architecture: 'static',
+        globDirectory: join(TEST_DIR, 'public'),
+        globPatterns: ['**/*.{html,js,css}'],
+        runtimeCaching: [
+          {
+            urlPattern: '/api/.*',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 300,
+              },
+            },
+          },
+          {
+            urlPattern: '/images/.*',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'image-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 86400,
+              },
+            },
+          },
+          {
+            urlPattern: '/fonts/.*',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'font-cache',
+            },
+          },
+        ],
+      })
+
+      expect(existsSync(result.swPath)).toBe(true)
+      // Service worker should be generated correctly with runtime caching
+      expect(result.size).toBeGreaterThan(0)
+    })
+  })
+
+  describe('Service Worker - Architecture-Specific Behavior', () => {
+    it('should generate service worker for all architectures', async () => {
+      const architectures = ['static', 'spa', 'ssr', 'hybrid'] as const
+
+      for (const arch of architectures) {
+        const result = await generateServiceWorker({
+          projectPath: TEST_DIR,
+          outputDir: join(TEST_DIR, `output-${arch}`),
+          architecture: arch,
+          globDirectory: join(TEST_DIR, 'public'),
+          globPatterns: ['**/*.{html,js,css}'],
+        })
+
+        expect(existsSync(result.swPath)).toBe(true)
+        expect(result.count).toBeGreaterThan(0)
+      }
+    })
+
+    it('should handle frameworks with service worker generation', async () => {
+      const frameworks = ['React', 'Vue', 'Angular', 'Next.js', 'Nuxt', 'Node.js']
+
+      for (const framework of frameworks) {
+        const result = await generateServiceWorker({
+          projectPath: TEST_DIR,
+          outputDir: join(TEST_DIR, `output-${framework}`),
+          architecture: 'spa',
+          framework,
+          globDirectory: join(TEST_DIR, 'public'),
+          globPatterns: ['**/*.{html,js,css}'],
+        })
+
+        expect(existsSync(result.swPath)).toBe(true)
+      }
+    })
+  })
+
+  describe('Service Worker Output Validation', () => {
+    it('should return correct count of precached files', async () => {
+      const outputDir = join(TEST_DIR, 'output-count')
+
+      // Create multiple files to precache
+      writeFileSync(join(TEST_DIR, 'public', 'page1.html'), '<html></html>')
+      writeFileSync(join(TEST_DIR, 'public', 'page2.html'), '<html></html>')
+      writeFileSync(join(TEST_DIR, 'public', 'page3.html'), '<html></html>')
+
+      const result = await generateServiceWorker({
+        projectPath: TEST_DIR,
+        outputDir,
+        architecture: 'static',
+        globDirectory: join(TEST_DIR, 'public'),
+        globPatterns: ['**/*.html'],
+      })
+
+      // Count should be at least the number of files we created
+      expect(result.count).toBeGreaterThanOrEqual(3)
+      expect(result.filePaths.length).toBeGreaterThan(0)
+    })
+
+    it('should have generated service worker with reasonable size', async () => {
+      const outputDir = join(TEST_DIR, 'output-size')
+
+      const result = await generateServiceWorker({
+        projectPath: TEST_DIR,
+        outputDir,
+        architecture: 'static',
+        globDirectory: join(TEST_DIR, 'public'),
+        globPatterns: ['**/*.{html,js,css}'],
+      })
+
+      // Size should be reasonable (at least 50 bytes for minimal SW)
+      expect(result.size).toBeGreaterThan(50)
+      expect(result.size).toBeLessThan(1000000) // Less than 1MB
+    })
+
+    it('should include file paths in result', async () => {
+      const outputDir = join(TEST_DIR, 'output-paths')
+
+      const result = await generateServiceWorker({
+        projectPath: TEST_DIR,
+        outputDir,
+        architecture: 'static',
+        globDirectory: join(TEST_DIR, 'public'),
+        globPatterns: ['**/*.{html,js,css}'],
+      })
+
+      expect(Array.isArray(result.filePaths)).toBe(true)
+      expect(result.filePaths.length).toBeGreaterThan(0)
+      // All paths should be strings
+      result.filePaths.forEach((path) => {
+        expect(typeof path).toBe('string')
+      })
+    })
+
+    it('should have warnings array in result', async () => {
+      const outputDir = join(TEST_DIR, 'output-warnings')
+
+      const result = await generateServiceWorker({
+        projectPath: TEST_DIR,
+        outputDir,
+        architecture: 'static',
+        globDirectory: join(TEST_DIR, 'public'),
+        globPatterns: ['**/*.{html,js,css}'],
+      })
+
+      expect(Array.isArray(result.warnings)).toBe(true)
+    })
   })
 })
 

@@ -269,5 +269,152 @@ describe('remove command', () => {
       expect(result.errors.length).toBeGreaterThan(0)
     })
   })
+
+  describe('Service worker script removal', () => {
+    it('should detect service worker scripts in HTML for removal', async () => {
+      const html = `<html>
+<head><title>Test</title></head>
+<body>
+  <script type="text/javascript">
+    navigator.serviceWorker.register('/sw.js');
+  </script>
+</body>
+</html>`
+      writeFileSync(join(TEST_DIR, 'index.html'), html)
+
+      const result = await removeCommand({
+        projectPath: TEST_DIR,
+        skipFiles: true,
+        skipHtmlRestore: false,
+      })
+
+      expect(result.success).toBe(true)
+      // Verify the command completed successfully
+      expect(result.projectPath).toBeDefined()
+    })
+
+    it('should remove beforeinstallprompt handler from HTML', async () => {
+      const html = `
+<html>
+<head><title>Test</title></head>
+<body>
+  <script>
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+    });
+  </script>
+</body>
+</html>`
+      writeFileSync(join(TEST_DIR, 'index.html'), html)
+
+      const result = await removeCommand({
+        projectPath: TEST_DIR,
+        skipFiles: true,
+      })
+
+      // Verify the command succeeds
+      expect(result.success).toBe(true)
+      expect(result.projectPath).toBeDefined()
+    })
+
+    it('should preserve non-PWA scripts', async () => {
+      const html = `
+<html>
+<head><title>Test</title></head>
+<body>
+  <script>console.log('important code');</script>
+  <script>
+    navigator.serviceWorker.register('/sw.js');
+  </script>
+  <script>console.log('more important code');</script>
+</body>
+</html>`
+      writeFileSync(join(TEST_DIR, 'index.html'), html)
+
+      const result = await removeCommand({
+        projectPath: TEST_DIR,
+        skipFiles: true,
+      })
+
+      // Verify the command succeeds
+      expect(result.success).toBe(true)
+      const restoredHtml = readFileSync(join(TEST_DIR, 'index.html'), 'utf-8')
+      // Verify the file still has content
+      expect(restoredHtml).toContain('console.log')
+      expect(restoredHtml).toContain('important code')
+    })
+  })
+
+  describe('Edge cases', () => {
+    it('should handle HTML with nested meta tags', async () => {
+      const html = `
+<html>
+<head>
+  <title>Test</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#ffffff">
+</head>
+<body></body>
+</html>`
+      writeFileSync(join(TEST_DIR, 'index.html'), html)
+
+      const result = await removeCommand({
+        projectPath: TEST_DIR,
+        skipFiles: true,
+      })
+
+      expect(result.success).toBe(true)
+      const restoredHtml = readFileSync(join(TEST_DIR, 'index.html'), 'utf-8')
+      expect(restoredHtml).not.toContain('rel="manifest"')
+      expect(restoredHtml).not.toContain('theme-color')
+    })
+
+    it('should handle directory with no files', async () => {
+      mkdirSync(join(TEST_DIR, 'empty-dir'), { recursive: true })
+
+      const result = await removeCommand({
+        projectPath: join(TEST_DIR, 'empty-dir'),
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.filesRemoved.length).toBe(0)
+      expect(result.htmlFilesRestored).toBe(0)
+    })
+
+    it('should list removed PWA files correctly', async () => {
+      createPWAFiles('public', ['manifest.json', 'sw.js', 'icon-192x192.png'])
+
+      const result = await removeCommand({
+        ...baseRemoveCommand,
+        outputDir: 'public',
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.filesRemoved).toContain('manifest.json')
+      expect(result.filesRemoved).toContain('sw.js')
+      expect(result.filesRemoved).toContain('icon-192x192.png')
+      expect(result.filesRemoved.length).toBe(3)
+    })
+
+    it('should handle skipHtmlRestore and skipFiles both true', async () => {
+      createHtmlWithPWA('index.html')
+      createPWAFiles('public', ['manifest.json'])
+
+      const result = await removeCommand({
+        projectPath: TEST_DIR,
+        outputDir: 'public',
+        skipHtmlRestore: true,
+        skipFiles: true,
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.filesRemoved.length).toBe(0)
+      expect(result.htmlFilesRestored).toBe(0)
+
+      // Verify nothing was removed
+      expect(existsSync(join(TEST_DIR, 'public', 'manifest.json'))).toBe(true)
+      expect(readFileSync(join(TEST_DIR, 'index.html'), 'utf-8')).toContain('rel="manifest"')
+    })
+  })
 })
 

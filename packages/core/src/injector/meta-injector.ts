@@ -113,31 +113,64 @@ export function injectMetaTags(htmlContent: string, options: MetaInjectorOptions
     }
 
     // Use the new standard meta tag
-    if (!elementExists(parsed, 'meta', { name: 'mobile-web-app-capable', value: content })) {
+    // Find existing mobile-web-app-capable meta tag by name attribute
+    const existingMeta = findElement(parsed, 'meta', { name: 'name', value: 'mobile-web-app-capable' })
+    if (existingMeta) {
+      // Check if content matches
+      const existingContent = existingMeta.attribs?.content
+      if (existingContent === content) {
+        result.skipped.push('mobile-web-app-capable (already exists)')
+      } else {
+        // Update existing value
+        updateMetaContent(existingMeta, content)
+        result.injected.push(`<meta name="mobile-web-app-capable" content="${content}"> (updated)`)
+      }
+    } else {
+      // No existing meta tag, inject new one
       injectMetaTag(head, 'mobile-web-app-capable', content)
       result.injected.push(`<meta name="mobile-web-app-capable" content="${content}">`)
-    } else {
-      result.skipped.push('mobile-web-app-capable (already exists)')
     }
   }
 
   // Injecter apple-mobile-web-app-status-bar-style
   if (options.appleMobileWebAppStatusBarStyle) {
-    if (!elementExists(parsed, 'meta', { name: 'apple-mobile-web-app-status-bar-style', value: options.appleMobileWebAppStatusBarStyle })) {
+    // Find existing meta tag by name attribute
+    const existingMeta = findElement(parsed, 'meta', { name: 'name', value: 'apple-mobile-web-app-status-bar-style' })
+    if (existingMeta) {
+      // Check if content matches
+      const existingContent = existingMeta.attribs?.content
+      if (existingContent === options.appleMobileWebAppStatusBarStyle) {
+        result.skipped.push('apple-mobile-web-app-status-bar-style (already exists)')
+      } else {
+        // Update existing value
+        updateMetaContent(existingMeta, options.appleMobileWebAppStatusBarStyle)
+        result.injected.push(`<meta name="apple-mobile-web-app-status-bar-style" content="${options.appleMobileWebAppStatusBarStyle}"> (updated)`)
+      }
+    } else {
+      // No existing meta tag, inject new one
       injectMetaTag(head, 'apple-mobile-web-app-status-bar-style', options.appleMobileWebAppStatusBarStyle)
       result.injected.push(`<meta name="apple-mobile-web-app-status-bar-style" content="${options.appleMobileWebAppStatusBarStyle}">`)
-    } else {
-      result.skipped.push('apple-mobile-web-app-status-bar-style (already exists)')
     }
   }
 
   // Injecter apple-mobile-web-app-title
   if (options.appleMobileWebAppTitle) {
-    if (!elementExists(parsed, 'meta', { name: 'apple-mobile-web-app-title', value: options.appleMobileWebAppTitle })) {
+    // Find existing meta tag by name attribute
+    const existingMeta = findElement(parsed, 'meta', { name: 'name', value: 'apple-mobile-web-app-title' })
+    if (existingMeta) {
+      // Check if content matches
+      const existingContent = existingMeta.attribs?.content
+      if (existingContent === options.appleMobileWebAppTitle) {
+        result.skipped.push('apple-mobile-web-app-title (already exists)')
+      } else {
+        // Update existing value
+        updateMetaContent(existingMeta, options.appleMobileWebAppTitle)
+        result.injected.push(`<meta name="apple-mobile-web-app-title" content="${options.appleMobileWebAppTitle}"> (updated)`)
+      }
+    } else {
+      // No existing meta tag, inject new one
       injectMetaTag(head, 'apple-mobile-web-app-title', options.appleMobileWebAppTitle)
       result.injected.push(`<meta name="apple-mobile-web-app-title" content="${options.appleMobileWebAppTitle}">`)
-    } else {
-      result.skipped.push('apple-mobile-web-app-title (already exists)')
     }
   }
 

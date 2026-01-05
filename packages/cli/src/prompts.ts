@@ -16,6 +16,74 @@ export interface PromptAnswers {
   skipIcons?: boolean
 }
 
+// Validators exported for testing
+export function validateName(input: string): string | true {
+  if (!input || input.trim().length === 0) {
+    return 'Le nom de l\'application est requis'
+  }
+  if (input.length > 50) {
+    return 'Le nom doit faire moins de 50 caractères'
+  }
+  return true
+}
+
+export function validateShortName(input: string): string | true {
+  if (!input || input.trim().length === 0) {
+    return 'Le nom court est requis'
+  }
+  if (input.length > 12) {
+    return 'Le nom court doit faire maximum 12 caractères'
+  }
+  return true
+}
+
+export function filterShortName(input: string): string {
+  return input.trim().substring(0, 12)
+}
+
+export function validateIconSource(input: string, projectPath: string): string | true {
+  if (!input || input.trim().length === 0) {
+    return true // Optionnel
+  }
+  const fullPath = existsSync(input) ? input : join(projectPath, input)
+  if (!existsSync(fullPath)) {
+    const suggestions = [
+      'public/logo.png',
+      'src/assets/icon.png',
+      'assets/logo.png',
+      'logo.png',
+    ].join(', ')
+    return `Le fichier n'existe pas: ${input}\nSuggestions: ${suggestions}`
+  }
+  // Valider le format
+  const ext = extname(fullPath).toLowerCase()
+  const supportedFormats = ['.png', '.jpg', '.jpeg', '.svg', '.webp']
+  if (!supportedFormats.includes(ext)) {
+    return `Format non supporté: ${ext}. Utilisez PNG, JPG, SVG ou WebP`
+  }
+  return true
+}
+
+export function validateHexColor(input: string, fieldName: string): string | true {
+  if (!input || input.trim().length === 0) {
+    return true // Optionnel
+  }
+  const trimmed = input.trim()
+  if (!/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(trimmed)) {
+    return `Format hex invalide (ex: ${fieldName === 'themeColor' ? '#ffffff ou #fff' : '#000000 ou #000'})`
+  }
+  return true
+}
+
+export function filterHexColor(input: string): string {
+  // Normaliser vers format 6 caractères si format 3
+  const trimmed = input.trim()
+  if (/^#[A-Fa-f0-9]{3}$/.test(trimmed)) {
+    return `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`
+  }
+  return trimmed
+}
+
 
 /**
  * Prompts interactifs pour initialiser la PWA
@@ -81,15 +149,7 @@ export async function promptInitOptions(
       name: 'name',
       message: 'Nom de l\'application:',
       default: defaultName,
-      validate: (input: string) => {
-        if (!input || input.trim().length === 0) {
-          return 'Le nom de l\'application est requis'
-        }
-        if (input.length > 50) {
-          return 'Le nom doit faire moins de 50 caractères'
-        }
-        return true
-      },
+      validate: validateName,
     },
     {
       type: 'input',
@@ -98,44 +158,15 @@ export async function promptInitOptions(
       default: (answers: { name?: string }) => {
         return answers.name ? answers.name.substring(0, 12) : defaultShortName
       },
-      validate: (input: string) => {
-        if (!input || input.trim().length === 0) {
-          return 'Le nom court est requis'
-        }
-        if (input.length > 12) {
-          return 'Le nom court doit faire maximum 12 caractères'
-        }
-        return true
-      },
-      filter: (input: string) => input.trim().substring(0, 12),
+      validate: validateShortName,
+      filter: filterShortName,
     },
     {
       type: 'input',
       name: 'iconSource',
       message: 'Chemin vers l\'image source pour les icônes:',
       default: defaultIconSource,
-      validate: (input: string) => {
-        if (!input || input.trim().length === 0) {
-          return true // Optionnel
-        }
-        const fullPath = existsSync(input) ? input : join(projectPath, input)
-        if (!existsSync(fullPath)) {
-          const suggestions = [
-            'public/logo.png',
-            'src/assets/icon.png',
-            'assets/logo.png',
-            'logo.png',
-          ].join(', ')
-          return `Le fichier n'existe pas: ${input}\nSuggestions: ${suggestions}`
-        }
-        // Valider le format
-        const ext = extname(fullPath).toLowerCase()
-        const supportedFormats = ['.png', '.jpg', '.jpeg', '.svg', '.webp']
-        if (!supportedFormats.includes(ext)) {
-          return `Format non supporté: ${ext}. Utilisez PNG, JPG, SVG ou WebP`
-        }
-        return true
-      },
+      validate: (input: string) => validateIconSource(input, projectPath),
     },
     {
       type: 'confirm',
@@ -151,48 +182,16 @@ export async function promptInitOptions(
       name: 'themeColor',
       message: 'Couleur du thème (hex, ex: #ffffff):',
       default: suggestions.colors.themeColor,
-      validate: (input: string) => {
-        if (!input || input.trim().length === 0) {
-          return true // Optionnel
-        }
-        const trimmed = input.trim()
-        if (!/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(trimmed)) {
-          return 'Format hex invalide (ex: #ffffff ou #fff)'
-        }
-        return true
-      },
-      filter: (input: string) => {
-        // Normaliser vers format 6 caractères si format 3
-        const trimmed = input.trim()
-        if (/^#[A-Fa-f0-9]{3}$/.test(trimmed)) {
-          return `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`
-        }
-        return trimmed
-      },
+      validate: (input: string) => validateHexColor(input, 'themeColor'),
+      filter: filterHexColor,
     },
     {
       type: 'input',
       name: 'backgroundColor',
       message: 'Couleur de fond (hex, ex: #000000):',
       default: suggestions.colors.backgroundColor,
-      validate: (input: string) => {
-        if (!input || input.trim().length === 0) {
-          return true // Optionnel
-        }
-        const trimmed = input.trim()
-        if (!/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(trimmed)) {
-          return 'Format hex invalide (ex: #000000 ou #000)'
-        }
-        return true
-      },
-      filter: (input: string) => {
-        // Normaliser vers format 6 caractères si format 3
-        const trimmed = input.trim()
-        if (/^#[A-Fa-f0-9]{3}$/.test(trimmed)) {
-          return `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`
-        }
-        return trimmed
-      },
+      validate: (input: string) => validateHexColor(input, 'backgroundColor'),
+      filter: filterHexColor,
     },
   ])
 

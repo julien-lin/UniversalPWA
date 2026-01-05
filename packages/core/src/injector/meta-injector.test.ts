@@ -305,5 +305,226 @@ describe('meta-injector', () => {
       expect(modifiedHtml).toContain('theme-color')
     })
   })
+
+  describe('Edge cases and error handling', () => {
+    const baseHtml = (body = '') => '<html><head><title>Test</title></head><body>' + body + '</body></html>'
+
+    it('should handle appleMobileWebAppCapable false', () => {
+      const html = baseHtml()
+      const options: MetaInjectorOptions = {
+        appleMobileWebAppCapable: false,
+      }
+
+      const { html: modifiedHtml } = injectMetaTags(html, options)
+
+      expect(modifiedHtml).toContain('name="mobile-web-app-capable"')
+      expect(modifiedHtml).toContain('content="no"')
+    })
+
+    it('should remove deprecated apple-mobile-web-app-capable when injecting new one', () => {
+      const html = '<html><head><meta name="apple-mobile-web-app-capable" content="yes" /></head><body></body></html>'
+      const options: MetaInjectorOptions = {
+        appleMobileWebAppCapable: true,
+      }
+
+      const { html: modifiedHtml, result } = injectMetaTags(html, options)
+
+      expect(modifiedHtml).not.toContain('name="apple-mobile-web-app-capable"')
+      expect(modifiedHtml).toContain('name="mobile-web-app-capable"')
+      expect(result.warnings.some((w) => w.includes('Removed deprecated'))).toBe(true)
+    })
+
+    it('should handle service worker path without leading slash', () => {
+      const html = baseHtml()
+      const options: MetaInjectorOptions = {
+        serviceWorkerPath: 'sw.js',
+      }
+
+      const { html: modifiedHtml } = injectMetaTags(html, options)
+
+      expect(modifiedHtml).toContain('navigator.serviceWorker.register')
+      expect(modifiedHtml).toContain('/sw.js')
+    })
+
+    it('should handle HTML without html tag', () => {
+      const html = '<head><title>Test</title></head><body></body>'
+      const options: MetaInjectorOptions = {
+        manifestPath: '/manifest.json',
+      }
+
+      const { html: modifiedHtml, result } = injectMetaTags(html, options)
+
+      expect(modifiedHtml).toContain('rel="manifest"')
+      // Should handle gracefully
+      expect(result).toBeDefined()
+    })
+
+    it('should handle HTML without head or body', () => {
+      const html = '<html><title>Test</title></html>'
+      const options: MetaInjectorOptions = {
+        manifestPath: '/manifest.json',
+      }
+
+      const { html: modifiedHtml, result } = injectMetaTags(html, options)
+
+      // Should create head and inject
+      expect(modifiedHtml).toContain('rel="manifest"')
+      expect(result.warnings.length).toBeGreaterThan(0)
+    })
+
+    it('should handle existing mobile-web-app-capable', () => {
+      const html = '<html><head><meta name="mobile-web-app-capable" content="yes" /></head><body></body></html>'
+      const options: MetaInjectorOptions = {
+        appleMobileWebAppCapable: true,
+      }
+
+      const { result } = injectMetaTags(html, options)
+
+      // Should skip if already exists with same content
+      expect(result.skipped.some((s) => s.includes('mobile-web-app-capable'))).toBe(true)
+    })
+
+    it('should update existing mobile-web-app-capable with different content', () => {
+      const html = '<html><head><meta name="mobile-web-app-capable" content="no" /></head><body></body></html>'
+      const options: MetaInjectorOptions = {
+        appleMobileWebAppCapable: true,
+      }
+
+      const { result } = injectMetaTags(html, options)
+
+      // Should update if content differs
+      expect(result.injected.some((i) => i.includes('mobile-web-app-capable') && i.includes('updated'))).toBe(true)
+    })
+
+    it('should handle existing apple-mobile-web-app-status-bar-style', () => {
+      const html = '<html><head><meta name="apple-mobile-web-app-status-bar-style" content="black" /></head><body></body></html>'
+      const options: MetaInjectorOptions = {
+        appleMobileWebAppStatusBarStyle: 'black',
+      }
+
+      const { result } = injectMetaTags(html, options)
+
+      // Should skip if already exists with same content
+      expect(result.skipped.some((s) => s.includes('apple-mobile-web-app-status-bar-style'))).toBe(true)
+    })
+
+    it('should update existing apple-mobile-web-app-status-bar-style with different content', () => {
+      const html = '<html><head><meta name="apple-mobile-web-app-status-bar-style" content="default" /></head><body></body></html>'
+      const options: MetaInjectorOptions = {
+        appleMobileWebAppStatusBarStyle: 'black',
+      }
+
+      const { result } = injectMetaTags(html, options)
+
+      // Should update if content differs
+      expect(result.injected.some((i) => i.includes('apple-mobile-web-app-status-bar-style') && i.includes('updated'))).toBe(true)
+    })
+
+    it('should handle existing apple-mobile-web-app-title', () => {
+      const html = '<html><head><meta name="apple-mobile-web-app-title" content="My App" /></head><body></body></html>'
+      const options: MetaInjectorOptions = {
+        appleMobileWebAppTitle: 'My App',
+      }
+
+      const { result } = injectMetaTags(html, options)
+
+      // Should skip if already exists with same content
+      expect(result.skipped.some((s) => s.includes('apple-mobile-web-app-title'))).toBe(true)
+    })
+
+    it('should update existing apple-mobile-web-app-title with different content', () => {
+      const html = '<html><head><meta name="apple-mobile-web-app-title" content="Old App" /></head><body></body></html>'
+      const options: MetaInjectorOptions = {
+        appleMobileWebAppTitle: 'My App',
+      }
+
+      const { result } = injectMetaTags(html, options)
+
+      // Should update if content differs
+      expect(result.injected.some((i) => i.includes('apple-mobile-web-app-title') && i.includes('updated'))).toBe(true)
+    })
+
+    it('should handle body creation when html exists but body does not', () => {
+      const html = '<html><head><title>Test</title></head></html>'
+      const options: MetaInjectorOptions = {
+        serviceWorkerPath: '/sw.js',
+      }
+
+      const { html: modifiedHtml, result } = injectMetaTags(html, options)
+
+      expect(modifiedHtml).toContain('navigator.serviceWorker.register')
+      expect(result.warnings.some((w) => w.includes('Created <body>'))).toBe(true)
+    })
+
+    it('should handle case where html tag does not exist for body creation', () => {
+      const html = '<head><title>Test</title></head>'
+      const options: MetaInjectorOptions = {
+        serviceWorkerPath: '/sw.js',
+      }
+
+      const { html: modifiedHtml, result } = injectMetaTags(html, options)
+
+      expect(modifiedHtml).toContain('navigator.serviceWorker.register')
+      expect(result.warnings.some((w) => w.includes('No <html> or <body>'))).toBe(true)
+    })
+
+    it('should handle head without children array when injecting link', () => {
+      // Test injectLinkTag with head without children
+      const html = '<html><head></head><body></body></html>'
+      const options: MetaInjectorOptions = {
+        manifestPath: '/manifest.json',
+        appleTouchIcon: '/icon.png',
+      }
+
+      const { html: modifiedHtml, result } = injectMetaTags(html, options)
+
+      expect(modifiedHtml).toContain('rel="manifest"')
+      expect(modifiedHtml).toContain('rel="apple-touch-icon"')
+      expect(result.injected.length).toBeGreaterThan(0)
+    })
+
+    it('should handle head without children array when injecting meta', () => {
+      // Test injectMetaTag with head without children
+      const html = '<html><head></head><body></body></html>'
+      const options: MetaInjectorOptions = {
+        themeColor: '#ffffff',
+        appleMobileWebAppCapable: true,
+      }
+
+      const { html: modifiedHtml, result } = injectMetaTags(html, options)
+
+      expect(modifiedHtml).toContain('name="theme-color"')
+      expect(modifiedHtml).toContain('name="mobile-web-app-capable"')
+      expect(result.injected.length).toBeGreaterThan(0)
+    })
+
+    it('should handle service worker exists but install handler missing', () => {
+      const html = baseHtml('<script>navigator.serviceWorker.register("/sw.js")</script>')
+      const options: MetaInjectorOptions = {
+        serviceWorkerPath: '/sw.js',
+      }
+
+      const { html: modifiedHtml, result } = injectMetaTags(html, options)
+
+      expect(modifiedHtml).toContain('beforeinstallprompt')
+      expect(result.skipped.some((s) => s.includes('Service Worker registration'))).toBe(true)
+      expect(result.injected.some((i) => i.includes('PWA install handler'))).toBe(true)
+    })
+
+    it('should handle install handler exists but service worker missing', () => {
+      const html = baseHtml('<script>window.addEventListener("beforeinstallprompt")</script>')
+      const options: MetaInjectorOptions = {
+        serviceWorkerPath: '/sw.js',
+      }
+
+      const { html: modifiedHtml, result } = injectMetaTags(html, options)
+
+      expect(modifiedHtml).toContain('navigator.serviceWorker.register')
+      expect(result.injected.some((i) => i.includes('Service Worker registration'))).toBe(true)
+      // Since the HTML doesn't contain 'beforeinstallprompt' check from the script content,
+      // it will also inject the PWA install handler script
+      expect(result.injected.some((i) => i.includes('PWA install handler'))).toBe(true)
+    })
+  })
 })
 
