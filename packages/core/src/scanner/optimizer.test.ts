@@ -512,7 +512,6 @@ describe('optimizer', () => {
     })
 
     it('should keep WebP as WebP if already WebP', async () => {
-      const testImagePath = join(TEST_DIR, 'test-image.webp')
       // Create a PNG and rename it (Sharp can't create WebP directly in test)
       await createSharpImage(join(TEST_DIR, 'temp.png'), 500, 500, { r: 255, g: 255, b: 0, alpha: 1 })
       // For this test, we'll just verify the logic handles .webp extension
