@@ -1,0 +1,6 @@
+{
+    "name": "WordPress Fixture",
+    "short_name": "WP",
+    "start_url": "/",
+    "display": "standalone"
+}
