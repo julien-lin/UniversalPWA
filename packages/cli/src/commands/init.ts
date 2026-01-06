@@ -441,11 +441,12 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
       console.log(chalk.blue('💉 Injecting meta-tags...'))
       
       try {
-        // Find all HTML files (including dist/ for production builds)
+        // Find all HTML files and template files (including dist/ for production builds)
         // Priority: dist/ > public/ > root
-        const htmlFiles = await glob('**/*.html', {
+        // Support: .html, .twig (Symfony), .html.twig (Symfony), .blade.php (Laravel)
+        const htmlFiles = await glob('**/*.{html,twig,html.twig,blade.php}', {
           cwd: result.projectPath,
-          ignore: ['**/node_modules/**', '**/.next/**', '**/.nuxt/**'],
+          ignore: ['**/node_modules/**', '**/.next/**', '**/.nuxt/**', '**/vendor/**'],
           absolute: true,
         })
         
@@ -469,10 +470,18 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
           : htmlFiles
 
         if (htmlFiles.length > 0) {
-          console.log(chalk.gray(`  Found ${htmlFiles.length} HTML file(s)${maxHtmlFiles && maxHtmlFiles > 0 ? ` (processing ${htmlFilesToProcess.length})` : ''}`))
+          const htmlCount = htmlFiles.filter(f => f.endsWith('.html') && !f.endsWith('.html.twig')).length
+          const twigCount = htmlFiles.filter(f => f.endsWith('.twig') || f.endsWith('.html.twig')).length
+          const bladeCount = htmlFiles.filter(f => f.endsWith('.blade.php')).length
+          const fileTypes = []
+          if (htmlCount > 0) fileTypes.push(`${htmlCount} HTML`)
+          if (twigCount > 0) fileTypes.push(`${twigCount} Twig`)
+          if (bladeCount > 0) fileTypes.push(`${bladeCount} Blade`)
+          const typeSummary = fileTypes.length > 0 ? ` (${fileTypes.join(', ')})` : ''
+          console.log(chalk.gray(`  Found ${htmlFiles.length} template file(s)${typeSummary}${maxHtmlFiles && maxHtmlFiles > 0 ? ` (processing ${htmlFilesToProcess.length})` : ''}`))
         }
 
-        // Backup HTML files before injection
+        // Backup HTML/template files before injection
         for (const htmlFile of htmlFilesToProcess) {
           const htmlRelativePath = relative(result.projectPath, htmlFile)
           if (htmlRelativePath && !htmlRelativePath.startsWith('..')) {
@@ -565,7 +574,10 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
         }
         
         result.htmlFilesInjected = injectedCount
-        console.log(chalk.green(`✓ Injected meta-tags in ${injectedCount} HTML file(s)`))
+        const fileTypeLabel = htmlFilesToProcess.some(f => f.endsWith('.twig') || f.endsWith('.html.twig') || f.endsWith('.blade.php'))
+          ? 'template file(s)'
+          : 'HTML file(s)'
+        console.log(chalk.green(`✓ Injected meta-tags in ${injectedCount} ${fileTypeLabel}`))
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error)
         const errorCode = detectErrorCode(error)

@@ -1020,6 +1020,68 @@ describe('init command', () => {
 
       expect(result.htmlFilesInjected).toBeGreaterThanOrEqual(0)
     })
+
+    it('should inject meta-tags in Twig template files (Symfony)', async () => {
+      mkdirSync(join(TEST_DIR, 'templates'), { recursive: true })
+      const twigContent = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Symfony App{% endblock %}</title>
+</head>
+<body>
+    {% block body %}{% endblock %}
+</body>
+</html>`
+      writeFileSync(join(TEST_DIR, 'templates', 'base.html.twig'), twigContent)
+      createPublicDir()
+      createManifest()
+
+      const result = await initCommand({
+        projectPath: TEST_DIR,
+        ...baseInitCommand,
+        skipInjection: false,
+      })
+
+      expect(result.htmlFilesInjected).toBeGreaterThan(0)
+      
+      // Verify that meta-tags were injected
+      const modifiedTwig = readFileSync(join(TEST_DIR, 'templates', 'base.html.twig'), 'utf-8')
+      expect(modifiedTwig).toContain('rel="manifest"')
+      expect(modifiedTwig).toContain('name="theme-color"')
+      expect(modifiedTwig).toContain('navigator.serviceWorker')
+    })
+
+    it('should inject meta-tags in Blade template files (Laravel)', async () => {
+      mkdirSync(join(TEST_DIR, 'resources', 'views'), { recursive: true })
+      const bladeContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>@yield('title', 'Laravel App')</title>
+</head>
+<body>
+    @yield('content')
+</body>
+</html>`
+      writeFileSync(join(TEST_DIR, 'resources', 'views', 'layout.blade.php'), bladeContent)
+      createPublicDir()
+      createManifest()
+
+      const result = await initCommand({
+        projectPath: TEST_DIR,
+        ...baseInitCommand,
+        skipInjection: false,
+      })
+
+      expect(result.htmlFilesInjected).toBeGreaterThan(0)
+      
+      // Verify that meta-tags were injected
+      const modifiedBlade = readFileSync(join(TEST_DIR, 'resources', 'views', 'layout.blade.php'), 'utf-8')
+      expect(modifiedBlade).toContain('rel="manifest"')
+      expect(modifiedBlade).toContain('name="theme-color"')
+      expect(modifiedBlade).toContain('navigator.serviceWorker')
+    })
   })
 
   describe('Large projects (100+ HTML files)', () => {
