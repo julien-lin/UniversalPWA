@@ -628,7 +628,7 @@ describe('init command', () => {
       const result = await initCommand({
         projectPath: TEST_DIR,
         name: 'Test App',
-        shortName: null as any,
+        shortName: undefined,
         skipIcons: true,
         skipServiceWorker: true,
         skipInjection: true,
