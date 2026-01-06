@@ -276,8 +276,8 @@ describe('optimizer', () => {
         handler: string
       }>
       if (exp.patternIncludes || exp.handler) {
-        expect(strategies.length).toBeGreaterThan(0)
-        expectStrategyIncludes(strategies, exp)
+      expect(strategies.length).toBeGreaterThan(0)
+      expectStrategyIncludes(strategies, exp)
       } else {
         // No strategies expected
         expect(strategies.length).toBe(0)
