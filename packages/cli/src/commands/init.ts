@@ -490,6 +490,8 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
         }
 
         let injectedCount = 0
+        let skippedCount = 0
+        let errorCount = 0
         let processedCount = 0
         const totalFiles = htmlFilesToProcess.length
 
@@ -563,8 +565,32 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
             
             if (injectionResult.injected.length > 0) {
               injectedCount++
+              // Log détaillé pour debug (seulement si verbose ou si peu de fichiers)
+              if (totalFiles <= 10) {
+                const relativePath = relative(result.projectPath, htmlFile)
+                console.log(chalk.gray(`    ✓ ${relativePath}: ${injectionResult.injected.length} tag(s) injected`))
+              }
+            } else if (injectionResult.skipped.length > 0 && injectionResult.injected.length === 0) {
+              // Tous les tags étaient déjà présents
+              skippedCount++
+              if (totalFiles <= 10) {
+                const relativePath = relative(result.projectPath, htmlFile)
+                console.log(chalk.gray(`    ⊘ ${relativePath}: already has PWA tags`))
+              }
+            } else {
+              // Aucun tag injecté ni skipped (problème potentiel)
+              if (totalFiles <= 10) {
+                const relativePath = relative(result.projectPath, htmlFile)
+                console.log(chalk.yellow(`    ⚠ ${relativePath}: no tags injected (check warnings)`))
+              }
+              if (injectionResult.warnings.length > 0) {
+                injectionResult.warnings.forEach(warning => {
+                  result.warnings.push(`${relative(result.projectPath, htmlFile)}: ${warning}`)
+                })
+              }
             }
           } catch (error) {
+            errorCount++
             const errorMessage = error instanceof Error ? error.message : String(error)
             const errorCode = detectErrorCode(error)
             const warningMessage = formatError(errorCode, `${htmlFile}: ${errorMessage}`)
@@ -577,7 +603,20 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
         const fileTypeLabel = htmlFilesToProcess.some(f => f.endsWith('.twig') || f.endsWith('.html.twig') || f.endsWith('.blade.php'))
           ? 'template file(s)'
           : 'HTML file(s)'
-        console.log(chalk.green(`✓ Injected meta-tags in ${injectedCount} ${fileTypeLabel}`))
+        
+        // Message de résumé détaillé
+        if (injectedCount > 0) {
+          console.log(chalk.green(`✓ Injected meta-tags in ${injectedCount} ${fileTypeLabel}`))
+        }
+        if (skippedCount > 0) {
+          console.log(chalk.gray(`  ${skippedCount} ${fileTypeLabel} already had PWA tags`))
+        }
+        if (errorCount > 0) {
+          console.log(chalk.yellow(`  ${errorCount} ${fileTypeLabel} had errors (see warnings above)`))
+        }
+        if (injectedCount === 0 && skippedCount === 0 && errorCount === 0 && totalFiles > 0) {
+          console.log(chalk.yellow(`⚠ No tags were injected in ${totalFiles} ${fileTypeLabel}. Check if files contain valid HTML structure.`))
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error)
         const errorCode = detectErrorCode(error)
