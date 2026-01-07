@@ -36,5 +36,11 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
     },
+    {
+      command: 'cd fixtures/symfony/public && npx serve . -p 3003',
+      url: 'http://localhost:3003',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+    },
   ],
 })

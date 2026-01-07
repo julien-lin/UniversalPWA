@@ -1,16 +1,96 @@
-<!doctype html>
-<html>
-
+<!DOCTYPE html>
+<html lang="fr">
 <head>
-    <meta charset="utf-8">
-    <title>Symfony Fixture</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Back'n Food - Symfony PWA</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="csrf-token" content="symfony-fixture-token">
-    <link rel="manifest" href="manifest.webmanifest">
 </head>
-
 <body>
-    <h1>Symfony Fixture</h1>
-    <p>Twig placeholder</p>
-</body>
+    <div id="app">
+        <h1>Back'n Food - Symfony Application</h1>
+        <p>Application Symfony avec PWA générée par UniversalPWA</p>
+    </div>
 
+    <script>
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register("/sw.js")
+          .then((registration) => console.log('SW registered:', registration))
+          .catch((error) => console.error('SW registration failed:', error));
+      });
+    }
+
+    // PWA Install Handler
+    let deferredPrompt = null;
+    let isInstalled = false;
+
+    // Check if app is already installed
+    if (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches) {
+      isInstalled = true;
+    } else if (window.navigator.standalone === true) {
+      isInstalled = true;
+    }
+
+    // Listen for beforeinstallprompt event
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      window.dispatchEvent(new CustomEvent('pwa-installable', { detail: { installable: true } }));
+      console.log('PWA installable: beforeinstallprompt event captured');
+    });
+
+    // Listen for app installed event
+    window.addEventListener('appinstalled', () => {
+      isInstalled = true;
+      deferredPrompt = null;
+      window.dispatchEvent(new CustomEvent('pwa-installed', { detail: { installed: true } }));
+      console.log('PWA installed successfully');
+    });
+
+    // Expose global install function
+    window.installPWA = function() {
+      if (!deferredPrompt) {
+        console.warn('PWA install prompt not available. App may already be installed or not installable.');
+        return Promise.reject(new Error('PWA install prompt not available'));
+      }
+      
+      deferredPrompt.prompt();
+      
+      return deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('User accepted the install prompt');
+        } else {
+          console.log('User dismissed the install prompt');
+        }
+        deferredPrompt = null;
+        window.dispatchEvent(new CustomEvent('pwa-install-choice', { detail: { outcome: choiceResult.outcome } }));
+        return choiceResult;
+      });
+    };
+
+    // Expose global check function
+    window.isPWAInstalled = function() {
+      if (isInstalled) return true;
+      if (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches) {
+        return true;
+      }
+      if (window.navigator.standalone === true) {
+        return true;
+      }
+      return false;
+    };
+
+    // Expose global check if installable
+    window.isPWAInstallable = function() {
+      return deferredPrompt !== null;
+    };
+    </script>
+</body>
 </html>
+
