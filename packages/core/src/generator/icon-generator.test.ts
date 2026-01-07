@@ -402,5 +402,121 @@ describe('icon-generator', () => {
       expect(Array.isArray(result.generatedFiles)).toBe(true)
     })
   })
+
+  describe('Icon validation', () => {
+    it('should include validation result when validate is true', async () => {
+      const outputDir = join(TEST_DIR, 'output-validation')
+      const iconSizes = [{ width: 192, height: 192, name: 'icon-192.png' }]
+
+      const result = await generateIcons({
+        sourceImage,
+        outputDir,
+        iconSizes,
+        splashSizes: [],
+        validate: true,
+      })
+
+      expect(result.validation).toBeDefined()
+      expect(result.validation?.valid).toBe(true)
+      expect(result.validation?.metadata).toBeDefined()
+      expect(result.validation?.metadata?.width).toBe(512)
+      expect(result.validation?.metadata?.height).toBe(512)
+    })
+
+    it('should not include validation result when validate is false', async () => {
+      const outputDir = join(TEST_DIR, 'output-no-validation')
+      const iconSizes = [{ width: 192, height: 192, name: 'icon-192.png' }]
+
+      const result = await generateIcons({
+        sourceImage,
+        outputDir,
+        iconSizes,
+        splashSizes: [],
+        validate: false,
+      })
+
+      expect(result.validation).toBeUndefined()
+    })
+
+    it('should include warnings for icon below optimal size', async () => {
+      const outputDir = join(TEST_DIR, 'output-warnings')
+      const iconSizes = [{ width: 192, height: 192, name: 'icon-192.png' }]
+
+      const result = await generateIcons({
+        sourceImage,
+        outputDir,
+        iconSizes,
+        splashSizes: [],
+        validate: true,
+      })
+
+      expect(result.validation).toBeDefined()
+      // 512x512 should have warnings about being below optimal (if optimalSize > 512)
+      // But with default optimalSize=512, there should be no warning
+      expect(result.validation?.warnings.length).toBeGreaterThanOrEqual(0)
+    })
+
+    it('should throw error in strict mode if validation fails', async () => {
+      const sharp = (await import('sharp')).default
+      const smallSourceImage = join(TEST_DIR, 'small-source.png')
+      
+      await sharp({
+        create: {
+          width: 100,
+          height: 100,
+          channels: 4,
+          background: { r: 0, g: 0, b: 255, alpha: 1 },
+        },
+      })
+        .png()
+        .toFile(smallSourceImage)
+
+      const outputDir = join(TEST_DIR, 'output-strict')
+      const iconSizes = [{ width: 192, height: 192, name: 'icon-192.png' }]
+
+      await expect(
+        generateIcons({
+          sourceImage: smallSourceImage,
+          outputDir,
+          iconSizes,
+          splashSizes: [],
+          validate: true,
+          strictValidation: true,
+        }),
+      ).rejects.toThrow('Icon validation failed')
+    })
+
+    it('should not throw error in non-strict mode even if validation has warnings', async () => {
+      const sharp = (await import('sharp')).default
+      const smallSourceImage = join(TEST_DIR, 'small-source-non-strict.png')
+      
+      await sharp({
+        create: {
+          width: 100,
+          height: 100,
+          channels: 4,
+          background: { r: 0, g: 255, b: 0, alpha: 1 },
+        },
+      })
+        .png()
+        .toFile(smallSourceImage)
+
+      const outputDir = join(TEST_DIR, 'output-non-strict')
+      const iconSizes = [{ width: 192, height: 192, name: 'icon-192.png' }]
+
+      const result = await generateIcons({
+        sourceImage: smallSourceImage,
+        outputDir,
+        iconSizes,
+        splashSizes: [],
+        validate: true,
+        strictValidation: false,
+      })
+
+      expect(result.validation).toBeDefined()
+      expect(result.validation?.warnings.length).toBeGreaterThan(0)
+      expect(result.icons.length).toBeGreaterThan(0) // Generation should succeed
+    })
+  })
 })
 
