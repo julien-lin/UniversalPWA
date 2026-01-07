@@ -214,7 +214,34 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
           const iconResult = await generateIcons({
             sourceImage: iconSourcePath,
             outputDir: finalOutputDir,
+            validate: true, // Enable validation
+            strictValidation: false, // Don't block on warnings, only errors
           })
+          
+          // Display validation warnings/errors if present
+          if (iconResult.validation) {
+            const { validation } = iconResult
+            
+            if (validation.errors.length > 0) {
+              validation.errors.forEach(error => {
+                result.errors.push(`Icon validation: ${error}`)
+                console.log(chalk.red(`✗ ${error}`))
+              })
+            }
+            
+            if (validation.warnings.length > 0) {
+              validation.warnings.forEach(warning => {
+                result.warnings.push(`Icon validation: ${warning}`)
+                console.log(chalk.yellow(`⚠ ${warning}`))
+              })
+            }
+            
+            if (validation.suggestions.length > 0) {
+              validation.suggestions.forEach(suggestion => {
+                console.log(chalk.blue(`💡 ${suggestion}`))
+              })
+            }
+          }
           
           iconPaths = iconResult.icons.map((icon) => icon.src)
           result.iconsGenerated = iconResult.icons.length

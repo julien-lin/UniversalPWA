@@ -2,6 +2,7 @@ import sharp from 'sharp'
 import { existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import type { ManifestIcon, ManifestSplashScreen } from './manifest-generator.js'
+import { validateIconSource, type IconValidationResult } from '../validator/icon-validator.js'
 
 export interface IconSize {
   width: number
@@ -45,12 +46,15 @@ export interface IconGeneratorOptions {
   splashSizes?: SplashScreenSize[]
   format?: 'png' | 'webp'
   quality?: number
+  validate?: boolean // Validate icon before generation (default: false)
+  strictValidation?: boolean // If true, throw error on validation failure (default: false)
 }
 
 export interface IconGenerationResult {
   icons: ManifestIcon[]
   splashScreens: ManifestSplashScreen[]
   generatedFiles: string[]
+  validation?: IconValidationResult
 }
 
 /**
@@ -64,11 +68,27 @@ export async function generateIcons(options: IconGeneratorOptions): Promise<Icon
     splashSizes = STANDARD_SPLASH_SIZES,
     format = 'png',
     quality = 90,
+    validate = false,
+    strictValidation = false,
   } = options
 
   // Check that source image exists
   if (!existsSync(sourceImage)) {
     throw new Error(`Source image not found: ${sourceImage}`)
+  }
+
+  // Validate icon if requested
+  let validation: IconValidationResult | undefined
+  if (validate) {
+    validation = await validateIconSource({
+      sourceImage,
+      strict: strictValidation,
+    })
+
+    if (strictValidation && !validation.valid) {
+      const errorMessages = validation.errors.join('; ')
+      throw new Error(`Icon validation failed: ${errorMessages}`)
+    }
   }
 
   // Create output directory if necessary
@@ -170,6 +190,7 @@ export async function generateIcons(options: IconGeneratorOptions): Promise<Icon
     icons,
     splashScreens,
     generatedFiles,
+    validation,
   }
 }
 
