@@ -69,30 +69,31 @@ export async function scanProject(options: ScannerOptions): Promise<ScannerResul
     }
   }
 
-  // Framework detection (synchronous)
+  // Framework detection (synchronous) - run first
   const frameworkCandidate: unknown = detectFramework(projectPath)
   const framework: FrameworkDetectionResult = isFrameworkDetectionResult(frameworkCandidate)
     ? frameworkCandidate
     : {
-        framework: null,
-        confidence: 'low',
-        confidenceScore: 0,
-        indicators: [],
-        version: null,
-        configuration: {
-          language: null,
-          cssInJs: [],
-          stateManagement: [],
-          buildTool: null,
-        },
-      }
+      framework: null,
+      confidence: 'low',
+      confidenceScore: 0,
+      indicators: [],
+      version: null,
+      configuration: {
+        language: null,
+        cssInJs: [],
+        stateManagement: [],
+        buildTool: null,
+      },
+    }
 
-  // Assets detection (asynchronous)
-  const assetsCandidate: unknown = includeAssets ? await detectAssets(projectPath) : getEmptyAssets()
+  // Parallelize assets and architecture detection using Promise.all
+  const [assetsCandidate, architectureCandidate] = await Promise.all([
+    includeAssets ? detectAssets(projectPath) : Promise.resolve(getEmptyAssets()),
+    includeArchitecture ? detectArchitecture(projectPath) : Promise.resolve(getEmptyArchitecture()),
+  ])
+
   const assets: AssetDetectionResult = isAssetDetectionResult(assetsCandidate) ? assetsCandidate : getEmptyAssets()
-
-  // Architecture detection (asynchronous)
-  const architectureCandidate: unknown = includeArchitecture ? await detectArchitecture(projectPath) : getEmptyArchitecture()
   const architecture: ArchitectureDetectionResult = isArchitectureDetectionResult(architectureCandidate)
     ? architectureCandidate
     : getEmptyArchitecture()

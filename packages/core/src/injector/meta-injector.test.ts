@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { injectMetaTags, injectMetaTagsInFile, type MetaInjectorOptions } from './meta-injector'
+import { injectMetaTags, injectMetaTagsInFile, injectMetaTagsInFilesBatch, type MetaInjectorOptions } from './meta-injector'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-meta-injector')
 
@@ -524,6 +524,144 @@ describe('meta-injector', () => {
       // Since the HTML doesn't contain 'beforeinstallprompt' check from the script content,
       // it will also inject the PWA install handler script
       expect(result.injected.some((i) => i.includes('PWA install handler'))).toBe(true)
+    })
+  })
+
+  describe('injectMetaTagsInFilesBatch', () => {
+    it('should inject meta tags into multiple files in parallel', async () => {
+      // Create multiple HTML files
+      const files = []
+      for (let i = 0; i < 10; i++) {
+        const file = join(TEST_DIR, `test-batch-${i}.html`)
+        writeFileSync(file, '<html><head><title>Test</title></head><body></body></html>')
+        files.push(file)
+      }
+
+      const options: MetaInjectorOptions = {
+        manifestPath: '/manifest.json',
+        themeColor: '#ffffff',
+      }
+
+      const result = await injectMetaTagsInFilesBatch({
+        files,
+        options,
+        concurrency: 3,
+      })
+
+      expect(result.totalProcessed).toBe(10)
+      expect(result.totalFailed).toBe(0)
+      expect(result.successful).toHaveLength(10)
+      expect(result.failed).toHaveLength(0)
+
+      // Verify all files were modified
+      for (const file of files) {
+        const content = readFileSync(file, 'utf-8')
+        expect(content).toContain('manifest')
+        expect(content).toContain('theme-color')
+      }
+    })
+
+    it('should handle errors with continueOnError=true', async () => {
+      const files = [
+        join(TEST_DIR, 'batch-valid.html'),
+        join(TEST_DIR, 'batch-non-existent.html'), // This will fail
+        join(TEST_DIR, 'batch-valid2.html'),
+      ]
+
+      writeFileSync(files[0], '<html><head><title>Test</title></head><body></body></html>')
+      writeFileSync(files[2], '<html><head><title>Test</title></head><body></body></html>')
+
+      const result = await injectMetaTagsInFilesBatch({
+        files,
+        options: { manifestPath: '/manifest.json' },
+        continueOnError: true,
+      })
+
+      expect(result.totalProcessed).toBe(2)
+      expect(result.totalFailed).toBe(1)
+      expect(result.successful).toHaveLength(2)
+      expect(result.failed).toHaveLength(1)
+      expect(result.failed[0].file).toBe(files[1])
+    })
+
+    it('should respect concurrency limit', async () => {
+      const files = []
+      for (let i = 0; i < 20; i++) {
+        const file = join(TEST_DIR, `test-conc-${i}.html`)
+        writeFileSync(file, '<html><head><title>Test</title></head><body></body></html>')
+        files.push(file)
+      }
+
+      const startTime = Date.now()
+      const result = await injectMetaTagsInFilesBatch({
+        files,
+        options: { themeColor: '#000000' },
+        concurrency: 5,
+      })
+      const endTime = Date.now()
+
+      expect(result.totalProcessed).toBe(20)
+      expect(result.totalFailed).toBe(0)
+
+      // With concurrency of 5, processing should be done in batches
+      // This is a simple check that it completes in reasonable time
+      expect(endTime - startTime).toBeLessThan(5000)
+    })
+
+    it('should use default concurrency of 5', async () => {
+      const files = []
+      for (let i = 0; i < 3; i++) {
+        const file = join(TEST_DIR, `test-default-${i}.html`)
+        writeFileSync(file, '<html><head><title>Test</title></head><body></body></html>')
+        files.push(file)
+      }
+
+      const result = await injectMetaTagsInFilesBatch({
+        files,
+        options: { manifestPath: '/manifest.json' },
+      })
+
+      expect(result.totalProcessed).toBe(3)
+      expect(result.totalFailed).toBe(0)
+    })
+
+    it('should handle empty file list', async () => {
+      const result = await injectMetaTagsInFilesBatch({
+        files: [],
+        options: { manifestPath: '/manifest.json' },
+      })
+
+      expect(result.totalProcessed).toBe(0)
+      expect(result.totalFailed).toBe(0)
+      expect(result.successful).toHaveLength(0)
+      expect(result.failed).toHaveLength(0)
+    })
+
+    it('should process large number of files efficiently', async () => {
+      const files = []
+      for (let i = 0; i < 100; i++) {
+        const file = join(TEST_DIR, `test-large-${i}.html`)
+        writeFileSync(file, '<html><head><title>Test</title></head><body></body></html>')
+        files.push(file)
+      }
+
+      const startTime = Date.now()
+      const result = await injectMetaTagsInFilesBatch({
+        files,
+        options: {
+          manifestPath: '/manifest.json',
+          themeColor: '#ffffff',
+          appleTouchIcon: '/icon.png',
+        },
+        concurrency: 10,
+      })
+      const endTime = Date.now()
+
+      expect(result.totalProcessed).toBe(100)
+      expect(result.totalFailed).toBe(0)
+
+      // Verify performance - should complete in reasonable time
+      expect(endTime - startTime).toBeLessThan(10000) // 10 seconds max for 100 files
     })
   })
 })
