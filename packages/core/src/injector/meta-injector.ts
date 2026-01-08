@@ -472,3 +472,79 @@ export function injectMetaTagsInFile(filePath: string, options: MetaInjectorOpti
 
   return result
 }
+
+/**
+ * Batch process options for parallel HTML injection
+ */
+export interface BatchInjectOptions {
+  files: string[]
+  options: MetaInjectorOptions
+  concurrency?: number // Max concurrent file processing (default: 5)
+  continueOnError?: boolean // Continue processing if a file fails (default: true)
+}
+
+/**
+ * Result of batch injection
+ */
+export interface BatchInjectResult {
+  successful: Array<{ file: string; result: InjectionResult }>
+  failed: Array<{ file: string; error: string }>
+  totalProcessed: number
+  totalFailed: number
+}
+
+/**
+ * Injects PWA meta-tags into multiple HTML files in parallel with concurrency limit
+ * This significantly improves performance when processing many files
+ */
+export async function injectMetaTagsInFilesBatch(batchOptions: BatchInjectOptions): Promise<BatchInjectResult> {
+  const { files, options, concurrency = 5, continueOnError = true } = batchOptions
+
+  const successful: Array<{ file: string; result: InjectionResult }> = []
+  const failed: Array<{ file: string; error: string }> = []
+
+  // Process files in batches with concurrency limit
+  const processBatch = async (batch: string[]): Promise<void> => {
+    const results = await Promise.allSettled(
+      batch.map(async (file) => {
+        try {
+          const result = injectMetaTagsInFile(file, options)
+          return { file, result, success: true as const }
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err)
+          if (!continueOnError) {
+            throw new Error(`Failed to inject meta tags in ${file}: ${message}`)
+          }
+          return { file, error: message, success: false as const }
+        }
+      })
+    )
+
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        if (result.value.success) {
+          successful.push({ file: result.value.file, result: result.value.result })
+        } else {
+          failed.push({ file: result.value.file, error: result.value.error })
+        }
+      } else {
+        // Promise rejected (should not happen with Promise.allSettled, but handle it)
+        const errorMessage = result.reason instanceof Error ? result.reason.message : String(result.reason)
+        failed.push({ file: 'unknown', error: errorMessage })
+      }
+    }
+  }
+
+  // Split files into batches based on concurrency
+  for (let i = 0; i < files.length; i += concurrency) {
+    const batch = files.slice(i, i + concurrency)
+    await processBatch(batch)
+  }
+
+  return {
+    successful,
+    failed,
+    totalProcessed: successful.length,
+    totalFailed: failed.length,
+  }
+}

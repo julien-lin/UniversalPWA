@@ -106,64 +106,102 @@ export async function generateIcons(options: IconGeneratorOptions): Promise<Icon
     throw new Error('Unable to read image dimensions')
   }
 
-  // Generate icons
-  for (const size of iconSizes) {
-    const outputPath = join(outputDir, size.name)
+  // Generate icons in parallel with Promise.all
+  const iconResults = await Promise.all(
+    iconSizes.map(async (size) => {
+      const outputPath = join(outputDir, size.name)
 
-    try {
-      let pipeline = image.clone().resize(size.width, size.height, {
-        fit: 'cover',
-        position: 'center',
-      })
+      try {
+        let pipeline = image.clone().resize(size.width, size.height, {
+          fit: 'cover',
+          position: 'center',
+        })
 
-      if (format === 'png') {
-        pipeline = pipeline.png({ quality, compressionLevel: 9 })
-      } else {
-        pipeline = pipeline.webp({ quality })
+        if (format === 'png') {
+          pipeline = pipeline.png({ quality, compressionLevel: 9 })
+        } else {
+          pipeline = pipeline.webp({ quality })
+        }
+
+        await pipeline.toFile(outputPath)
+
+        return {
+          success: true as const,
+          file: outputPath,
+          icon: {
+            src: `/${size.name}`,
+            sizes: `${size.width}x${size.height}`,
+            type: format === 'png' ? ('image/png' as const) : ('image/webp' as const),
+            purpose: (size.width >= 192 && size.width <= 512 ? 'any' : undefined) as 'any' | undefined,
+          },
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err)
+        return {
+          success: false as const,
+          error: `Failed to generate icon ${size.name}: ${message}`,
+          size: size.name,
+        }
       }
+    })
+  )
 
-      await pipeline.toFile(outputPath)
-      generatedFiles.push(outputPath)
-
-      icons.push({
-        src: `/${size.name}`,
-        sizes: `${size.width}x${size.height}`,
-        type: format === 'png' ? 'image/png' : 'image/webp',
-        purpose: size.width >= 192 && size.width <= 512 ? 'any' : undefined,
-      })
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      throw new Error(`Failed to generate icon ${size.name}: ${message}`)
+  // Process icon results
+  for (const result of iconResults) {
+    if (result.success) {
+      generatedFiles.push(result.file)
+      icons.push(result.icon)
+    } else {
+      throw new Error(result.error)
     }
   }
 
-  // Generate splash screens
-  for (const size of splashSizes) {
-    const outputPath = join(outputDir, size.name)
+  // Generate splash screens in parallel with Promise.all
+  const splashResults = await Promise.all(
+    splashSizes.map(async (size) => {
+      const outputPath = join(outputDir, size.name)
 
-    try {
-      let pipeline = image.clone().resize(size.width, size.height, {
-        fit: 'cover',
-        position: 'center',
-      })
+      try {
+        let pipeline = image.clone().resize(size.width, size.height, {
+          fit: 'cover',
+          position: 'center',
+        })
 
-      if (format === 'png') {
-        pipeline = pipeline.png({ quality, compressionLevel: 9 })
-      } else {
-        pipeline = pipeline.webp({ quality })
+        if (format === 'png') {
+          pipeline = pipeline.png({ quality, compressionLevel: 9 })
+        } else {
+          pipeline = pipeline.webp({ quality })
+        }
+
+        await pipeline.toFile(outputPath)
+
+        return {
+          success: true as const,
+          file: outputPath,
+          splash: {
+            src: `/${size.name}`,
+            sizes: `${size.width}x${size.height}`,
+            type: format === 'png' ? ('image/png' as const) : ('image/webp' as const),
+          },
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err)
+        return {
+          success: false as const,
+          error: `Failed to generate splash screen ${size.name}: ${message}`,
+          size: size.name,
+        }
       }
+    })
+  )
 
-      await pipeline.toFile(outputPath)
-      generatedFiles.push(outputPath)
-
-      splashScreens.push({
-        src: `/${size.name}`,
-        sizes: `${size.width}x${size.height}`,
-        type: format === 'png' ? 'image/png' : 'image/webp',
-      })
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      throw new Error(`Failed to generate splash screen ${size.name}: ${message}`)
+  // Process splash results
+  for (const result of splashResults) {
+    if (result.success) {
+      generatedFiles.push(result.file)
+      splashScreens.push(result.splash)
+    } else {
+      throw new Error(result.error)
     }
   }
 
