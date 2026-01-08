@@ -141,7 +141,7 @@ export class ProgressBar {
         const percentStr = `${Math.round(percent * 100)}%`
         const eta = this.getETA()
 
-        let output = this.format
+        const output = this.format
             .replace(':bar', bar)
             .replace(':percent', percentStr)
             .replace(':eta', eta)

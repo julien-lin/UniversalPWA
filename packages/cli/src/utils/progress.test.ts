@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { ProgressBar, createPWAProgressBar, type ProgressStats } from './progress.js'
 
 describe('ProgressBar', () => {
-    let stdoutWriteSpy: any
+    let stdoutWriteSpy: ReturnType<typeof vi.spyOn>
 
     beforeEach(() => {
         stdoutWriteSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
@@ -35,7 +35,7 @@ describe('ProgressBar', () => {
 
             // Find output that contains percentage (before completion newline)
             const calls = stdoutWriteSpy.mock.calls
-            const outputWithPercent = calls.find((call: any) => {
+            const outputWithPercent = calls.find((call: unknown[]) => {
                 const output = call[0] as string
                 return output.includes('100%')
             })
@@ -144,7 +144,7 @@ describe('ProgressBar', () => {
 
             // Find output with percentage
             const calls = stdoutWriteSpy.mock.calls
-            const outputWithPercent = calls.find((call: any) => {
+            const outputWithPercent = calls.find((call: unknown[]) => {
                 const output = call[0] as string
                 return output.includes('100%')
             })
@@ -210,7 +210,7 @@ describe('ProgressBar', () => {
             progress.update(100)
 
             const calls = stdoutWriteSpy.mock.calls
-            const outputWithDone = calls.find((call: any) => {
+            const outputWithDone = calls.find((call: unknown[]) => {
                 const output = call[0] as string
                 return output.includes('done')
             })
@@ -220,8 +220,6 @@ describe('ProgressBar', () => {
         it('should calculate ETA based on current progress', () => {
             const progress = new ProgressBar({ total: 100 })
 
-            // Use real Date for more accurate testing
-            const startTime = Date.now()
             progress.update(50)
 
             // Get ETA immediately
