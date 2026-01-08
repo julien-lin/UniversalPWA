@@ -126,13 +126,13 @@ export async function generateIcons(options: IconGeneratorOptions): Promise<Icon
         await pipeline.toFile(outputPath)
 
         return {
-          success: true as const,
+          success: true,
           file: outputPath,
           icon: {
             src: `/${size.name}`,
             sizes: `${size.width}x${size.height}`,
-            type: format === 'png' ? ('image/png' as const) : ('image/webp' as const),
-            purpose: (size.width >= 192 && size.width <= 512 ? 'any' : undefined) as 'any' | undefined,
+            type: format === 'png' ? 'image/png' : 'image/webp',
+            purpose: size.width >= 192 && size.width <= 512 ? 'any' : undefined,
           },
         }
       } catch (err: unknown) {

@@ -4,7 +4,7 @@
  * Run with: npx tsx packages/cli/src/utils/progress.demo.ts
  */
 
-import { createPWAProgressBar } from './progress'
+import { createPWAProgressBar } from './progress.js'
 
 async function delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms))

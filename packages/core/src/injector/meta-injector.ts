@@ -506,16 +506,16 @@ export async function injectMetaTagsInFilesBatch(batchOptions: BatchInjectOption
   // Process files in batches with concurrency limit
   const processBatch = async (batch: string[]): Promise<void> => {
     const results = await Promise.allSettled(
-      batch.map(async (file) => {
+      batch.map((file) => {
         try {
           const result = injectMetaTagsInFile(file, options)
-          return { file, result, success: true as const }
+          return Promise.resolve({ file, result, success: true as const })
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : String(err)
           if (!continueOnError) {
-            throw new Error(`Failed to inject meta tags in ${file}: ${message}`)
+            return Promise.reject(new Error(`Failed to inject meta tags in ${file}: ${message}`))
           }
-          return { file, error: message, success: false as const }
+          return Promise.resolve({ file, error: message, success: false as const })
         }
       })
     )

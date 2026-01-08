@@ -22,10 +22,10 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   if (!hex.startsWith('#')) {
     return null
   }
-  
+
   // Supprimer le #
   const cleanHex = hex.substring(1)
-  
+
   // Vérifier format (6 caractères hex)
   if (!/^[0-9A-Fa-f]{6}$/.test(cleanHex)) {
     return null
@@ -104,8 +104,8 @@ function suggestAlternativeColor(
   background: { r: number; g: number; b: number },
   targetRatio: number,
 ): string {
-  const currentRatio = getContrastRatio(foreground, background)
-  
+  // Calculer le ratio actuel si nécessaire (supprimé pour éviter variable inutilisée)
+
   // Déterminer quelle couleur est la plus claire
   const fgLuminance = getLuminance(foreground)
   const bgLuminance = getLuminance(background)
@@ -259,7 +259,7 @@ export function suggestComplementaryThemeColor(backgroundColor: string): string 
   }
 
   const bgLuminance = getLuminance(bgRgb)
-  
+
   // Si le fond est clair, suggérer un thème foncé, et vice versa
   if (bgLuminance > 0.5) {
     // Fond clair → thème foncé
