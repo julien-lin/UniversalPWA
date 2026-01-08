@@ -7,6 +7,19 @@ Command-line interface for UniversalPWA - Transform any web project into a Progr
 
 **🇫🇷 [Documentation en français](./README.fr.md)**
 
+## Quick Start (No Installation Required)
+
+```bash
+npx @julien-lin/universal-pwa-cli init
+```
+
+This command will:
+- Guide you through an interactive setup
+- Generate all PWA assets (icons, manifest, service worker)
+- Inject meta tags into your HTML files
+
+No global installation needed!
+
 ## Installation
 
 ```bash

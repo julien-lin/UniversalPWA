@@ -5,6 +5,19 @@
 
 Interface en ligne de commande pour UniversalPWA - Transformez n'importe quel projet web en Progressive Web App (PWA) en un clic.
 
+## Démarrage Rapide (Sans Installation)
+
+```bash
+npx @julien-lin/universal-pwa-cli init
+```
+
+Cette commande va :
+- Vous guider à travers une configuration interactive
+- Générer tous les assets PWA (icônes, manifest, service worker)
+- Injecter les meta tags dans vos fichiers HTML
+
+Aucune installation globale nécessaire !
+
 ## Installation
 
 ```bash
