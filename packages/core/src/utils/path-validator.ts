@@ -1,5 +1,5 @@
-import { resolve, normalize, isAbsolute, join } from 'path'
-import { statSync, existsSync } from 'fs'
+import { resolve, normalize, isAbsolute } from 'path'
+import { statSync } from 'fs'
 import { logger } from './logger.js'
 
 /**
@@ -251,7 +251,8 @@ export function validateFile(
     let stats
     try {
       stats = statSync(filePath)
-    } catch (err) {
+    } catch {
+      // statSync lance si le fichier n'existe pas ou inaccessible
       if (checkExists) {
         return {
           valid: false,
