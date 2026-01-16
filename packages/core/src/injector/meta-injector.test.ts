@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { injectMetaTags, injectMetaTagsInFile, injectMetaTagsInFilesBatch, type MetaInjectorOptions } from './meta-injector'
+import { injectMetaTags, injectMetaTagsInFile, injectMetaTagsInFilesBatch, type MetaInjectorOptions } from './meta-injector.js'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-meta-injector')
 
@@ -66,7 +66,7 @@ describe('meta-injector', () => {
 
       contains.forEach((s) => expect(modifiedHtml).toContain(s))
       notContains?.forEach((s) => expect(modifiedHtml).not.toContain(s))
-      expect(result.injected.some((i) => i.includes(injectedIncludes))).toBe(true)
+      expect(result.injected.some((i: string) => i.includes(injectedIncludes))).toBe(true)
     })
 
     it.each([
@@ -90,7 +90,7 @@ describe('meta-injector', () => {
       },
     ])('should skip when $name', ({ html, options, skippedIncludes }) => {
       const { result } = injectMetaTags(html, options)
-      expect(result.skipped.some((s) => s.includes(skippedIncludes))).toBe(true)
+      expect(result.skipped.some((s: string) => s.includes(skippedIncludes))).toBe(true)
     })
 
     it('should update existing theme-color', () => {
@@ -100,7 +100,7 @@ describe('meta-injector', () => {
       const { html: modifiedHtml, result } = injectMetaTags(html, options)
 
       expect(modifiedHtml).toContain('content="#ffffff"')
-      expect(result.injected.some((i) => i.includes('updated'))).toBe(true)
+      expect(result.injected.some((i: string) => i.includes('updated'))).toBe(true)
     })
 
     // service worker cases covered by the table above
@@ -113,7 +113,7 @@ describe('meta-injector', () => {
 
       expect(modifiedHtml).toContain('<head>')
       expect(modifiedHtml).toContain('rel="manifest"')
-      expect(result.warnings.some((w) => w.includes('Created'))).toBe(true)
+      expect(result.warnings.some((w: string) => w.includes('Created'))).toBe(true)
     })
 
     it('should inject all meta tags at once', () => {
@@ -220,7 +220,7 @@ describe('meta-injector', () => {
       expect(modifiedHtml).toContain('window.installPWA')
       expect(modifiedHtml).toContain('window.isPWAInstalled')
       expect(modifiedHtml).toContain('window.isPWAInstallable')
-      expect(result.injected.some((i) => i.includes('PWA install handler'))).toBe(true)
+      expect(result.injected.some((i: string) => i.includes('PWA install handler'))).toBe(true)
     })
 
     it('should inject install script before </body> tag', () => {
@@ -245,7 +245,7 @@ describe('meta-injector', () => {
       const { html: modifiedHtml, result } = injectMetaTags(html, options)
 
       expect(modifiedHtml).toContain('window.addEventListener(\'beforeinstallprompt\'')
-      expect(result.warnings.some((w) => w.includes('(no </body> found)'))).toBe(true)
+      expect(result.warnings.some((w: string) => w.includes('(no </body> found)'))).toBe(true)
     })
 
     it('should inject install script at end if no </body> or </html> tag', () => {
@@ -257,7 +257,7 @@ describe('meta-injector', () => {
       const { html: modifiedHtml, result } = injectMetaTags(html, options)
 
       expect(modifiedHtml).toContain('window.addEventListener(\'beforeinstallprompt\'')
-      expect(result.warnings.some((w) => w.includes('(no </body> or </html> found)'))).toBe(true)
+      expect(result.warnings.some((w: string) => w.includes('(no </body> or </html> found)'))).toBe(true)
     })
 
     // skip scenarios are covered in the parameterized tests above
@@ -331,7 +331,7 @@ describe('meta-injector', () => {
 
       expect(modifiedHtml).not.toContain('name="apple-mobile-web-app-capable"')
       expect(modifiedHtml).toContain('name="mobile-web-app-capable"')
-      expect(result.warnings.some((w) => w.includes('Removed deprecated'))).toBe(true)
+      expect(result.warnings.some((w: string) => w.includes('Removed deprecated'))).toBe(true)
     })
 
     it('should handle service worker path without leading slash', () => {
@@ -381,7 +381,7 @@ describe('meta-injector', () => {
       const { result } = injectMetaTags(html, options)
 
       // Should skip if already exists with same content
-      expect(result.skipped.some((s) => s.includes('mobile-web-app-capable'))).toBe(true)
+      expect(result.skipped.some((s: string) => s.includes('mobile-web-app-capable'))).toBe(true)
     })
 
     it('should update existing mobile-web-app-capable with different content', () => {
@@ -393,7 +393,7 @@ describe('meta-injector', () => {
       const { result } = injectMetaTags(html, options)
 
       // Should update if content differs
-      expect(result.injected.some((i) => i.includes('mobile-web-app-capable') && i.includes('updated'))).toBe(true)
+      expect(result.injected.some((i: string) => i.includes('mobile-web-app-capable') && i.includes('updated'))).toBe(true)
     })
 
     it('should handle existing apple-mobile-web-app-status-bar-style', () => {
@@ -405,7 +405,7 @@ describe('meta-injector', () => {
       const { result } = injectMetaTags(html, options)
 
       // Should skip if already exists with same content
-      expect(result.skipped.some((s) => s.includes('apple-mobile-web-app-status-bar-style'))).toBe(true)
+      expect(result.skipped.some((s: string) => s.includes('apple-mobile-web-app-status-bar-style'))).toBe(true)
     })
 
     it('should update existing apple-mobile-web-app-status-bar-style with different content', () => {
@@ -417,7 +417,9 @@ describe('meta-injector', () => {
       const { result } = injectMetaTags(html, options)
 
       // Should update if content differs
-      expect(result.injected.some((i) => i.includes('apple-mobile-web-app-status-bar-style') && i.includes('updated'))).toBe(true)
+      expect(
+        result.injected.some((i: string) => i.includes('apple-mobile-web-app-status-bar-style') && i.includes('updated')),
+      ).toBe(true)
     })
 
     it('should handle existing apple-mobile-web-app-title', () => {
@@ -429,7 +431,7 @@ describe('meta-injector', () => {
       const { result } = injectMetaTags(html, options)
 
       // Should skip if already exists with same content
-      expect(result.skipped.some((s) => s.includes('apple-mobile-web-app-title'))).toBe(true)
+      expect(result.skipped.some((s: string) => s.includes('apple-mobile-web-app-title'))).toBe(true)
     })
 
     it('should update existing apple-mobile-web-app-title with different content', () => {
@@ -441,7 +443,7 @@ describe('meta-injector', () => {
       const { result } = injectMetaTags(html, options)
 
       // Should update if content differs
-      expect(result.injected.some((i) => i.includes('apple-mobile-web-app-title') && i.includes('updated'))).toBe(true)
+      expect(result.injected.some((i: string) => i.includes('apple-mobile-web-app-title') && i.includes('updated'))).toBe(true)
     })
 
     it('should handle body creation when html exists but body does not', () => {
@@ -453,7 +455,7 @@ describe('meta-injector', () => {
       const { html: modifiedHtml, result } = injectMetaTags(html, options)
 
       expect(modifiedHtml).toContain('navigator.serviceWorker.register')
-      expect(result.warnings.some((w) => w.includes('Created <body>'))).toBe(true)
+      expect(result.warnings.some((w: string) => w.includes('Created <body>'))).toBe(true)
     })
 
     it('should handle case where html tag does not exist for body creation', () => {
@@ -465,7 +467,7 @@ describe('meta-injector', () => {
       const { html: modifiedHtml, result } = injectMetaTags(html, options)
 
       expect(modifiedHtml).toContain('navigator.serviceWorker.register')
-      expect(result.warnings.some((w) => w.includes('No <html> or <body>'))).toBe(true)
+      expect(result.warnings.some((w: string) => w.includes('No <html> or <body>'))).toBe(true)
     })
 
     it('should handle head without children array when injecting link', () => {
@@ -507,8 +509,8 @@ describe('meta-injector', () => {
       const { html: modifiedHtml, result } = injectMetaTags(html, options)
 
       expect(modifiedHtml).toContain('beforeinstallprompt')
-      expect(result.skipped.some((s) => s.includes('Service Worker registration'))).toBe(true)
-      expect(result.injected.some((i) => i.includes('PWA install handler'))).toBe(true)
+      expect(result.skipped.some((s: string) => s.includes('Service Worker registration'))).toBe(true)
+      expect(result.injected.some((i: string) => i.includes('PWA install handler'))).toBe(true)
     })
 
     it('should handle install handler exists but service worker missing', () => {
@@ -520,10 +522,10 @@ describe('meta-injector', () => {
       const { html: modifiedHtml, result } = injectMetaTags(html, options)
 
       expect(modifiedHtml).toContain('navigator.serviceWorker.register')
-      expect(result.injected.some((i) => i.includes('Service Worker registration'))).toBe(true)
+      expect(result.injected.some((i: string) => i.includes('Service Worker registration'))).toBe(true)
       // Since the HTML doesn't contain 'beforeinstallprompt' check from the script content,
       // it will also inject the PWA install handler script
-      expect(result.injected.some((i) => i.includes('PWA install handler'))).toBe(true)
+      expect(result.injected.some((i: string) => i.includes('PWA install handler'))).toBe(true)
     })
   })
 

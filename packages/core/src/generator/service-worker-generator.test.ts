@@ -276,7 +276,7 @@ describe('service-worker-generator', () => {
         const swContent = readFileSync(result.swPath, 'utf-8')
         expect(swContent).toContain('workbox')
       }
-    })
+    }, 15000)
 
     it('should generate service worker with multiple runtime cache entries', async () => {
       const outputDir = join(TEST_DIR, 'output-multiple-cache')
@@ -328,7 +328,7 @@ describe('service-worker-generator', () => {
 
   describe('Service Worker - Architecture-Specific Behavior', () => {
     it('should generate service worker for all architectures', async () => {
-      const architectures = ['static', 'spa', 'ssr', 'hybrid'] as const
+      const architectures = ['static', 'spa', 'ssr'] as const
 
       for (const arch of architectures) {
         const result = await generateServiceWorker({

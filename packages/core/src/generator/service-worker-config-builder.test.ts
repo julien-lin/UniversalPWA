@@ -313,7 +313,7 @@ describe('ServiceWorkerConfigBuilder', () => {
                 staticRoutes: [],
                 apiRoutes: [],
                 imageRoutes: [],
-            } as Record<string, unknown>
+            } as unknown as ServiceWorkerConfig
 
             const validation = ServiceWorkerConfigBuilder.validate(config)
 
@@ -327,7 +327,7 @@ describe('ServiceWorkerConfigBuilder', () => {
                 staticRoutes: 'not-array',
                 apiRoutes: [],
                 imageRoutes: [],
-            } as Record<string, unknown>
+            } as unknown as ServiceWorkerConfig
 
             const validation = ServiceWorkerConfigBuilder.validate(config)
 
@@ -377,7 +377,7 @@ describe('ServiceWorkerConfigBuilder', () => {
                 apiRoutes: [],
                 imageRoutes: [],
                 offline: {
-                    fallbackPage: 123 as Record<string, unknown>,
+                    fallbackPage: 123 as unknown as string,
                 },
             }
 

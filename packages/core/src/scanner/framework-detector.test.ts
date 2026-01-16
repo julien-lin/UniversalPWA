@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
 import { join } from 'path'
-import { detectFramework } from './framework-detector'
+import { detectFramework } from './framework-detector.js'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-framework-detector')
 
@@ -350,7 +350,7 @@ describe('framework-detector', () => {
       writeFileSync(join(TEST_DIR, 'settings.py'), '# Django settings')
 
       const result = expectFramework('django')
-      expect(result.indicators.some((i) => i.includes('Django'))).toBe(true)
+      expect(result.indicators.some((i: string) => i.includes('Django'))).toBe(true)
     })
 
     it('should detect Django with manage.py and django/ directory', () => {
@@ -366,7 +366,7 @@ describe('framework-detector', () => {
       writeFileSync(join(TEST_DIR, 'app.py'), 'from flask import Flask')
 
       const result = expectFramework('flask')
-      expect(result.indicators.some((i) => i.includes('Flask'))).toBe(true)
+      expect(result.indicators.some((i: string) => i.includes('Flask'))).toBe(true)
     })
 
     it('should detect Flask with requirements.txt and application.py', () => {
@@ -380,7 +380,7 @@ describe('framework-detector', () => {
     it('should detect FastAPI with requirements.txt', () => {
       writeFileSync(join(TEST_DIR, 'requirements.txt'), 'fastapi==0.104.0')
       const result = expectFramework('fastapi')
-      expect(result.indicators.some((i) => i.includes('FastAPI'))).toBe(true)
+      expect(result.indicators.some((i: string) => i.includes('FastAPI'))).toBe(true)
     })
   })
 
@@ -391,7 +391,7 @@ describe('framework-detector', () => {
       writeFileSync(join(TEST_DIR, 'config', 'application.rb'), 'module MyApp')
 
       const result = expectFramework('rails')
-      expect(result.indicators.some((i) => i.includes('rails'))).toBe(true)
+      expect(result.indicators.some((i: string) => i.includes('rails'))).toBe(true)
     })
 
     it('should detect Rails with Gemfile and config/routes.rb', () => {
@@ -408,7 +408,7 @@ describe('framework-detector', () => {
       writeFileSync(join(TEST_DIR, 'app.rb'), 'require "sinatra"')
 
       const result = expectFramework('sinatra')
-      expect(result.indicators.some((i) => i.includes('sinatra'))).toBe(true)
+      expect(result.indicators.some((i: string) => i.includes('sinatra'))).toBe(true)
     })
 
     it('should detect Sinatra with Gemfile and main.rb', () => {
@@ -424,7 +424,7 @@ describe('framework-detector', () => {
       writeFileSync(join(TEST_DIR, 'main.go'), 'package main\nimport "net/http"\nfunc main() { http.ListenAndServe(":8080", nil) }')
 
       const result = expectFramework('go')
-      expect(result.indicators.some((i) => i.includes('HTTP server'))).toBe(true)
+      expect(result.indicators.some((i: string) => i.includes('HTTP server'))).toBe(true)
     })
 
     it('should detect Go web project with go.mod and server.go', () => {
@@ -442,7 +442,7 @@ describe('framework-detector', () => {
       )
 
       const result = expectFramework('spring')
-      expect(result.indicators.some((i) => i.includes('spring-boot'))).toBe(true)
+      expect(result.indicators.some((i: string) => i.includes('spring-boot'))).toBe(true)
     })
 
     it('should detect Spring Boot with build.gradle', () => {
@@ -463,7 +463,7 @@ describe('framework-detector', () => {
       writeFileSync(join(TEST_DIR, 'Program.cs'), 'var builder = WebApplication.CreateBuilder(args);')
 
       const result = expectFramework('aspnet')
-      expect(result.indicators.some((i) => i.includes('ASP.NET Core'))).toBe(true)
+      expect(result.indicators.some((i: string) => i.includes('ASP.NET Core'))).toBe(true)
     })
 
     it('should detect ASP.NET Core with .csproj and Startup.cs', () => {
@@ -667,7 +667,7 @@ describe('framework-detector', () => {
       const result = detectFramework(TEST_DIR)
 
       expect(result.configuration.cssInJs).toContain('styled-components')
-      expect(result.indicators.some((i) => i.includes('CSS-in-JS: styled-components'))).toBe(true)
+      expect(result.indicators.some((i: string) => i.includes('CSS-in-JS: styled-components'))).toBe(true)
     })
 
     it('should detect emotion', () => {
@@ -684,7 +684,7 @@ describe('framework-detector', () => {
       const result = detectFramework(TEST_DIR)
 
       expect(result.configuration.stateManagement).toContain('redux')
-      expect(result.indicators.some((i) => i.includes('State Management: redux'))).toBe(true)
+      expect(result.indicators.some((i: string) => i.includes('State Management: redux'))).toBe(true)
     })
 
     it('should detect Zustand', () => {
@@ -709,7 +709,7 @@ describe('framework-detector', () => {
       const result = detectFramework(TEST_DIR)
 
       expect(result.configuration.buildTool).toBe('vite')
-      expect(result.indicators.some((i) => i.includes('Build Tool: vite'))).toBe(true)
+      expect(result.indicators.some((i: string) => i.includes('Build Tool: vite'))).toBe(true)
     })
 
     it('should detect Webpack as build tool', () => {

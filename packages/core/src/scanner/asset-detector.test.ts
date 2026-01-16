@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
 import { join } from 'path'
-import { detectAssets } from './asset-detector'
+import { detectAssets } from './asset-detector.js'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-asset-detector')
 
@@ -26,9 +26,9 @@ describe('asset-detector', () => {
       const result = await detectAssets(TEST_DIR)
 
       expect(result.javascript.length).toBeGreaterThanOrEqual(3)
-      expect(result.javascript.some((f) => f.endsWith('app.js') || f.includes('app.js'))).toBe(true)
-      expect(result.javascript.some((f) => f.endsWith('module.mjs') || f.includes('module.mjs'))).toBe(true)
-      expect(result.javascript.some((f) => f.endsWith('component.tsx') || f.includes('component.tsx'))).toBe(true)
+      expect(result.javascript.some((f: string) => f.endsWith('app.js') || f.includes('app.js'))).toBe(true)
+      expect(result.javascript.some((f: string) => f.endsWith('module.mjs') || f.includes('module.mjs'))).toBe(true)
+      expect(result.javascript.some((f: string) => f.endsWith('component.tsx') || f.includes('component.tsx'))).toBe(true)
     })
 
     it('should exclude node_modules', async () => {
@@ -38,8 +38,8 @@ describe('asset-detector', () => {
 
       const result = await detectAssets(TEST_DIR)
 
-      expect(result.javascript.some((f) => f.includes('node_modules'))).toBe(false)
-      expect(result.javascript.some((f) => f.includes('app.js'))).toBe(true)
+      expect(result.javascript.some((f: string) => f.includes('node_modules'))).toBe(false)
+      expect(result.javascript.some((f: string) => f.includes('app.js'))).toBe(true)
     })
   })
 
@@ -51,8 +51,8 @@ describe('asset-detector', () => {
       const result = await detectAssets(TEST_DIR)
 
       expect(result.css.length).toBeGreaterThanOrEqual(2)
-      expect(result.css.some((f) => f.includes('styles.css'))).toBe(true)
-      expect(result.css.some((f) => f.includes('theme.scss'))).toBe(true)
+      expect(result.css.some((f: string) => f.includes('styles.css'))).toBe(true)
+      expect(result.css.some((f: string) => f.includes('theme.scss'))).toBe(true)
     })
   })
 
@@ -65,9 +65,9 @@ describe('asset-detector', () => {
       const result = await detectAssets(TEST_DIR)
 
       expect(result.images.length).toBeGreaterThanOrEqual(3)
-      expect(result.images.some((f) => f.includes('logo.png'))).toBe(true)
-      expect(result.images.some((f) => f.includes('photo.jpg'))).toBe(true)
-      expect(result.images.some((f) => f.includes('icon.svg'))).toBe(true)
+      expect(result.images.some((f: string) => f.includes('logo.png'))).toBe(true)
+      expect(result.images.some((f: string) => f.includes('photo.jpg'))).toBe(true)
+      expect(result.images.some((f: string) => f.includes('icon.svg'))).toBe(true)
     })
   })
 
@@ -79,8 +79,8 @@ describe('asset-detector', () => {
       const result = await detectAssets(TEST_DIR)
 
       expect(result.fonts.length).toBeGreaterThanOrEqual(2)
-      expect(result.fonts.some((f) => f.includes('font.woff2'))).toBe(true)
-      expect(result.fonts.some((f) => f.includes('font.ttf'))).toBe(true)
+      expect(result.fonts.some((f: string) => f.includes('font.woff2'))).toBe(true)
+      expect(result.fonts.some((f: string) => f.includes('font.ttf'))).toBe(true)
     })
   })
 
@@ -106,7 +106,7 @@ describe('asset-detector', () => {
 
       const result = await detectAssets(TEST_DIR)
 
-      expect(result.javascript.some((f) => f.includes('dist'))).toBe(false)
+      expect(result.javascript.some((f: string) => f.includes('dist'))).toBe(false)
     })
 
     it('should exclude .git folder', async () => {
@@ -116,7 +116,7 @@ describe('asset-detector', () => {
 
       const result = await detectAssets(TEST_DIR)
 
-      expect(result.javascript.some((f) => f.includes('.git'))).toBe(false)
+      expect(result.javascript.some((f: string) => f.includes('.git'))).toBe(false)
     })
   })
 
@@ -128,7 +128,7 @@ describe('asset-detector', () => {
       const result = await detectAssets(TEST_DIR)
 
       expect(result.javascript.length).toBeGreaterThan(0)
-      result.javascript.forEach((file) => {
+      result.javascript.forEach((file: string) => {
         expect(existsSync(file)).toBe(true)
       })
     })

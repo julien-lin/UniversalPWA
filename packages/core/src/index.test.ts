@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { detectFramework, type Framework, type FrameworkDetectionResult } from './index'
+import { detectFramework, type Framework, type FrameworkDetectionResult } from './index.js'
 
 describe('@julien-lin/universal-pwa-core', () => {
   it('should export detectFramework', () => {

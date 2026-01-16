@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
 import { join } from 'path'
-import { scanProject, generateReport, validateProjectPath, type ScannerResult } from './index'
+import { scanProject, generateReport, validateProjectPath, type ScannerResult } from './index.js'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-scanner')
 
@@ -161,7 +161,15 @@ describe('scanner orchestrator', () => {
         framework: {
           framework: 'react',
           confidence: 'high',
+          confidenceScore: 95,
           indicators: ['package.json: react'],
+          version: { major: 19, minor: 0, patch: 0, raw: '19.0.0' },
+          configuration: {
+            language: 'typescript',
+            cssInJs: [],
+            stateManagement: [],
+            buildTool: 'vite',
+          },
         },
         assets: {
           javascript: ['/path/to/app.js'],

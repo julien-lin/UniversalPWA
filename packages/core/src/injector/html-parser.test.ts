@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
 import { join } from 'path'
-import { parseHTML, parseHTMLFile, findElement, findAllElements, elementExists, serializeHTML } from './html-parser'
+import { parseHTML, parseHTMLFile, findElement, findAllElements, elementExists, serializeHTML } from './html-parser.js'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-html-parser')
+
+type ParsedElement = { tagName: string; attributes?: { name: string; value: string }[] }
 
 // Helpers
 const html = (content: string) => `<html><head>${content}</head></html>`
@@ -103,7 +105,7 @@ describe('html-parser', () => {
     it('should find all meta tags', () => {
       const parsed = parseHTML(html('<meta charset="UTF-8" /><meta name="viewport" content="width=device-width" />'))
       const metas = findAllElements(parsed, 'meta')
-      const metaTags = metas.filter((m) => m.tagName.toLowerCase() === 'meta')
+      const metaTags = metas.filter((m: ParsedElement) => m.tagName.toLowerCase() === 'meta')
       expect(metaTags).toHaveLength(2)
     })
 
@@ -117,8 +119,8 @@ describe('html-parser', () => {
       const parsed = parseHTML(html('<link rel="stylesheet" href="style.css" /><link rel="manifest" href="manifest.json" />'))
       const manifestLinks = findAllElements(parsed, 'link', { name: 'rel', value: 'manifest' })
       expect(manifestLinks.length).toBeGreaterThanOrEqual(1)
-      manifestLinks.forEach((link) => {
-        const relAttr = link.attributes?.find((attr) => attr.name.toLowerCase() === 'rel')
+      manifestLinks.forEach((link: ParsedElement) => {
+        const relAttr = link.attributes?.find((attr: { name: string; value: string }) => attr.name.toLowerCase() === 'rel')
         expect(relAttr?.value).toBe('manifest')
       })
     })
