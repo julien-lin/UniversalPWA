@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { initCommand } from './init'
+import { initCommand } from './init.js'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-cli-init')
 
@@ -247,7 +247,7 @@ describe('init command', () => {
         iconSource: 'non-existent-icon.png',
       })
 
-      expect(result.warnings.some((w) => w.includes('Icon source file not found') || w.includes('E3001'))).toBe(true)
+      expect(result.warnings.some((w: string) => w.includes('Icon source file not found') || w.includes('E3001'))).toBe(true)
     })
 
     it('should handle icon source as relative path', async () => {
@@ -290,7 +290,7 @@ describe('init command', () => {
         ...baseInitCommand,
       })
 
-      expect(result.warnings.some((w) => w.includes('icon'))).toBe(true)
+      expect(result.warnings.some((w: string) => w.includes('icon'))).toBe(true)
     })
 
     it('should generate manifest with placeholder icon when no icons provided', async () => {
@@ -302,7 +302,7 @@ describe('init command', () => {
         ...baseInitCommand,
       })
 
-      expect(result.warnings.some((w) => w.includes('placeholder icon'))).toBe(true)
+      expect(result.warnings.some((w: string) => w.includes('placeholder icon'))).toBe(true)
       expect(result.manifestPath).toBeDefined()
     })
 
@@ -1044,7 +1044,7 @@ describe('init command', () => {
       })
 
       expect(result.htmlFilesInjected).toBeGreaterThan(0)
-      
+
       // Verify that meta-tags were injected
       const modifiedTwig = readFileSync(join(TEST_DIR, 'templates', 'base.html.twig'), 'utf-8')
       expect(modifiedTwig).toContain('rel="manifest"')
@@ -1075,7 +1075,7 @@ describe('init command', () => {
       })
 
       expect(result.htmlFilesInjected).toBeGreaterThan(0)
-      
+
       // Verify that meta-tags were injected
       const modifiedBlade = readFileSync(join(TEST_DIR, 'resources', 'views', 'layout.blade.php'), 'utf-8')
       expect(modifiedBlade).toContain('rel="manifest"')

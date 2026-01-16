@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
 import { join } from 'path'
-import { previewCommand } from './preview'
+import { previewCommand } from './preview.js'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-cli-preview')
 
@@ -114,7 +114,7 @@ describe('preview command', () => {
 
       expect(result.manifestExists).toBe(true)
       expect(result.serviceWorkerExists).toBe(false)
-      expect(result.warnings.some((w) => w.includes('sw.js'))).toBe(true)
+      expect(result.warnings.some((w: string) => w.includes('sw.js'))).toBe(true)
     })
 
     it('should warn when only service worker is present without manifest', async () => {
@@ -127,7 +127,7 @@ describe('preview command', () => {
 
       expect(result.serviceWorkerExists).toBe(true)
       expect(result.manifestExists).toBe(false)
-      expect(result.warnings.some((w) => w.includes('manifest'))).toBe(true)
+      expect(result.warnings.some((w: string) => w.includes('manifest'))).toBe(true)
     })
   })
 
