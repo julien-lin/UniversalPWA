@@ -68,7 +68,7 @@ export async function generateServiceWorker(
   mkdirSync(outputDir, { recursive: true })
 
   // Determine template type
-  const finalTemplateType = templateType ?? determineTemplateType(architecture, framework ?? null)
+  const finalTemplateType: ServiceWorkerTemplateType = templateType ?? determineTemplateType(architecture, framework ?? null)
   const template = getServiceWorkerTemplate(finalTemplateType)
 
   // Create temporary source file with template
@@ -245,7 +245,7 @@ export async function generateServiceWorkerFromConfig(
   } = options
 
   // Determine template type
-  const finalTemplateType = templateType ?? determineTemplateType(architecture, framework ?? null)
+  const finalTemplateType: ServiceWorkerTemplateType = templateType ?? determineTemplateType(architecture, framework ?? null)
   const template = getServiceWorkerTemplate(finalTemplateType)
 
   // Create temporary source file with template

@@ -48,18 +48,8 @@ jobs:
         if: always()
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: |
-            ./packages/core/coverage/coverage-final.json
-            ./packages/cli/coverage/coverage-final.json
-            ./packages/templates/coverage/coverage-final.json
-            ./packages/web-ui/coverage/coverage-final.json
-          flags: |
-            core
-            cli
-            templates
-            web-ui
+          files: ./packages/core/coverage/coverage-final.json,./packages/cli/coverage/coverage-final.json,./packages/templates/coverage/coverage-final.json,./packages/web-ui/coverage/coverage-final.json
+          flags: core,cli,templates,web-ui
           name: codecov-umbrella
           fail_ci_if_error: false
-          # Détection automatique des fichiers coverage dans le répertoire
-          directory: ./
 
