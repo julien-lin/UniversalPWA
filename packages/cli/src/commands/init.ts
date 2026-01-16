@@ -1,5 +1,5 @@
 import { scanProject, optimizeProject } from '@julien-lin/universal-pwa-core'
-import { generateManifest, generateAndWriteManifest } from '@julien-lin/universal-pwa-core'
+import { generateAndWriteManifest } from '@julien-lin/universal-pwa-core'
 import { generateIcons } from '@julien-lin/universal-pwa-core'
 import { generateServiceWorker, generateSimpleServiceWorker } from '@julien-lin/universal-pwa-core'
 import { injectMetaTagsInFile, processInParallel } from '@julien-lin/universal-pwa-core'
@@ -8,10 +8,15 @@ import chalk from 'chalk'
 import { existsSync } from 'fs'
 import { glob } from 'glob'
 import { join, resolve, relative, normalize } from 'path'
+// @ts-expect-error - @types/cli-progress not available
 import cliProgress from 'cli-progress'
 import type { Framework } from '@julien-lin/universal-pwa-core'
 import type { Architecture } from '@julien-lin/universal-pwa-core'
 import { Transaction } from '../utils/transaction.js'
+
+// @types/cli-progress not available, using any type
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type CliProgressBar = any
 import { ErrorCode, formatError, detectErrorCode } from '../utils/error-codes.js'
 
 export interface InitOptions {
@@ -101,7 +106,7 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     }
 
     console.log(chalk.blue('🔍 Scanning project...'))
-    
+
     // Scan project (with cache support)
     const scanResult = await scanProject({
       projectPath: result.projectPath,
@@ -137,12 +142,12 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
       // Auto-detect: prefer dist/ for React/Vite projects (production builds)
       const distDir = join(result.projectPath, 'dist')
       const publicDir = join(result.projectPath, 'public')
-      
+
       // For React/Vite: prefer dist/ if it exists (production build), otherwise public/
-      if ((result.framework === 'React' || result.framework === 'Vite') && existsSync(distDir)) {
+      if ((result.framework === 'react' || result.framework === 'nextjs') && existsSync(distDir)) {
         finalOutputDir = distDir
         console.log(chalk.gray(`  Using dist/ directory (production build detected)`))
-      } else if (result.framework === 'WordPress') {
+      } else if (result.framework === 'wordpress') {
         finalOutputDir = publicDir
       } else if (existsSync(publicDir)) {
         finalOutputDir = publicDir
@@ -164,7 +169,7 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     // Backup existing files before modification
     const existingManifestPath = join(finalOutputDir, 'manifest.json')
     const existingSwPath = join(finalOutputDir, 'sw.js')
-    
+
     if (existsSync(existingManifestPath)) {
       const manifestRelative = relative(result.projectPath, existingManifestPath)
       if (manifestRelative && !manifestRelative.startsWith('..')) {
@@ -180,14 +185,14 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
 
     // Generate manifest
     console.log(chalk.blue('📝 Generating manifest.json...'))
-    
+
     const appName = name ?? (result.framework ? `${result.framework} App` : 'My PWA')
     // Ensure shortName is always defined and valid (max 12 characters, non-empty)
     // Normalize shortName (can be undefined, empty string, or valid)
     const normalizedShortName = shortName && typeof shortName === 'string' && shortName.trim().length > 0
       ? shortName.trim()
       : undefined
-    
+
     let appShortName: string
     if (normalizedShortName && normalizedShortName.length > 0 && normalizedShortName.length <= 12) {
       appShortName = normalizedShortName
@@ -207,10 +212,10 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     let iconPaths: string[] = []
     if (!skipIcons && iconSource) {
       const iconSourcePath = existsSync(iconSource) ? iconSource : join(result.projectPath, iconSource)
-      
+
       if (existsSync(iconSourcePath)) {
         console.log(chalk.blue('🎨 Generating icons...'))
-        
+
         try {
           const iconResult = await generateIcons({
             sourceImage: iconSourcePath,
@@ -218,41 +223,41 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
             validate: true, // Enable validation
             strictValidation: false, // Don't block on warnings, only errors
           })
-          
+
           // Display validation warnings/errors if present
           if (iconResult.validation) {
             const { validation } = iconResult
-            
+
             if (validation.errors.length > 0) {
               validation.errors.forEach(error => {
                 result.errors.push(`Icon validation: ${error}`)
                 console.log(chalk.red(`✗ ${error}`))
               })
             }
-            
+
             if (validation.warnings.length > 0) {
               validation.warnings.forEach(warning => {
                 result.warnings.push(`Icon validation: ${warning}`)
                 console.log(chalk.yellow(`⚠ ${warning}`))
               })
             }
-            
+
             if (validation.suggestions.length > 0) {
               validation.suggestions.forEach(suggestion => {
                 console.log(chalk.blue(`💡 ${suggestion}`))
               })
             }
           }
-          
+
           iconPaths = iconResult.icons.map((icon) => icon.src)
           result.iconsGenerated = iconResult.icons.length
-          
+
           // Check if apple-touch-icon.png was generated
           const appleTouchIconPath = join(finalOutputDir, 'apple-touch-icon.png')
           if (existsSync(appleTouchIconPath)) {
             iconPaths.push('/apple-touch-icon.png')
           }
-          
+
           console.log(chalk.green(`✓ Generated ${result.iconsGenerated} icons`))
           if (existsSync(appleTouchIconPath)) {
             console.log(chalk.green(`✓ Generated apple-touch-icon.png`))
@@ -273,31 +278,31 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     // Generate manifest (with or without icons)
     // Final validation of appShortName before use - ensure it's always a valid string
     let finalShortName: string = 'PWA' // Default value
-    
+
     if (appShortName && typeof appShortName === 'string' && appShortName.trim().length > 0) {
       finalShortName = appShortName.trim().substring(0, 12)
     } else if (appName && typeof appName === 'string' && appName.length > 0) {
       finalShortName = appName.substring(0, 12)
     }
-    
+
     // Ensure finalShortName is never empty or undefined
     if (!finalShortName || finalShortName.trim().length === 0) {
       finalShortName = 'PWA'
     }
-    
+
     // Double check: ensure it's a string
     finalShortName = String(finalShortName).trim().substring(0, 12) || 'PWA'
-    
+
     let manifestPath: string | undefined
     try {
       if (iconPaths.length > 0) {
         // Manifest with generated icons
-        const manifestWithIcons = generateManifest({
+        const manifestWithIconsOptions = {
           name: appName,
           shortName: finalShortName,
           startUrl: '/',
           scope: '/',
-          display: 'standalone',
+          display: 'standalone' as const,
           themeColor: themeColor ?? '#ffffff',
           backgroundColor: backgroundColor ?? '#000000',
           icons: iconPaths.map((src) => ({
@@ -305,11 +310,11 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
             sizes: src.match(/(\d+)x(\d+)/)?.[0] ?? '192x192',
             type: 'image/png',
           })),
-        })
-        
-        manifestPath = generateAndWriteManifest(manifestWithIcons, finalOutputDir)
+        }
+
+        manifestPath = generateAndWriteManifest(manifestWithIconsOptions, finalOutputDir)
         result.manifestPath = manifestPath
-        
+
         // Track manifest if it's new (not backed up)
         const manifestRelative = relative(result.projectPath, manifestPath)
         if (manifestRelative && !manifestRelative.startsWith('..')) {
@@ -321,7 +326,7 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
             transaction.trackCreatedFile(manifestRelative)
           }
         }
-        
+
         console.log(chalk.green(`✓ Manifest generated: ${manifestPath}`))
       } else {
         // Minimal manifest without icons (use placeholder icon)
@@ -329,15 +334,15 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
         // Create manifest with placeholder icon that must be replaced
         result.warnings.push('No icons provided. Manifest generated with placeholder icon. Please provide an icon source with --icon-source for production.')
         console.log(chalk.yellow('⚠ Generating manifest with placeholder icon'))
-        
+
         // Create manifest with placeholder icon
         // finalShortName is already validated above
-        const manifestMinimal = generateManifest({
+        const manifestMinimalOptions = {
           name: appName,
           shortName: finalShortName,
           startUrl: '/',
           scope: '/',
-          display: 'standalone',
+          display: 'standalone' as const,
           themeColor: themeColor ?? '#ffffff',
           backgroundColor: backgroundColor ?? '#000000',
           icons: [{
@@ -345,11 +350,11 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
             sizes: '192x192',
             type: 'image/png',
           }],
-        })
-        
-        manifestPath = generateAndWriteManifest(manifestMinimal, finalOutputDir)
+        }
+
+        manifestPath = generateAndWriteManifest(manifestMinimalOptions, finalOutputDir)
         result.manifestPath = manifestPath
-        
+
         // Track manifest if it's new (not backed up)
         const manifestRelative = relative(result.projectPath, manifestPath)
         if (manifestRelative && !manifestRelative.startsWith('..')) {
@@ -361,16 +366,16 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
             transaction.trackCreatedFile(manifestRelative)
           }
         }
-        
+
         console.log(chalk.green(`✓ Manifest generated: ${manifestPath}`))
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
-      const errorCode = detectErrorCode(error)
+      const errorCode = detectErrorCode(errorMessage)
       const formattedError = formatError(errorCode, errorMessage)
       result.errors.push(formattedError)
       console.log(chalk.red(`✗ ${formattedError}`))
-      
+
       // Rollback on critical error
       if (transaction) {
         transaction.rollback()
@@ -381,7 +386,7 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     // Generate service worker with adaptive cache strategies
     if (!skipServiceWorker) {
       console.log(chalk.blue('⚙️ Generating service worker...'))
-      
+
       try {
         // Optimize project to get adaptive cache strategies
         const optimizationResult = await optimizeProject(
@@ -422,11 +427,11 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
             globPatterns: ['**/*.{html,js,css,png,jpg,jpeg,svg,webp,woff,woff2}'],
           })
         }
-        
+
         result.serviceWorkerPath = swResult.swPath
         console.log(chalk.green(`✓ Service worker generated: ${result.serviceWorkerPath}`))
         console.log(chalk.gray(`  Pre-cached ${swResult.count} files`))
-        
+
         // Track service worker if it's new (not backed up)
         const swRelative = relative(result.projectPath, swResult.swPath)
         if (swRelative && !swRelative.startsWith('..')) {
@@ -438,7 +443,7 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
             transaction.trackCreatedFile(swRelative)
           }
         }
-        
+
         // Log asset optimization suggestions if any
         if (optimizationResult.assetSuggestions.length > 0) {
           const highPrioritySuggestions = optimizationResult.assetSuggestions.filter((s) => s.priority === 'high')
@@ -451,11 +456,11 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error)
-        const errorCode = detectErrorCode(error)
+        const errorCode = detectErrorCode(errorMessage)
         const formattedError = formatError(errorCode, errorMessage)
         result.errors.push(formattedError)
         console.log(chalk.red(`✗ ${formattedError}`))
-        
+
         // Rollback on critical error
         if (transaction) {
           transaction.rollback()
@@ -467,7 +472,7 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     // Inject meta-tags into HTML files
     if (!skipInjection) {
       console.log(chalk.blue('💉 Injecting meta-tags...'))
-      
+
       try {
         // Find all HTML files and template files (including dist/ for production builds)
         // Priority: dist/ > public/ > root
@@ -477,14 +482,14 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
           ignore: ['**/node_modules/**', '**/.next/**', '**/.nuxt/**', '**/vendor/**'],
           absolute: true,
         })
-        
+
         // Sort: dist/ files first, then public/, then others
         htmlFiles.sort((a, b) => {
           const aInDist = a.includes('/dist/')
           const bInDist = b.includes('/dist/')
           const aInPublic = a.includes('/public/')
           const bInPublic = b.includes('/public/')
-          
+
           if (aInDist && !bInDist) return -1
           if (!aInDist && bInDist) return 1
           if (aInPublic && !bInPublic) return -1
@@ -518,7 +523,7 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
         }
 
         const totalFiles = htmlFilesToProcess.length
-        
+
         // Normalize paths securely - helper function (needs htmlFile context)
         const normalizePathForInjection = (fullPath: string | undefined, basePath: string, outputDir: string, htmlFile: string, fallback: string): string => {
           if (!fullPath) return fallback
@@ -526,7 +531,7 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
             // Check if HTML file is in dist/ (production build)
             const htmlInDist = htmlFile.includes('/dist/')
             const swInDist = fullPath.includes('/dist/')
-            
+
             // If HTML is in dist/, paths should be relative to dist/ root
             if (htmlInDist && swInDist) {
               // Both in dist/, use relative path from dist/ root
@@ -536,50 +541,51 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
                 return distPath.startsWith('/') ? distPath : `/${distPath}`
               }
             }
-            
+
             // If path is in outputDir (e.g., public/), it must be served at root
             const rel = relativePath(fullPath, basePath)
             let normalized = rel.startsWith('/') ? rel : `/${rel}`
-            
+
             // For Vite/React, if file is in public/ or dist/, remove directory from path
             const outputDirName = outputDir.replace(basePath, '').replace(/^\/+|\/+$/g, '')
             if (outputDirName && normalized.startsWith(`/${outputDirName}/`)) {
               normalized = normalized.replace(`/${outputDirName}/`, '/')
             }
-            
+
             // Also handle dist/ directory if present
             if (normalized.includes('/dist/')) {
               const distIndex = normalized.indexOf('/dist/')
               normalized = normalized.substring(distIndex + 6)
               normalized = normalized.startsWith('/') ? normalized : `/${normalized}`
             }
-            
+
             return normalized
           } catch {
             return fallback
           }
         }
-        
+
         // Determine apple-touch-icon path
         const appleTouchIconFullPath = join(finalOutputDir, 'apple-touch-icon.png')
         const appleTouchIconExists = existsSync(appleTouchIconFullPath)
-        
+
         // Create progress bar for large projects
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-        const progressBar = totalFiles > 10 
-          ? new cliProgress.SingleBar({
-              format: chalk.blue('💉 Injecting meta-tags') + ' |{bar}| {percentage}% | {value}/{total} files | ETA: {eta}s',
-              barCompleteChar: '\u2588',
-              barIncompleteChar: '\u2591',
-              hideCursor: true,
-            })
-          : null
-        
+        let progressBar: CliProgressBar = null
+        if (totalFiles > 10) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+          progressBar = new cliProgress.SingleBar({
+            format: chalk.blue('💉 Injecting meta-tags') + ' |{bar}| {percentage}% | {value}/{total} files | ETA: {eta}s',
+            barCompleteChar: '\u2588',
+            barIncompleteChar: '\u2591',
+            hideCursor: true,
+          })
+        }
+
         if (progressBar) {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
           progressBar.start(totalFiles, 0)
         }
-        
+
         // Process files in parallel using batch injection with file-specific path normalization
         // We need to create options per file since normalization depends on htmlFile location
         const processFileWithNormalizedPaths = (htmlFile: string): Promise<ReturnType<typeof injectMetaTagsInFile>> => {
@@ -587,17 +593,17 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
             manifestPath: normalizePathForInjection(result.manifestPath, result.projectPath, finalOutputDir, htmlFile, '/manifest.json'),
             themeColor: themeColor ?? '#ffffff',
             backgroundColor: backgroundColor ?? '#000000',
-            appleTouchIcon: appleTouchIconExists 
+            appleTouchIcon: appleTouchIconExists
               ? normalizePathForInjection(appleTouchIconFullPath, result.projectPath, finalOutputDir, htmlFile, '/apple-touch-icon.png')
               : '/apple-touch-icon.png',
             appleMobileWebAppCapable: true,
             serviceWorkerPath: normalizePathForInjection(result.serviceWorkerPath, result.projectPath, finalOutputDir, htmlFile, '/sw.js'),
           }
-          
+
           // Use injectMetaTagsInFile directly (it's synchronous but we wrap it in Promise.resolve for parallel processing)
           return Promise.resolve(injectMetaTagsInFile(htmlFile, fileOptions))
         }
-        
+
         const batchResult = await processInParallel(
           htmlFilesToProcess,
           processFileWithNormalizedPaths,
@@ -612,16 +618,16 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
             },
           }
         )
-        
+
         if (progressBar) {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
           progressBar.stop()
         }
-        
+
         // Process results
         let injectedCount = 0
         let skippedCount = 0
-        
+
         for (const success of batchResult.successful) {
           const injectionResult = success.result
           if (injectionResult.injected.length > 0) {
@@ -649,7 +655,7 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
             }
           }
         }
-        
+
         // Handle failed files
         for (const failed of batchResult.failed) {
           const errorCode = detectErrorCode(new Error(failed.error))
@@ -659,13 +665,13 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
             console.log(chalk.yellow(`⚠ ${warningMessage}`))
           }
         }
-        
+
         result.htmlFilesInjected = injectedCount
         const errorCount = batchResult.totalFailed
         const fileTypeLabel = htmlFilesToProcess.some(f => f.endsWith('.twig') || f.endsWith('.html.twig') || f.endsWith('.blade.php'))
           ? 'template file(s)'
           : 'HTML file(s)'
-        
+
         // Message de résumé détaillé
         if (injectedCount > 0) {
           console.log(chalk.green(`✓ Injected meta-tags in ${injectedCount} ${fileTypeLabel}`))
@@ -681,11 +687,11 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error)
-        const errorCode = detectErrorCode(error)
+        const errorCode = detectErrorCode(errorMessage)
         const formattedError = formatError(errorCode, errorMessage)
         result.errors.push(formattedError)
         console.log(chalk.red(`✗ ${formattedError}`))
-        
+
         // Rollback on critical error
         if (transaction) {
           transaction.rollback()
@@ -695,7 +701,7 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     }
 
     result.success = result.errors.length === 0
-    
+
     if (result.success) {
       // Commit transaction if everything succeeded
       if (transaction) {
@@ -714,17 +720,17 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     return result
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    const errorCode = detectErrorCode(error)
+    const errorCode = detectErrorCode(errorMessage)
     const formattedError = formatError(errorCode, errorMessage)
     result.errors.push(formattedError)
     console.log(chalk.red(`✗ ${formattedError}`))
-    
+
     // Rollback on unexpected error
     if (transaction) {
       console.log(chalk.yellow('\n🔄 Rolling back changes due to unexpected error...'))
       transaction.rollback()
     }
-    
+
     return result
   }
 }
