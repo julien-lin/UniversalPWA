@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
 import { join } from 'path'
-import { checkHttps, checkProjectHttps, detectProjectUrl } from './https-checker'
+import { checkHttps, checkProjectHttps, detectProjectUrl } from './https-checker.js'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-https-checker')
 

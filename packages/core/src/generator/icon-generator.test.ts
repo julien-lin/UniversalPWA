@@ -9,7 +9,8 @@ import {
   generateAppleTouchIcon,
   STANDARD_ICON_SIZES,
   STANDARD_SPLASH_SIZES,
-} from './icon-generator'
+} from './icon-generator.js'
+import type { ManifestIcon, ManifestSplashScreen } from './manifest-generator.js'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-icon-generator')
 
@@ -62,7 +63,7 @@ describe('icon-generator', () => {
       }
 
       // Check icon structure
-      result.icons.forEach((icon, index) => {
+      result.icons.forEach((icon: typeof STANDARD_ICON_SIZES[number] & { src: string }, index: number) => {
         expect(icon.src).toContain(STANDARD_ICON_SIZES[index].name)
         expect(icon.sizes).toBe(`${STANDARD_ICON_SIZES[index].width}x${STANDARD_ICON_SIZES[index].height}`)
         expect(icon.type).toBe('image/png')
@@ -291,7 +292,7 @@ describe('icon-generator', () => {
       expect(result.splashScreens).toHaveLength(3)
       expect(result.generatedFiles.length).toBeGreaterThanOrEqual(3)
 
-      result.splashScreens.forEach((splash, index) => {
+      result.splashScreens.forEach((splash: typeof STANDARD_SPLASH_SIZES[number] & { sizes: string }, index: number) => {
         expect(splash.sizes).toBe(`${customSplashSizes[index].width}x${customSplashSizes[index].height}`)
       })
     })
@@ -311,9 +312,9 @@ describe('icon-generator', () => {
       })
 
       // 192 and 512 should have purpose 'any'
-      const icon192 = result.icons.find(i => i.sizes === '192x192')
-      const icon512 = result.icons.find(i => i.sizes === '512x512')
-      const icon96 = result.icons.find(i => i.sizes === '96x96')
+      const icon192 = result.icons.find((i: ManifestIcon) => i.sizes === '192x192')
+      const icon512 = result.icons.find((i: ManifestIcon) => i.sizes === '512x512')
+      const icon96 = result.icons.find((i: ManifestIcon) => i.sizes === '96x96')
 
       expect(icon192?.purpose).toBe('any')
       expect(icon512?.purpose).toBe('any')
@@ -359,7 +360,7 @@ describe('icon-generator', () => {
         splashSizes: [],
       })
 
-      result.icons.forEach((icon) => {
+      result.icons.forEach((icon: ManifestIcon) => {
         expect(icon.src).toMatch(/^\/.*\.png$/)
         expect(icon.sizes).toMatch(/^\d+x\d+$/)
         expect(['image/png', 'image/webp']).toContain(icon.type)
@@ -375,7 +376,7 @@ describe('icon-generator', () => {
         splashSizes: STANDARD_SPLASH_SIZES,
       })
 
-      result.splashScreens.forEach((splash) => {
+      result.splashScreens.forEach((splash: ManifestSplashScreen) => {
         expect(splash.src).toMatch(/^\/.*\.png$/)
         expect(splash.sizes).toMatch(/^\d+x\d+$/)
         expect(['image/png', 'image/webp']).toContain(splash.type)
@@ -459,7 +460,7 @@ describe('icon-generator', () => {
     it('should throw error in strict mode if validation fails', async () => {
       const sharp = (await import('sharp')).default
       const smallSourceImage = join(TEST_DIR, 'small-source.png')
-      
+
       await sharp({
         create: {
           width: 100,
@@ -489,7 +490,7 @@ describe('icon-generator', () => {
     it('should not throw error in non-strict mode even if validation has warnings', async () => {
       const sharp = (await import('sharp')).default
       const smallSourceImage = join(TEST_DIR, 'small-source-non-strict.png')
-      
+
       await sharp({
         create: {
           width: 100,
