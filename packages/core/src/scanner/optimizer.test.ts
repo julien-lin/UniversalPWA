@@ -89,7 +89,7 @@ const expectOptimizationResultOk = (result: Awaited<ReturnType<typeof optimizePr
 }
 
 describe('optimizer', () => {
-  let warnSpy: ReturnType<typeof vi.spyOn> | null = null
+  let warnSpy: ReturnType<typeof vi.spyOn<typeof console, 'warn'>> | null = null
 
   beforeEach(() => {
     warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})

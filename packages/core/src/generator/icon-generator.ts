@@ -3,6 +3,7 @@ import { existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import type { ManifestIcon, ManifestSplashScreen } from './manifest-generator.js'
 import { validateIconSource, type IconValidationResult } from '../validator/icon-validator.js'
+import { logger } from '../utils/logger.js'
 
 export interface IconSize {
   width: number
@@ -220,7 +221,7 @@ export async function generateIcons(options: IconGeneratorOptions): Promise<Icon
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
       // Don't fail generation if apple-touch-icon fails
-      console.warn(`Warning: Failed to generate apple-touch-icon: ${message}`)
+      logger.warn({ module: 'icon-generator' }, `Failed to generate apple-touch-icon: ${message}`)
     }
   }
 

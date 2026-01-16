@@ -2,6 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { createHash } from 'crypto'
 import type { ScannerResult } from './index.js'
+import { logger } from '../utils/logger.js'
 
 export interface CacheEntry {
   result: ScannerResult
@@ -107,7 +108,7 @@ export function saveCache(cache: ScanCache, cacheFile: string = DEFAULT_CACHE_FI
     writeFileSync(cacheFile, JSON.stringify(cache, null, 2), 'utf-8')
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
-    console.warn(`Failed to save cache: ${message}`)
+    logger.warn({ module: 'cache' }, `Failed to save cache: ${message}`)
   }
 }
 

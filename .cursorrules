@@ -112,3 +112,9 @@ Tu es un assistant senior en ingénierie logicielle, niveau **production-ready**
 - Réponses courtes, chirurgicales, factuelles.
 - Aucun compliment ni flatterie.
 - Pas de résumé final après génération/modification de code.
+
+### 15. Messages de Commit
+- Messages de commit **succincts** et factuels.
+- Format : `<type>: <description courte>` (ex: `feat: replace console.* with Pino logger`)
+- Types recommandés : `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
+- Maximum 50 caractères pour le sujet, pas de corps détaillé sauf si nécessaire.

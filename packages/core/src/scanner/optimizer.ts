@@ -3,6 +3,7 @@ import { join, dirname, extname, basename } from 'path'
 import sharp from 'sharp'
 import type { AssetDetectionResult } from './asset-detector.js'
 import type { ProjectConfiguration } from './framework-detector.js'
+import { logger } from '../utils/logger.js'
 
 export type CacheStrategy = 'NetworkFirst' | 'CacheFirst' | 'StaleWhileRevalidate' | 'NetworkOnly' | 'CacheOnly'
 export type ApiType = 'REST' | 'GraphQL' | 'Mixed' | 'None'
@@ -331,7 +332,7 @@ export async function generateResponsiveImageSizes(
       generatedFiles.push(outputPath)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
-      console.warn(`Failed to generate responsive size ${width}w for ${imagePath}: ${message}`)
+      logger.warn({ module: 'optimizer', imagePath, width }, `Failed to generate responsive size: ${message}`)
     }
   }
 
@@ -419,7 +420,7 @@ export async function optimizeImage(
     }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
-    console.warn(`Failed to optimize image ${imagePath}: ${message}`)
+    logger.warn({ module: 'optimizer', imagePath }, `Failed to optimize image: ${message}`)
     return null
   }
 }
@@ -453,7 +454,7 @@ export async function optimizeProjectImages(
     } catch (err: unknown) {
       // Ignore individual image errors
       const message = err instanceof Error ? err.message : String(err)
-      console.warn(`Skipped optimization for ${imagePath}: ${message}`)
+      logger.warn({ module: 'optimizer', imagePath }, `Skipped optimization: ${message}`)
     }
   }
 

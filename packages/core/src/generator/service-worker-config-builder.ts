@@ -9,6 +9,7 @@ import type { BackendIntegration } from '../backends/types.js'
 import type { RouteConfig, ServiceWorkerConfig } from './caching-strategy.js'
 import { PRESET_STRATEGIES } from './caching-strategy.js'
 import { RoutePatternResolver } from './route-pattern-resolver.js'
+import { logger } from '../utils/logger.js'
 
 /**
  * Validation result from configuration checks
@@ -92,7 +93,7 @@ export class ServiceWorkerConfigBuilder {
         if (options?.validate !== false) {
             const validation = this.validate(config)
             if (!validation.isValid) {
-                console.warn('ServiceWorkerConfig validation warnings:', validation.errors)
+                logger.warn({ module: 'service-worker-config-builder', errors: validation.errors }, 'ServiceWorkerConfig validation warnings')
             }
         }
 
