@@ -496,55 +496,30 @@ export interface BatchInjectResult {
 /**
  * Injects PWA meta-tags into multiple HTML files in parallel with concurrency limit
  * This significantly improves performance when processing many files
+ * 
+ * Uses optimized parallel processing with proper async handling
  */
 export async function injectMetaTagsInFilesBatch(batchOptions: BatchInjectOptions): Promise<BatchInjectResult> {
-  const { files, options, concurrency = 5, continueOnError = true } = batchOptions
+  const { files, options, concurrency = 10, continueOnError = true } = batchOptions
 
-  const successful: Array<{ file: string; result: InjectionResult }> = []
-  const failed: Array<{ file: string; error: string }> = []
+  // Import parallel processor dynamically to avoid circular dependencies
+  const { processInParallel } = await import('../utils/parallel-processor.js')
 
-  // Process files in batches with concurrency limit
-  const processBatch = async (batch: string[]): Promise<void> => {
-    const results = await Promise.allSettled(
-      batch.map((file) => {
-        try {
-          const result = injectMetaTagsInFile(file, options)
-          return Promise.resolve({ file, result, success: true as const })
-        } catch (err: unknown) {
-          const message = err instanceof Error ? err.message : String(err)
-          if (!continueOnError) {
-            return Promise.reject(new Error(`Failed to inject meta tags in ${file}: ${message}`))
-          }
-          return Promise.resolve({ file, error: message, success: false as const })
-        }
-      })
-    )
-
-    for (const result of results) {
-      if (result.status === 'fulfilled') {
-        if (result.value.success) {
-          successful.push({ file: result.value.file, result: result.value.result })
-        } else {
-          failed.push({ file: result.value.file, error: result.value.error })
-        }
-      } else {
-        // Promise rejected (should not happen with Promise.allSettled, but handle it)
-        const errorMessage = result.reason instanceof Error ? result.reason.message : String(result.reason)
-        failed.push({ file: 'unknown', error: errorMessage })
-      }
-    }
+  // Convert synchronous injectMetaTagsInFile to async wrapper
+  const processFile = (file: string): Promise<InjectionResult> => {
+    return Promise.resolve(injectMetaTagsInFile(file, options))
   }
 
-  // Split files into batches based on concurrency
-  for (let i = 0; i < files.length; i += concurrency) {
-    const batch = files.slice(i, i + concurrency)
-    await processBatch(batch)
-  }
+  // Process files in parallel
+  const result = await processInParallel(files, processFile, {
+    concurrency,
+    continueOnError,
+  })
 
   return {
-    successful,
-    failed,
-    totalProcessed: successful.length,
-    totalFailed: failed.length,
+    successful: result.successful.map((s) => ({ file: s.item, result: s.result })),
+    failed: result.failed.map((f) => ({ file: f.item, error: f.error })),
+    totalProcessed: result.totalProcessed,
+    totalFailed: result.totalFailed,
   }
 }

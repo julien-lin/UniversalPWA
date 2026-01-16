@@ -23,6 +23,7 @@
     "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.57.0",
     "@types/node": "^25.0.9",
+    "cli-progress": "^3.12.0",
     "eslint": "^9.39.2",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.26",

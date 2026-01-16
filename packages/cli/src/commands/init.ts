@@ -2,12 +2,13 @@ import { scanProject, optimizeProject } from '@julien-lin/universal-pwa-core'
 import { generateManifest, generateAndWriteManifest } from '@julien-lin/universal-pwa-core'
 import { generateIcons } from '@julien-lin/universal-pwa-core'
 import { generateServiceWorker, generateSimpleServiceWorker } from '@julien-lin/universal-pwa-core'
-import { injectMetaTagsInFile } from '@julien-lin/universal-pwa-core'
+import { injectMetaTagsInFile, processInParallel } from '@julien-lin/universal-pwa-core'
 import { checkProjectHttps } from '@julien-lin/universal-pwa-core'
 import chalk from 'chalk'
 import { existsSync } from 'fs'
 import { glob } from 'glob'
 import { join, resolve, relative, normalize } from 'path'
+import cliProgress from 'cli-progress'
 import type { Framework } from '@julien-lin/universal-pwa-core'
 import type { Architecture } from '@julien-lin/universal-pwa-core'
 import { Transaction } from '../utils/transaction.js'
@@ -516,117 +517,151 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
           }
         }
 
+        const totalFiles = htmlFilesToProcess.length
+        
+        // Normalize paths securely - helper function (needs htmlFile context)
+        const normalizePathForInjection = (fullPath: string | undefined, basePath: string, outputDir: string, htmlFile: string, fallback: string): string => {
+          if (!fullPath) return fallback
+          try {
+            // Check if HTML file is in dist/ (production build)
+            const htmlInDist = htmlFile.includes('/dist/')
+            const swInDist = fullPath.includes('/dist/')
+            
+            // If HTML is in dist/, paths should be relative to dist/ root
+            if (htmlInDist && swInDist) {
+              // Both in dist/, use relative path from dist/ root
+              const distIndex = fullPath.indexOf('/dist/')
+              if (distIndex !== -1) {
+                const distPath = fullPath.substring(distIndex + 6) // Remove up to /dist/
+                return distPath.startsWith('/') ? distPath : `/${distPath}`
+              }
+            }
+            
+            // If path is in outputDir (e.g., public/), it must be served at root
+            const rel = relativePath(fullPath, basePath)
+            let normalized = rel.startsWith('/') ? rel : `/${rel}`
+            
+            // For Vite/React, if file is in public/ or dist/, remove directory from path
+            const outputDirName = outputDir.replace(basePath, '').replace(/^\/+|\/+$/g, '')
+            if (outputDirName && normalized.startsWith(`/${outputDirName}/`)) {
+              normalized = normalized.replace(`/${outputDirName}/`, '/')
+            }
+            
+            // Also handle dist/ directory if present
+            if (normalized.includes('/dist/')) {
+              const distIndex = normalized.indexOf('/dist/')
+              normalized = normalized.substring(distIndex + 6)
+              normalized = normalized.startsWith('/') ? normalized : `/${normalized}`
+            }
+            
+            return normalized
+          } catch {
+            return fallback
+          }
+        }
+        
+        // Determine apple-touch-icon path
+        const appleTouchIconFullPath = join(finalOutputDir, 'apple-touch-icon.png')
+        const appleTouchIconExists = existsSync(appleTouchIconFullPath)
+        
+        // Create progress bar for large projects
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        const progressBar = totalFiles > 10 
+          ? new cliProgress.SingleBar({
+              format: chalk.blue('💉 Injecting meta-tags') + ' |{bar}| {percentage}% | {value}/{total} files | ETA: {eta}s',
+              barCompleteChar: '\u2588',
+              barIncompleteChar: '\u2591',
+              hideCursor: true,
+            })
+          : null
+        
+        if (progressBar) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+          progressBar.start(totalFiles, 0)
+        }
+        
+        // Process files in parallel using batch injection with file-specific path normalization
+        // We need to create options per file since normalization depends on htmlFile location
+        const processFileWithNormalizedPaths = (htmlFile: string): Promise<ReturnType<typeof injectMetaTagsInFile>> => {
+          const fileOptions = {
+            manifestPath: normalizePathForInjection(result.manifestPath, result.projectPath, finalOutputDir, htmlFile, '/manifest.json'),
+            themeColor: themeColor ?? '#ffffff',
+            backgroundColor: backgroundColor ?? '#000000',
+            appleTouchIcon: appleTouchIconExists 
+              ? normalizePathForInjection(appleTouchIconFullPath, result.projectPath, finalOutputDir, htmlFile, '/apple-touch-icon.png')
+              : '/apple-touch-icon.png',
+            appleMobileWebAppCapable: true,
+            serviceWorkerPath: normalizePathForInjection(result.serviceWorkerPath, result.projectPath, finalOutputDir, htmlFile, '/sw.js'),
+          }
+          
+          // Use injectMetaTagsInFile directly (it's synchronous but we wrap it in Promise.resolve for parallel processing)
+          return Promise.resolve(injectMetaTagsInFile(htmlFile, fileOptions))
+        }
+        
+        const batchResult = await processInParallel(
+          htmlFilesToProcess,
+          processFileWithNormalizedPaths,
+          {
+            concurrency: 10,
+            continueOnError: true,
+            onProgress: (processed) => {
+              if (progressBar) {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+                progressBar.update(processed)
+              }
+            },
+          }
+        )
+        
+        if (progressBar) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+          progressBar.stop()
+        }
+        
+        // Process results
         let injectedCount = 0
         let skippedCount = 0
-        let errorCount = 0
-        let processedCount = 0
-        const totalFiles = htmlFilesToProcess.length
-
-        for (const htmlFile of htmlFilesToProcess) {
-          processedCount++
-          // Log progression pour gros projets (tous les 50 fichiers ou à la fin)
-          if (totalFiles > 50 && (processedCount % 50 === 0 || processedCount === totalFiles)) {
-            console.log(chalk.gray(`  Processing ${processedCount}/${totalFiles} files...`))
+        
+        for (const success of batchResult.successful) {
+          const injectionResult = success.result
+          if (injectionResult.injected.length > 0) {
+            injectedCount++
+            // Log détaillé pour debug (seulement si peu de fichiers)
+            if (totalFiles <= 10) {
+              const relativePath = relative(result.projectPath, success.item)
+              console.log(chalk.gray(`    ✓ ${relativePath}: ${injectionResult.injected.length} tag(s) injected`))
+            }
+          } else if (injectionResult.skipped.length > 0 && injectionResult.injected.length === 0) {
+            skippedCount++
+            if (totalFiles <= 10) {
+              const relativePath = relative(result.projectPath, success.item)
+              console.log(chalk.gray(`    ⊘ ${relativePath}: already has PWA tags`))
+            }
+          } else {
+            if (totalFiles <= 10) {
+              const relativePath = relative(result.projectPath, success.item)
+              console.log(chalk.yellow(`    ⚠ ${relativePath}: no tags injected (check warnings)`))
+            }
+            if (injectionResult.warnings.length > 0) {
+              injectionResult.warnings.forEach(warning => {
+                result.warnings.push(`${relative(result.projectPath, success.item)}: ${warning}`)
+              })
+            }
           }
-
-          try {
-            // Normalize paths securely
-            // For Vite/React, files in public/ or dist/ are served at root
-            const normalizePathForInjection = (fullPath: string | undefined, basePath: string, outputDir: string, fallback: string): string => {
-              if (!fullPath) return fallback
-              try {
-                // Check if HTML file is in dist/ (production build)
-                const htmlInDist = htmlFile.includes('/dist/')
-                const swInDist = fullPath.includes('/dist/')
-                
-                // If HTML is in dist/, paths should be relative to dist/ root
-                if (htmlInDist && swInDist) {
-                  // Both in dist/, use relative path from dist/ root
-                  const distIndex = fullPath.indexOf('/dist/')
-                  if (distIndex !== -1) {
-                    const distPath = fullPath.substring(distIndex + 6) // Remove up to /dist/
-                    return distPath.startsWith('/') ? distPath : `/${distPath}`
-                  }
-                }
-                
-                // If path is in outputDir (e.g., public/), it must be served at root
-                const rel = relativePath(fullPath, basePath)
-                let normalized = rel.startsWith('/') ? rel : `/${rel}`
-                
-                // For Vite/React, if file is in public/ or dist/, remove directory from path
-                // Ex: /public/sw.js -> /sw.js
-                // Ex: /dist/sw.js -> /sw.js
-                // Ex: /public/manifest.json -> /manifest.json
-                const outputDirName = outputDir.replace(basePath, '').replace(/^\/+|\/+$/g, '')
-                if (outputDirName && normalized.startsWith(`/${outputDirName}/`)) {
-                  normalized = normalized.replace(`/${outputDirName}/`, '/')
-                }
-                
-                // Also handle dist/ directory if present
-                if (normalized.includes('/dist/')) {
-                  const distIndex = normalized.indexOf('/dist/')
-                  normalized = normalized.substring(distIndex + 6)
-                  normalized = normalized.startsWith('/') ? normalized : `/${normalized}`
-                }
-                
-                return normalized
-              } catch {
-                return fallback
-              }
-            }
-            
-            // Determine apple-touch-icon path
-            const appleTouchIconFullPath = join(finalOutputDir, 'apple-touch-icon.png')
-            const appleTouchIconExists = existsSync(appleTouchIconFullPath)
-            
-            const injectionResult = injectMetaTagsInFile(htmlFile, {
-              manifestPath: normalizePathForInjection(result.manifestPath, result.projectPath, finalOutputDir, '/manifest.json'),
-              themeColor: themeColor ?? '#ffffff',
-              backgroundColor: backgroundColor ?? '#000000',
-              appleTouchIcon: appleTouchIconExists 
-                ? normalizePathForInjection(appleTouchIconFullPath, result.projectPath, finalOutputDir, '/apple-touch-icon.png')
-                : '/apple-touch-icon.png', // Placeholder if not generated
-              appleMobileWebAppCapable: true,
-              serviceWorkerPath: normalizePathForInjection(result.serviceWorkerPath, result.projectPath, finalOutputDir, '/sw.js'),
-            })
-            
-            if (injectionResult.injected.length > 0) {
-              injectedCount++
-              // Log détaillé pour debug (seulement si verbose ou si peu de fichiers)
-              if (totalFiles <= 10) {
-                const relativePath = relative(result.projectPath, htmlFile)
-                console.log(chalk.gray(`    ✓ ${relativePath}: ${injectionResult.injected.length} tag(s) injected`))
-              }
-            } else if (injectionResult.skipped.length > 0 && injectionResult.injected.length === 0) {
-              // Tous les tags étaient déjà présents
-              skippedCount++
-              if (totalFiles <= 10) {
-                const relativePath = relative(result.projectPath, htmlFile)
-                console.log(chalk.gray(`    ⊘ ${relativePath}: already has PWA tags`))
-              }
-            } else {
-              // Aucun tag injecté ni skipped (problème potentiel)
-              if (totalFiles <= 10) {
-                const relativePath = relative(result.projectPath, htmlFile)
-                console.log(chalk.yellow(`    ⚠ ${relativePath}: no tags injected (check warnings)`))
-              }
-              if (injectionResult.warnings.length > 0) {
-                injectionResult.warnings.forEach(warning => {
-                  result.warnings.push(`${relative(result.projectPath, htmlFile)}: ${warning}`)
-                })
-              }
-            }
-          } catch (error) {
-            errorCount++
-            const errorMessage = error instanceof Error ? error.message : String(error)
-            const errorCode = detectErrorCode(error)
-            const warningMessage = formatError(errorCode, `${htmlFile}: ${errorMessage}`)
-            result.warnings.push(warningMessage)
+        }
+        
+        // Handle failed files
+        for (const failed of batchResult.failed) {
+          const errorCode = detectErrorCode(new Error(failed.error))
+          const warningMessage = formatError(errorCode, `${failed.item}: ${failed.error}`)
+          result.warnings.push(warningMessage)
+          if (totalFiles <= 10) {
             console.log(chalk.yellow(`⚠ ${warningMessage}`))
           }
         }
         
         result.htmlFilesInjected = injectedCount
+        const errorCount = batchResult.totalFailed
         const fileTypeLabel = htmlFilesToProcess.some(f => f.endsWith('.twig') || f.endsWith('.html.twig') || f.endsWith('.blade.php'))
           ? 'template file(s)'
           : 'HTML file(s)'
