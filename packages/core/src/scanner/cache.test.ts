@@ -73,7 +73,7 @@ const expectCacheHit = (dir: string, cache: ScanCache | null, expected: boolean)
 }
 
 describe('cache', () => {
-  let warnSpy: ReturnType<typeof vi.spyOn> | null = null
+  let warnSpy: ReturnType<typeof vi.spyOn<typeof console, 'warn'>> | null = null
 
   beforeEach(() => {
     warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})

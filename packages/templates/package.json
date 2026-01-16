@@ -52,13 +52,13 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "zod": "^4.2.1"
+    "zod": "^4.3.5"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^2.1.4",
-    "tsup": "^8.3.0",
-    "tsx": "^4.19.0",
+    "@vitest/coverage-v8": "^4.0.17",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
     "typescript": "~5.9.3",
-    "vitest": "^2.1.4"
+    "vitest": "^4.0.17"
   }
 }

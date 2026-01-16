@@ -6,7 +6,7 @@ import { scanProject, generateReport, validateProjectPath, type ScannerResult } 
 const TEST_DIR = join(process.cwd(), '.test-tmp-scanner')
 
 describe('scanner orchestrator', () => {
-  let warnSpy: ReturnType<typeof vi.spyOn> | null = null
+  let warnSpy: ReturnType<typeof vi.spyOn<typeof console, 'warn'>> | null = null
 
   beforeEach(() => {
     warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
