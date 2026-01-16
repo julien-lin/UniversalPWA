@@ -1,7 +1,12 @@
 import { test, expect } from '@playwright/test'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 
 test.describe('E2E - Symfony (PHP)', () => {
   const BASE_URL = 'http://localhost:3003'
+  const hasFixture = existsSync(join(process.cwd(), 'fixtures/symfony/public'))
+
+  test.skip(!hasFixture, 'Fixture symfony/public absente')
 
   test.beforeEach(async ({ page }) => {
     // Charger via HTTP pour permettre service workers et manifest

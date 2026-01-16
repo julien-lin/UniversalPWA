@@ -1,7 +1,12 @@
 import { test, expect } from '@playwright/test'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 
 test.describe('E2E - React + Vite (Back\'n Food)', () => {
   const BASE_URL = 'http://localhost:3001'
+  const hasFixture = existsSync(join(process.cwd(), 'fixtures/react-vite/dist'))
+
+  test.skip(!hasFixture, 'Fixture react-vite/dist absente')
 
   test.beforeEach(async ({ page }) => {
     // Charger via HTTP pour permettre service workers et manifest

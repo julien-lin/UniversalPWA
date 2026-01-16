@@ -1,7 +1,12 @@
 import { test, expect } from '@playwright/test'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 
 test.describe('E2E - Site Statique (No Framework)', () => {
   const BASE_URL = 'http://localhost:3002'
+  const hasFixture = existsSync(join(process.cwd(), 'fixtures/no-framework/dist'))
+
+  test.skip(!hasFixture, 'Fixture no-framework/dist absente')
 
   test.beforeEach(async ({ page }) => {
     // Charger via HTTP pour permettre service workers et manifest

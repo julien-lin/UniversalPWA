@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
 import { join } from 'path'
 import {
@@ -73,7 +73,10 @@ const expectCacheHit = (dir: string, cache: ScanCache | null, expected: boolean)
 }
 
 describe('cache', () => {
+  let warnSpy: ReturnType<typeof vi.spyOn> | null = null
+
   beforeEach(() => {
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     try {
       if (existsSync(TEST_DIR)) {
         rmSync(TEST_DIR, { recursive: true, force: true })
@@ -82,6 +85,11 @@ describe('cache', () => {
       // Ignore errors during cleanup
     }
     mkdirSync(TEST_DIR, { recursive: true })
+  })
+
+  afterEach(() => {
+    warnSpy?.mockRestore()
+    warnSpy = null
   })
 
   describe('loadCache and saveCache', () => {

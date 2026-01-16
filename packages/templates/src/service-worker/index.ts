@@ -3,8 +3,23 @@ import { spaServiceWorkerTemplate } from './spa.js'
 import { ssrServiceWorkerTemplate } from './ssr.js'
 import { wordpressServiceWorkerTemplate } from './wordpress.js'
 import { phpServiceWorkerTemplate } from './php.js'
+import { laravelSpaServiceWorkerTemplate } from './laravel-spa.js'
+import { laravelSsrServiceWorkerTemplate } from './laravel-ssr.js'
+import { laravelApiServiceWorkerTemplate } from './laravel-api.js'
+import { symfonySpaServiceWorkerTemplate } from './symfony-spa.js'
+import { symfonyApiServiceWorkerTemplate } from './symfony-api.js'
 
-export type ServiceWorkerTemplateType = 'static' | 'spa' | 'ssr' | 'wordpress' | 'php'
+export type ServiceWorkerTemplateType =
+  | 'static'
+  | 'spa'
+  | 'ssr'
+  | 'wordpress'
+  | 'php'
+  | 'laravel-spa'
+  | 'laravel-ssr'
+  | 'laravel-api'
+  | 'symfony-spa'
+  | 'symfony-api'
 
 export interface ServiceWorkerTemplate {
   type: ServiceWorkerTemplateType
@@ -21,6 +36,11 @@ export function getServiceWorkerTemplate(type: ServiceWorkerTemplateType): Servi
     ssr: ssrServiceWorkerTemplate,
     wordpress: wordpressServiceWorkerTemplate,
     php: phpServiceWorkerTemplate,
+    'laravel-spa': laravelSpaServiceWorkerTemplate,
+    'laravel-ssr': laravelSsrServiceWorkerTemplate,
+    'laravel-api': laravelApiServiceWorkerTemplate,
+    'symfony-spa': symfonySpaServiceWorkerTemplate,
+    'symfony-api': symfonyApiServiceWorkerTemplate,
   }
 
   const content = templates[type]
@@ -39,7 +59,18 @@ export function getServiceWorkerTemplate(type: ServiceWorkerTemplateType): Servi
  * Liste tous les types de templates disponibles
  */
 export function getAvailableTemplateTypes(): ServiceWorkerTemplateType[] {
-  return ['static', 'spa', 'ssr', 'wordpress', 'php']
+  return [
+    'static',
+    'spa',
+    'ssr',
+    'wordpress',
+    'php',
+    'laravel-spa',
+    'laravel-ssr',
+    'laravel-api',
+    'symfony-spa',
+    'symfony-api',
+  ]
 }
 
 /**
@@ -65,16 +96,23 @@ export function determineTemplateType(
     return 'php' // Use generic PHP template for CMS/e-commerce
   }
 
+  if (framework === 'Symfony') {
+    return architecture === 'spa' ? 'symfony-spa' : 'symfony-api'
+  }
+
   // PHP frameworks
-  if (
-    framework === 'Symfony' ||
-    framework === 'Laravel' ||
-    framework === 'CodeIgniter' ||
-    framework === 'CakePHP' ||
-    framework === 'Yii' ||
-    framework === 'Laminas'
-  ) {
+  if (framework === 'CodeIgniter' || framework === 'CakePHP' || framework === 'Yii' || framework === 'Laminas') {
     return 'php'
+  }
+
+  if (framework === 'Laravel') {
+    if (architecture === 'spa') {
+      return 'laravel-spa'
+    }
+    if (architecture === 'ssr') {
+      return 'laravel-ssr'
+    }
+    return 'laravel-api'
   }
 
   // Backend frameworks (Python, Ruby, Go, Java, .NET) - use static or SSR template based on architecture
@@ -100,4 +138,9 @@ export { spaServiceWorkerTemplate } from './spa.js'
 export { ssrServiceWorkerTemplate } from './ssr.js'
 export { wordpressServiceWorkerTemplate } from './wordpress.js'
 export { phpServiceWorkerTemplate } from './php.js'
+export { laravelSpaServiceWorkerTemplate } from './laravel-spa.js'
+export { laravelSsrServiceWorkerTemplate } from './laravel-ssr.js'
+export { laravelApiServiceWorkerTemplate } from './laravel-api.js'
+export { symfonySpaServiceWorkerTemplate } from './symfony-spa.js'
+export { symfonyApiServiceWorkerTemplate } from './symfony-api.js'
 
