@@ -27,6 +27,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Clear TypeScript cache
+        run: |
+          rm -rf packages/*/tsconfig.tsbuildinfo
+          rm -rf packages/*/.tsbuildinfo
+          find packages -name "*.tsbuildinfo" -delete || true
+
       - name: Lint
         run: pnpm -r lint
         continue-on-error: false
