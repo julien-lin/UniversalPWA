@@ -22,7 +22,8 @@ export interface PreviewResult {
 /**
  * Preview command: launches a local server to preview the PWA
  */
-export function previewCommand(options: PreviewOptions = {}): Promise<PreviewResult> {
+// eslint-disable-next-line @typescript-eslint/require-await
+export async function previewCommand(options: PreviewOptions = {}): Promise<PreviewResult> {
   const {
     projectPath = process.cwd(),
     port = 3000,
@@ -51,7 +52,7 @@ export function previewCommand(options: PreviewOptions = {}): Promise<PreviewRes
     // Check manifest
     const manifestPath = join(resolvedPath, 'public', 'manifest.json')
     const manifestPathAlt = join(resolvedPath, 'manifest.json')
-    
+
     if (existsSync(manifestPath) || existsSync(manifestPathAlt)) {
       result.manifestExists = true
       console.log(chalk.green('✓ manifest.json found'))
@@ -63,7 +64,7 @@ export function previewCommand(options: PreviewOptions = {}): Promise<PreviewRes
     // Check service worker
     const swPath = join(resolvedPath, 'public', 'sw.js')
     const swPathAlt = join(resolvedPath, 'sw.js')
-    
+
     if (existsSync(swPath) || existsSync(swPathAlt)) {
       result.serviceWorkerExists = true
       console.log(chalk.green('✓ Service worker found'))

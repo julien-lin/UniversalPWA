@@ -95,7 +95,7 @@ export async function promptInitOptions(
 ): Promise<PromptAnswers> {
   // Générer toutes les suggestions intelligentes
   const suggestions = generateSuggestions(projectPath, framework, architecture)
-  
+
   const defaultName = suggestions.name.name
   const defaultShortName = suggestions.name.shortName
   const defaultIconSource = suggestions.icons.length > 0 ? suggestions.icons[0].path : undefined
@@ -143,6 +143,7 @@ export async function promptInitOptions(
   }
 
   // Phase 2 : Configuration de l'application
+  // @ts-expect-error - inquirer type definition is too strict for array syntax
   const configAnswers = await inquirer.prompt<Omit<PromptAnswers, 'environment'>>([
     {
       type: 'input',

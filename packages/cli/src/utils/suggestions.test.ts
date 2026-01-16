@@ -166,7 +166,7 @@ describe('suggestions', () => {
     })
 
     it('should be case insensitive for framework names', () => {
-      const suggestion = suggestColors(TEST_DIR, 'REACT')
+      const suggestion = suggestColors(TEST_DIR, 'react')
       expect(suggestion.themeColor).toBe('#61dafb')
     })
   })

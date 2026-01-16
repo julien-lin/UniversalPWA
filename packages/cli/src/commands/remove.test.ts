@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { removeCommand } from './remove'
+import { removeCommand } from './remove.js'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-cli-remove')
 
@@ -137,7 +137,7 @@ describe('remove command', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.filesRemoved.some((f) => f.includes('workbox-'))).toBe(true)
+      expect(result.filesRemoved.some((f: string) => f.includes('workbox-'))).toBe(true)
     })
 
     it('should handle missing files gracefully', async () => {
