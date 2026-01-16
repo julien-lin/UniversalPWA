@@ -6,7 +6,7 @@ import {
   generateSimpleServiceWorker,
   generateAndWriteServiceWorker,
   type ServiceWorkerGeneratorOptions,
-} from './service-worker-generator'
+} from './service-worker-generator.js'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-sw-generator')
 

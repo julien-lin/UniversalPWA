@@ -1,0 +1,15 @@
+source "https://rubygems.org"
+
+gemspec
+
+group :development do
+  gem "rspec", "~> 3.12"
+  gem "rspec-rails", "~> 6.0"
+  gem "rubocop", "~> 1.50"
+  gem "rubocop-rspec", "~> 2.20"
+  gem "simplecov", "~> 0.22"
+  gem "rails", "~> 7.0"
+  gem "sinatra", "~> 3.0"
+  gem "dry-struct", "~> 1.6"
+  gem "http", "~> 5.1"
+end

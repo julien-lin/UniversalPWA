@@ -49,6 +49,7 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsup src/index.ts --dts --format esm,cjs",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
     "test": "vitest run"
   },

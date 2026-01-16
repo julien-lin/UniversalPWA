@@ -1,0 +1,80 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "universal-pwa-python"
+version = "2.0.0.dev0"
+description = "Universal PWA SDK for Python frameworks (Django, Flask, FastAPI)"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "UniversalPWA Team", email = "info@universalpwa.dev" }
+]
+keywords = ["pwa", "progressive-web-app", "django", "flask", "fastapi"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "requests>=2.28.0",
+    "pydantic>=2.0.0",
+    "typing-extensions>=4.0.0",
+]
+
+[project.optional-dependencies]
+django = ["Django>=2.2"]
+flask = ["Flask>=1.0"]
+fastapi = ["FastAPI>=0.68.0", "uvicorn>=0.15.0"]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+    "django>=4.0",
+    "flask>=2.0",
+    "fastapi>=0.95.0",
+]
+
+[project.urls]
+Homepage = "https://universalpwa.dev"
+Documentation = "https://docs.universalpwa.dev/sdk/python"
+Repository = "https://github.com/julien-lin/universal-pwa"
+Issues = "https://github.com/julien-lin/universal-pwa/issues"
+
+[tool.hatch.version]
+path = "src/universal_pwa/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/universal_pwa"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=src/universal_pwa --cov-report=term-missing"

@@ -7,7 +7,7 @@ import {
   generateAndWriteManifest,
   ManifestSchema,
   type ManifestGeneratorOptions,
-} from './manifest-generator'
+} from './manifest-generator.js'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-manifest')
 
