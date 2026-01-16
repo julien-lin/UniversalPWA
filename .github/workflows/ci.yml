@@ -29,9 +29,16 @@ jobs:
 
       - name: Lint
         run: pnpm -r lint
+        continue-on-error: false
 
       - name: Test (with coverage)
         run: pnpm -r --filter '!universal-pwa-demos' --workspace-root test -- --coverage
+
+      - name: Verify coverage files exist
+        run: |
+          echo "Checking coverage files..."
+          ls -la packages/*/coverage/coverage-final.json || echo "Some coverage files missing"
+          find packages -name "coverage-final.json" -type f || echo "No coverage files found"
 
       - name: Build
         run: pnpm -r build
@@ -41,14 +48,18 @@ jobs:
         if: always()
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./packages/*/coverage/coverage-final.json
-          name: codecov-umbrella
-          fail_ci_if_error: false
-          # Support monorepo avec flags par package
+          files: |
+            ./packages/core/coverage/coverage-final.json
+            ./packages/cli/coverage/coverage-final.json
+            ./packages/templates/coverage/coverage-final.json
+            ./packages/web-ui/coverage/coverage-final.json
           flags: |
             core
             cli
             templates
-          # Détection automatique des fichiers coverage
+            web-ui
+          name: codecov-umbrella
+          fail_ci_if_error: false
+          # Détection automatique des fichiers coverage dans le répertoire
           directory: ./
 
