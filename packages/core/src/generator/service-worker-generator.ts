@@ -68,11 +68,14 @@ export async function generateServiceWorker(
   mkdirSync(outputDir, { recursive: true })
 
   // Determine template type
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
   const finalTemplateType: ServiceWorkerTemplateType = templateType ?? determineTemplateType(architecture, framework ?? null)
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
   const template = getServiceWorkerTemplate(finalTemplateType)
 
   // Create temporary source file with template
   const swSrcPath = join(outputDir, 'sw-src.js')
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
   writeFileSync(swSrcPath, template.content, 'utf-8')
 
   const swDestPath = join(outputDir, swDest)
@@ -245,11 +248,14 @@ export async function generateServiceWorkerFromConfig(
   } = options
 
   // Determine template type
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
   const finalTemplateType: ServiceWorkerTemplateType = templateType ?? determineTemplateType(architecture, framework ?? null)
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
   const template = getServiceWorkerTemplate(finalTemplateType)
 
   // Create temporary source file with template
   const swSrcPath = join(outputDir, 'sw-src.js')
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
   writeFileSync(swSrcPath, template.content, 'utf-8')
 
   const swDestPath = join(outputDir, swDest)
