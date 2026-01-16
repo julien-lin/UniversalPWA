@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
 import { join } from 'path'
 import { scanProject, generateReport, validateProjectPath, type ScannerResult } from './index.js'
@@ -6,7 +6,10 @@ import { scanProject, generateReport, validateProjectPath, type ScannerResult } 
 const TEST_DIR = join(process.cwd(), '.test-tmp-scanner')
 
 describe('scanner orchestrator', () => {
+  let warnSpy: ReturnType<typeof vi.spyOn> | null = null
+
   beforeEach(() => {
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     try {
       if (existsSync(TEST_DIR)) {
         rmSync(TEST_DIR, { recursive: true, force: true })
@@ -15,6 +18,11 @@ describe('scanner orchestrator', () => {
       // Ignore errors during cleanup
     }
     mkdirSync(TEST_DIR, { recursive: true })
+  })
+
+  afterEach(() => {
+    warnSpy?.mockRestore()
+    warnSpy = null
   })
 
   describe('scanProject', () => {

@@ -27,6 +27,8 @@ test.describe('E2E - Static HTML Site', () => {
 
 // --- React + Vite ---
 test.describe('E2E - React + Vite (build -> init -> verification)', () => {
+    const hasFixture = existsSync(join(FIXTURES_ROOT, 'react-vite', 'dist', 'index.html'))
+    test.skip(!hasFixture, 'Fixture react-vite/dist absente')
     const indexPath = join(FIXTURES_ROOT, 'react-vite', 'dist', 'index.html')
 
     test('should load built app and expose PWA assets', async ({ page }) => {
@@ -46,6 +48,8 @@ test.describe('E2E - React + Vite (build -> init -> verification)', () => {
 
 // --- Vue + Nuxt (SSR) ---
 test.describe('E2E - Vue + Nuxt (SSR)', () => {
+    const hasFixture = existsSync(join(FIXTURES_ROOT, 'nuxt-ssr', 'dist', 'index.html'))
+    test.skip(!hasFixture, 'Fixture nuxt-ssr/dist absente')
     const indexPath = join(FIXTURES_ROOT, 'nuxt-ssr', 'dist', 'index.html')
 
     test('should render SSR output with PWA meta', async ({ page }) => {
@@ -59,6 +63,8 @@ test.describe('E2E - Vue + Nuxt (SSR)', () => {
 
 // --- Symfony (PHP) ---
 test.describe('E2E - Symfony (PHP)', () => {
+    const hasFixture = existsSync(join(FIXTURES_ROOT, 'symfony', 'public', 'index.html'))
+    test.skip(!hasFixture, 'Fixture symfony/public absente')
     const indexPath = join(FIXTURES_ROOT, 'symfony', 'public', 'index.html')
 
     test('should include Twig-rendered PWA meta', async ({ page }) => {
@@ -71,6 +77,8 @@ test.describe('E2E - Symfony (PHP)', () => {
 
 // --- WordPress ---
 test.describe('E2E - WordPress', () => {
+    const hasFixture = existsSync(join(FIXTURES_ROOT, 'wordpress', 'index.html'))
+    test.skip(!hasFixture, 'Fixture wordpress absente')
     const indexPath = join(FIXTURES_ROOT, 'wordpress', 'index.html')
 
     test('should expose WP markup with PWA assets', async ({ page }) => {
@@ -83,6 +91,8 @@ test.describe('E2E - WordPress', () => {
 
 // --- Project Without Framework ---
 test.describe('E2E - Project Without Framework', () => {
+    const hasFixture = existsSync(join(FIXTURES_ROOT, 'no-framework', 'dist', 'index.html'))
+    test.skip(!hasFixture, 'Fixture no-framework/dist absente')
     const indexPath = join(FIXTURES_ROOT, 'no-framework', 'dist', 'index.html')
 
     test('should serve default PWA shell', async ({ page }) => {

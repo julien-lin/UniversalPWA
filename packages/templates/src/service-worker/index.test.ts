@@ -4,7 +4,7 @@ import {
   getAvailableTemplateTypes,
   determineTemplateType,
   type ServiceWorkerTemplateType,
-} from './index'
+} from './index.js'
 
 describe('service-worker templates', () => {
   describe('getServiceWorkerTemplate', () => {
@@ -59,6 +59,47 @@ describe('service-worker templates', () => {
       expect(template.content).toContain('/public/')
     })
 
+    it('should return laravel-spa template', () => {
+      const template = getServiceWorkerTemplate('laravel-spa')
+
+      expect(template.type).toBe('laravel-spa')
+      expect(template.content).toContain('NavigationRoute')
+      expect(template.content).toContain('X-Requested-With')
+    })
+
+    it('should return laravel-ssr template', () => {
+      const template = getServiceWorkerTemplate('laravel-ssr')
+
+      expect(template.type).toBe('laravel-ssr')
+      expect(template.content).toContain("request.mode === 'navigate'")
+      expect(template.content).toContain('X-Requested-With')
+    })
+
+    it('should return laravel-api template', () => {
+      const template = getServiceWorkerTemplate('laravel-api')
+
+      expect(template.type).toBe('laravel-api')
+      expect(template.content).toContain('/api/')
+      expect(template.content).toContain('X-Requested-With')
+    })
+
+    it('should return symfony-spa template', () => {
+      const template = getServiceWorkerTemplate('symfony-spa')
+
+      expect(template.type).toBe('symfony-spa')
+      expect(template.content).toContain('NavigationRoute')
+      expect(template.content).toContain('/build/')
+      expect(template.content).toContain('/bundles/')
+    })
+
+    it('should return symfony-api template', () => {
+      const template = getServiceWorkerTemplate('symfony-api')
+
+      expect(template.type).toBe('symfony-api')
+      expect(template.content).toContain('/api/')
+      expect(template.content).toContain('X-Requested-With')
+    })
+
     it('should throw error for unknown type', () => {
       expect(() => getServiceWorkerTemplate('unknown' as ServiceWorkerTemplateType)).toThrow(
         'Unknown service worker template type',
@@ -75,7 +116,12 @@ describe('service-worker templates', () => {
       expect(types).toContain('ssr')
       expect(types).toContain('wordpress')
       expect(types).toContain('php')
-      expect(types).toHaveLength(5)
+      expect(types).toContain('laravel-spa')
+      expect(types).toContain('laravel-ssr')
+      expect(types).toContain('laravel-api')
+      expect(types).toContain('symfony-spa')
+      expect(types).toContain('symfony-api')
+      expect(types).toHaveLength(10)
     })
   })
 
@@ -86,14 +132,15 @@ describe('service-worker templates', () => {
       expect(determineTemplateType('static', 'WordPress')).toBe('wordpress')
     })
 
-    it('should return php for Symfony framework', () => {
-      expect(determineTemplateType('ssr', 'Symfony')).toBe('php')
-      expect(determineTemplateType('spa', 'Symfony')).toBe('php')
+    it('should return symfony templates for Symfony framework', () => {
+      expect(determineTemplateType('ssr', 'Symfony')).toBe('symfony-api')
+      expect(determineTemplateType('spa', 'Symfony')).toBe('symfony-spa')
     })
 
     it('should return php for Laravel framework', () => {
-      expect(determineTemplateType('ssr', 'Laravel')).toBe('php')
-      expect(determineTemplateType('spa', 'Laravel')).toBe('php')
+      expect(determineTemplateType('ssr', 'Laravel')).toBe('laravel-ssr')
+      expect(determineTemplateType('spa', 'Laravel')).toBe('laravel-spa')
+      expect(determineTemplateType('static', 'Laravel')).toBe('laravel-api')
     })
 
     it('should return spa for spa architecture', () => {
@@ -113,13 +160,24 @@ describe('service-worker templates', () => {
 
     it('should prioritize framework over architecture', () => {
       expect(determineTemplateType('spa', 'WordPress')).toBe('wordpress')
-      expect(determineTemplateType('ssr', 'Symfony')).toBe('php')
+      expect(determineTemplateType('ssr', 'Symfony')).toBe('symfony-api')
     })
   })
 
   describe('template content validation', () => {
     it('should all templates use importScripts with Workbox CDN', () => {
-      const types: ServiceWorkerTemplateType[] = ['static', 'spa', 'ssr', 'wordpress', 'php']
+      const types: ServiceWorkerTemplateType[] = [
+        'static',
+        'spa',
+        'ssr',
+        'wordpress',
+        'php',
+        'laravel-spa',
+        'laravel-ssr',
+        'laravel-api',
+        'symfony-spa',
+        'symfony-api',
+      ]
 
       types.forEach((type) => {
         const template = getServiceWorkerTemplate(type)
@@ -130,7 +188,18 @@ describe('service-worker templates', () => {
     })
 
     it('should all templates contain precacheAndRoute', () => {
-      const types: ServiceWorkerTemplateType[] = ['static', 'spa', 'ssr', 'wordpress', 'php']
+      const types: ServiceWorkerTemplateType[] = [
+        'static',
+        'spa',
+        'ssr',
+        'wordpress',
+        'php',
+        'laravel-spa',
+        'laravel-ssr',
+        'laravel-api',
+        'symfony-spa',
+        'symfony-api',
+      ]
 
       types.forEach((type) => {
         const template = getServiceWorkerTemplate(type)
@@ -155,6 +224,43 @@ describe('service-worker templates', () => {
       const template = getServiceWorkerTemplate('php')
       expect(template.content).toContain('/build/')
       expect(template.content).toContain('/public/')
+    })
+
+    it('should laravel templates include CSRF-friendly headers', () => {
+      const templates = [
+        getServiceWorkerTemplate('laravel-spa'),
+        getServiceWorkerTemplate('laravel-ssr'),
+        getServiceWorkerTemplate('laravel-api'),
+      ]
+
+      templates.forEach((template) => {
+        expect(template.content).toContain('X-Requested-With')
+        expect(template.content).toContain('credentials')
+      })
+    })
+
+    it('should symfony templates include CSRF-friendly headers', () => {
+      const templates = [
+        getServiceWorkerTemplate('symfony-spa'),
+        getServiceWorkerTemplate('symfony-api'),
+      ]
+
+      templates.forEach((template) => {
+        expect(template.content).toContain('X-Requested-With')
+        expect(template.content).toContain('credentials')
+      })
+    })
+
+    it('should symfony templates contain asset versioning routes', () => {
+      const templates = [
+        getServiceWorkerTemplate('symfony-spa'),
+        getServiceWorkerTemplate('symfony-api'),
+      ]
+
+      templates.forEach((template) => {
+        expect(template.content).toContain('/build/')
+        expect(template.content).toContain('/bundles/')
+      })
     })
   })
 })
