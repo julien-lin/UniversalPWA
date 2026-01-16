@@ -1,15 +1,11 @@
 name: CI
 
-# Désactivé pendant le développement - sera réactivé à la fin du MVP
-# on:
-#   push:
-#     branches: [main, develop]
-#   pull_request:
-#     branches: [main, develop]
-
-# Workflow désactivé - ne s'exécute que manuellement via workflow_dispatch
 on:
-  workflow_dispatch:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:  # Garder pour tests manuels
 
 jobs:
   lint-and-test:
@@ -41,13 +37,19 @@ jobs:
       - name: Build
         run: pnpm -r build
 
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v4
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
         if: always()
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./packages/*/coverage/coverage-final.json
-          flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false
+          # Support monorepo avec flags par package
+          flags: |
+            core
+            cli
+            templates
+          # Détection automatique des fichiers coverage
+          directory: ./
 
