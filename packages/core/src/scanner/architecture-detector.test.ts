@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
 import { join } from 'path'
-import { detectArchitecture } from './architecture-detector'
+import { detectArchitecture } from './architecture-detector.js'
 
 const TEST_DIR = join(process.cwd(), '.test-tmp-architecture-detector')
 
@@ -21,7 +21,7 @@ describe('architecture-detector', () => {
     ensureDir('src')
     write(`src/${file}`, content)
   }
-  const writePkg = (deps?: Record<string, string>, devDeps?: Record<string, string>) =>
+  const writePkg = (deps?: Record<string, string | undefined>, devDeps?: Record<string, string | undefined>) =>
     write(
       'package.json',
       JSON.stringify({ dependencies: deps ?? {}, devDependencies: devDeps ?? {} }),
@@ -104,7 +104,7 @@ describe('architecture-detector', () => {
       writeIndex('<html><body></body></html>')
       const result = await detect()
       expect(result.architecture).toBe('ssr')
-      expect(result.indicators.some((i) => i.includes(label))).toBe(true)
+      expect(result.indicators.some((i: string) => i.includes(label))).toBe(true)
     })
   })
 
@@ -116,7 +116,7 @@ describe('architecture-detector', () => {
       writePkg(dep)
       const result = await detect()
       expect(result.architecture).toBe('spa')
-      expect(result.indicators.some((i) => i.includes(label))).toBe(true)
+      expect(result.indicators.some((i: string) => i.includes(label))).toBe(true)
     })
   })
 
@@ -165,7 +165,7 @@ describe('architecture-detector', () => {
 
       expect(result.architecture).toBe('spa')
       expect(result.confidence).toBe('medium')
-      expect(result.indicators.some((i) => i.includes('router patterns'))).toBe(true)
+      expect(result.indicators.some((i: string) => i.includes('router patterns'))).toBe(true)
     })
 
     it('should handle read errors in JS files gracefully', async () => {

@@ -235,11 +235,11 @@ describe('cache', () => {
   describe('removeCacheEntry', () => {
     it('should remove specific entry', () => {
       const result = makeResult(TEST_DIR)
-      let cache = updateCache(TEST_DIR, result, null)
+      const cache = updateCache(TEST_DIR, result, null)
       expect(Object.keys(cache.entries).length).toBe(1)
 
-      cache = removeCacheEntry(TEST_DIR, cache)
-      expect(cache).toBeNull() // Cache vide après suppression
+      const updatedCache = removeCacheEntry(TEST_DIR, cache)
+      expect(updatedCache).toBeNull() // Cache vide après suppression
     })
   })
 })

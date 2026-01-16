@@ -63,7 +63,7 @@ describe('icon-generator', () => {
       }
 
       // Check icon structure
-      result.icons.forEach((icon: typeof STANDARD_ICON_SIZES[number] & { src: string }, index: number) => {
+      result.icons.forEach((icon: ManifestIcon, index: number) => {
         expect(icon.src).toContain(STANDARD_ICON_SIZES[index].name)
         expect(icon.sizes).toBe(`${STANDARD_ICON_SIZES[index].width}x${STANDARD_ICON_SIZES[index].height}`)
         expect(icon.type).toBe('image/png')
@@ -292,7 +292,7 @@ describe('icon-generator', () => {
       expect(result.splashScreens).toHaveLength(3)
       expect(result.generatedFiles.length).toBeGreaterThanOrEqual(3)
 
-      result.splashScreens.forEach((splash: typeof STANDARD_SPLASH_SIZES[number] & { sizes: string }, index: number) => {
+      result.splashScreens.forEach((splash: ManifestSplashScreen, index: number) => {
         expect(splash.sizes).toBe(`${customSplashSizes[index].width}x${customSplashSizes[index].height}`)
       })
     })
