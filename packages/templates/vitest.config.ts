@@ -14,6 +14,8 @@ export default defineConfig({
         branches: 80,
         statements: 80,
       },
+      // Forcer la génération même si seuils non atteints
+      reportOnFailure: true,
     },
   },
 })

@@ -31,7 +31,7 @@ jobs:
         run: pnpm -r lint
 
       - name: Test (with coverage)
-        run: pnpm -r --workspace-root test -- --coverage
+        run: pnpm -r --filter '!universal-pwa-demos' --workspace-root test -- --coverage
 
       - name: Build
         run: pnpm -r build

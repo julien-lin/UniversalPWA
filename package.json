@@ -9,7 +9,7 @@
     "build:web": "pnpm --filter @julien-lin/universal-pwa-web-ui build",
     "lint:web": "pnpm --filter @julien-lin/universal-pwa-web-ui lint",
     "test": "pnpm -r test",
-    "test:coverage": "pnpm -r test -- --coverage",
+    "test:coverage": "pnpm -r --filter '!universal-pwa-demos' test -- --coverage",
     "lint": "pnpm -r lint",
     "build": "pnpm -r build",
     "prepublishOnly": "pnpm build && pnpm lint && pnpm test",
