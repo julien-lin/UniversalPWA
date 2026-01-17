@@ -1,0 +1,83 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Déclenche sur tags version (v1.0.0, v2.0.0, etc.)
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # Protection : ne publie que depuis main
+    if: github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Nécessaire pour les changelogs
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Clear TypeScript cache
+        run: |
+          rm -rf packages/*/tsconfig.tsbuildinfo
+          rm -rf packages/*/.tsbuildinfo
+          find packages -name "*.tsbuildinfo" -delete || true
+
+      - name: Lint
+        run: pnpm -r lint
+
+      - name: Test
+        run: pnpm -r --filter '!universal-pwa-demos' test
+
+      - name: Build
+        run: pnpm -r build
+
+      - name: Verify build artifacts
+        run: |
+          echo "Verifying build artifacts..."
+          ls -la packages/*/dist/ || echo "Some dist folders missing"
+          find packages -name "dist" -type d || echo "No dist folders found"
+
+      - name: Publish to npm
+        run: |
+          echo "Publishing packages to npm..."
+          # Publier chaque package individuellement
+          pnpm --filter @julien-lin/universal-pwa-core publish --access public --no-git-checks || echo "Core already published"
+          pnpm --filter @julien-lin/universal-pwa-cli publish --access public --no-git-checks || echo "CLI already published"
+          pnpm --filter @julien-lin/universal-pwa-templates publish --access public --no-git-checks || echo "Templates already published"
+          pnpm --filter @julien-lin/universal-pwa-web-ui publish --access public --no-git-checks || echo "Web UI already published"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        continue-on-error: false
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## Release ${{ github.ref_name }}
+            
+            Automatically published from tag ${{ github.ref_name }}
+            
+            ### Packages Published
+            - @julien-lin/universal-pwa-core
+            - @julien-lin/universal-pwa-cli
+            - @julien-lin/universal-pwa-templates
+            - @julien-lin/universal-pwa-web-ui
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

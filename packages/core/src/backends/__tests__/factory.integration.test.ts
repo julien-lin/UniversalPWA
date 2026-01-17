@@ -3,7 +3,7 @@
  * Tests detection, integration retrieval, and fallback behavior
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { join } from 'node:path'
 import { mkdirSync, rmSync, writeFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
