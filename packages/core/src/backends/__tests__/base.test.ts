@@ -248,9 +248,8 @@ describe('Backend Integration Layer', () => {
 
         it('should set custom factory', () => {
             const customFactory = {
-                getIntegration: () => null,
-                getAllIntegrations: () => [],
-                detectBackend: () => null,
+                getIntegration: (_framework: string, _projectPath: string) => null,
+                detectBackend: (_projectPath: string) => null,
             }
 
             setBackendFactory(customFactory)
@@ -264,12 +263,12 @@ describe('Backend Integration Layer', () => {
             const factory = getBackendFactory()
 
             expect(factory).toBeDefined()
-            expect(factory.getAllIntegrations()).toEqual([])
+            expect(factory.detectBackend('/tmp')).toBeNull()
         })
 
         it('should return null for unknown framework', () => {
             const factory = getBackendFactory()
-            const integration = factory.getIntegration('unknown' as 'symfony' | 'wordpress' | 'static' | 'react')
+            const integration = factory.getIntegration('unknown' as 'symfony' | 'wordpress' | 'static' | 'react', '/tmp')
 
             expect(integration).toBeNull()
         })

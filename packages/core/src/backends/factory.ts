@@ -5,61 +5,68 @@
 
 import type { BackendIntegration, BackendIntegrationFactory } from './types.js'
 import type { Framework } from '../scanner/framework-detector.js'
+import { LaravelIntegration } from './laravel.js'
+import { SymfonyIntegration } from './symfony.js'
 
 /**
  * Default factory implementation
  * Will be extended as we add more backend integrations
  */
 export class DefaultBackendIntegrationFactory implements BackendIntegrationFactory {
-    private integrations: Map<Framework, BackendIntegration> = new Map()
-
-    constructor() {
-        this.initializeIntegrations()
-    }
-
-    /**
-     * Initialize available integrations
-     * This will be expanded as we implement each backend
-     */
-    private initializeIntegrations(): void {
-        // Integrations will be registered here as they're implemented
-        // Example structure (to be filled in Phase 1):
-        // this.registerIntegration(new LaravelIntegration())
-        // this.registerIntegration(new SymfonyIntegration())
-        // this.registerIntegration(new DjangoIntegration())
-    }
-
-    /**
-     * Register a new backend integration
-     */
-    private registerIntegration(integration: BackendIntegration): void {
-        this.integrations.set(integration.framework, integration)
-    }
-
     /**
      * Get integration for a specific framework
+     * Creates integration instance with projectPath
      */
-    getIntegration(framework: Framework): BackendIntegration | null {
-        return this.integrations.get(framework) ?? null
+    getIntegration(framework: Framework, projectPath: string): BackendIntegration | null {
+        switch (framework) {
+            case 'laravel':
+                return new LaravelIntegration(projectPath)
+            case 'symfony':
+                return new SymfonyIntegration(projectPath)
+            default:
+                return null
+        }
     }
 
     /**
-     * Get all registered integrations
+     * Get all available integration types (for detection)
      */
-    getAllIntegrations(): BackendIntegration[] {
-        return Array.from(this.integrations.values())
+    private getAvailableIntegrationTypes(): Array<new (projectPath: string) => BackendIntegration> {
+        return [LaravelIntegration, SymfonyIntegration]
     }
 
     /**
-     * Detect which backend is in use (placeholder)
-     * Will be implemented in phase 1 to detect from project structure
+     * Detect which backend is in use
+     * Tries each integration's detect() method and returns best match
      */
-    detectBackend(_projectPath: string): BackendIntegration | null {
-        // TODO: Implement detection logic
-        // 1. Scan project
-        // 2. Try each integration's detect() method
-        // 3. Return best match
-        return null
+    detectBackend(projectPath: string): BackendIntegration | null {
+        const integrationTypes = this.getAvailableIntegrationTypes()
+        let bestMatch: BackendIntegration | null = null
+        let bestConfidence: 'low' | 'medium' | 'high' = 'low'
+
+        for (const IntegrationClass of integrationTypes) {
+            const integration = new IntegrationClass(projectPath)
+            const result = integration.detect()
+
+            if (result.detected) {
+                // Prefer high confidence matches - return immediately
+                if (result.confidence === 'high') {
+                    return integration
+                }
+                // Keep medium confidence as fallback if no high confidence found
+                if (result.confidence === 'medium') {
+                    if (bestConfidence === 'low') {
+                        bestMatch = integration
+                        bestConfidence = 'medium'
+                    }
+                } else if (result.confidence === 'low' && bestConfidence === 'low' && !bestMatch) {
+                    // Only use low confidence if no better match found
+                    bestMatch = integration
+                }
+            }
+        }
+
+        return bestMatch
     }
 }
 

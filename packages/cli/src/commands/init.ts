@@ -1,9 +1,10 @@
 import { scanProject, optimizeProject } from '@julien-lin/universal-pwa-core'
 import { generateAndWriteManifest } from '@julien-lin/universal-pwa-core'
 import { generateIcons } from '@julien-lin/universal-pwa-core'
-import { generateServiceWorker, generateSimpleServiceWorker } from '@julien-lin/universal-pwa-core'
+import { generateServiceWorker, generateSimpleServiceWorker, generateServiceWorkerFromBackend } from '@julien-lin/universal-pwa-core'
 import { injectMetaTagsInFile, processInParallel } from '@julien-lin/universal-pwa-core'
 import { checkProjectHttps } from '@julien-lin/universal-pwa-core'
+import { getBackendFactory } from '@julien-lin/universal-pwa-core'
 import chalk from 'chalk'
 import { existsSync } from 'fs'
 import { glob } from 'glob'
@@ -388,44 +389,78 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
       console.log(chalk.blue('⚙️ Generating service worker...'))
 
       try {
-        // Optimize project to get adaptive cache strategies
-        const optimizationResult = await optimizeProject(
-          result.projectPath,
-          scanResult.assets,
-          scanResult.framework.configuration,
-          result.framework,
-          iconSource,
-        )
+        // Try to detect backend integration (Laravel, Symfony, etc.)
+        const factory = getBackendFactory()
+        let backendIntegration = null
 
-        // Convert adaptive cache strategies to runtime caching format
-        const runtimeCaching = optimizationResult.cacheStrategies.map((strategy) => ({
-          urlPattern: strategy.urlPattern,
-          handler: strategy.handler,
-          options: strategy.options,
-        }))
+        // First, try to detect backend automatically
+        backendIntegration = factory.detectBackend(result.projectPath)
+
+        // If auto-detection failed but framework is known, try to get integration directly
+        if (!backendIntegration && result.framework) {
+          backendIntegration = factory.getIntegration(result.framework, result.projectPath)
+          // Verify the integration actually detects this project
+          if (backendIntegration) {
+            const detectionResult = backendIntegration.detect()
+            if (!detectionResult.detected || detectionResult.confidence === 'low') {
+              backendIntegration = null
+            }
+          }
+        }
 
         let swResult
-        if (runtimeCaching.length > 0) {
-          // Use generateSimpleServiceWorker when we have adaptive cache strategies
-          console.log(chalk.gray(`  Detected ${optimizationResult.apiType} API, applying ${optimizationResult.cacheStrategies.length} adaptive cache strategy(ies)`))
-          swResult = await generateSimpleServiceWorker({
-            projectPath: result.projectPath,
-            outputDir: finalOutputDir,
-            architecture: result.architecture,
-            globDirectory: finalOutputDir,
-            globPatterns: ['**/*.{html,js,css,png,jpg,jpeg,svg,webp,woff,woff2}'],
-            runtimeCaching,
-          })
+        if (backendIntegration) {
+          // Use backend-optimized service worker generation
+          const detectionResult = backendIntegration.detect()
+          console.log(chalk.blue(`  Using ${backendIntegration.name} optimized config (confidence: ${detectionResult.confidence})`))
+          swResult = await generateServiceWorkerFromBackend(
+            backendIntegration,
+            result.architecture,
+            {
+              projectPath: result.projectPath,
+              outputDir: finalOutputDir,
+              globDirectory: finalOutputDir,
+            },
+          )
         } else {
-          // Use generateServiceWorker with template when no adaptive strategies
-          swResult = await generateServiceWorker({
-            projectPath: result.projectPath,
-            outputDir: finalOutputDir,
-            architecture: result.architecture,
-            framework: result.framework,
-            globDirectory: finalOutputDir,
-            globPatterns: ['**/*.{html,js,css,png,jpg,jpeg,svg,webp,woff,woff2}'],
-          })
+          // Fallback to generic generation with adaptive cache strategies
+          const optimizationResult = await optimizeProject(
+            result.projectPath,
+            scanResult.assets,
+            scanResult.framework.configuration,
+            result.framework,
+            iconSource,
+          )
+
+          // Convert adaptive cache strategies to runtime caching format
+          const runtimeCaching = optimizationResult.cacheStrategies.map((strategy) => ({
+            urlPattern: strategy.urlPattern,
+            handler: strategy.handler,
+            options: strategy.options,
+          }))
+
+          if (runtimeCaching.length > 0) {
+            // Use generateSimpleServiceWorker when we have adaptive cache strategies
+            console.log(chalk.gray(`  Detected ${optimizationResult.apiType} API, applying ${optimizationResult.cacheStrategies.length} adaptive cache strategy(ies)`))
+            swResult = await generateSimpleServiceWorker({
+              projectPath: result.projectPath,
+              outputDir: finalOutputDir,
+              architecture: result.architecture,
+              globDirectory: finalOutputDir,
+              globPatterns: ['**/*.{html,js,css,png,jpg,jpeg,svg,webp,woff,woff2}'],
+              runtimeCaching,
+            })
+          } else {
+            // Use generateServiceWorker with template when no adaptive strategies
+            swResult = await generateServiceWorker({
+              projectPath: result.projectPath,
+              outputDir: finalOutputDir,
+              architecture: result.architecture,
+              framework: result.framework,
+              globDirectory: finalOutputDir,
+              globPatterns: ['**/*.{html,js,css,png,jpg,jpeg,svg,webp,woff,woff2}'],
+            })
+          }
         }
 
         result.serviceWorkerPath = swResult.swPath
@@ -445,11 +480,17 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
         }
 
         // Log asset optimization suggestions if any
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         if (optimizationResult.assetSuggestions.length > 0) {
-          const highPrioritySuggestions = optimizationResult.assetSuggestions.filter((s) => s.priority === 'high')
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+          const highPrioritySuggestions = optimizationResult.assetSuggestions.filter((s: { priority: string }) => s.priority === 'high')
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           if (highPrioritySuggestions.length > 0) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             console.log(chalk.yellow(`⚠ ${highPrioritySuggestions.length} high-priority asset optimization suggestion(s) found`))
-            highPrioritySuggestions.slice(0, 3).forEach((suggestion) => {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+            highPrioritySuggestions.slice(0, 3).forEach((suggestion: { suggestion: string }) => {
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
               console.log(chalk.gray(`  - ${suggestion.suggestion}`))
             })
           }
