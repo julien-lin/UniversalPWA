@@ -136,13 +136,10 @@ export interface BackendIntegration {
 export interface BackendIntegrationFactory {
     /**
      * Get integration for detected framework
+     * @param framework - Framework identifier
+     * @param projectPath - Project root path (required for integration instantiation)
      */
-    getIntegration(framework: Framework): BackendIntegration | null
-
-    /**
-     * Get all available integrations
-     */
-    getAllIntegrations(): BackendIntegration[]
+    getIntegration(framework: Framework, projectPath: string): BackendIntegration | null
 
     /**
      * Detect which backend is in use
