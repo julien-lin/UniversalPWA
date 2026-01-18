@@ -42,6 +42,39 @@ const webServer = [
       },
     ]
     : []),
+  ...(existsSync('fixtures/laravel/public')
+    ? [
+      {
+        command: 'npx serve . -p 3004',
+        cwd: 'fixtures/laravel/public',
+        url: 'http://localhost:3004',
+        reuseExistingServer: !process.env.CI,
+        timeout: 120 * 1000,
+      },
+    ]
+    : []),
+  ...(existsSync('fixtures/django/public')
+    ? [
+      {
+        command: 'npx serve . -p 3005',
+        cwd: 'fixtures/django/public',
+        url: 'http://localhost:3005',
+        reuseExistingServer: !process.env.CI,
+        timeout: 120 * 1000,
+      },
+    ]
+    : []),
+  ...(existsSync('fixtures/flask')
+    ? [
+      {
+        command: 'npx serve . -p 3006',
+        cwd: 'fixtures/flask',
+        url: 'http://localhost:3006',
+        reuseExistingServer: !process.env.CI,
+        timeout: 120 * 1000,
+      },
+    ]
+    : []),
 ]
 
 export default defineConfig({
