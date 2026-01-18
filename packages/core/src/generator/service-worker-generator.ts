@@ -7,6 +7,12 @@ import type { BackendIntegration } from '../backends/types.js'
 import type { ServiceWorkerConfig, RouteConfig } from './caching-strategy.js'
 import { RoutePatternResolver } from './route-pattern-resolver.js'
 import { ServiceWorkerConfigBuilder } from './service-worker-config-builder.js'
+import {
+  getOrGenerateCacheVersion,
+  shouldInvalidateCache,
+  buildDependencyGraph,
+  type CacheVersion,
+} from './cache-invalidation.js'
 // Use string to avoid type lint issues in this unit
 // import type { Framework } from '../scanner/framework-detector'
 
