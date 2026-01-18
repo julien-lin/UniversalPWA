@@ -14,6 +14,7 @@ import cliProgress from 'cli-progress'
 import type { Framework } from '@julien-lin/universal-pwa-core'
 import type { Architecture } from '@julien-lin/universal-pwa-core'
 import { Transaction } from '../utils/transaction.js'
+import { getEffectiveConfig } from '../utils/config-loader.js'
 
 // @types/cli-progress not available, using any type
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -68,6 +69,19 @@ function relativePath(fullPath: string, basePath: string): string {
  * Init command: scans project and generates PWA files
  */
 export async function initCommand(options: InitOptions = {}): Promise<InitResult> {
+  const resolvedProjectPath = resolve(options.projectPath || process.cwd())
+
+  // Load and merge configuration
+  const { options: mergedOptions, configFile } = await getEffectiveConfig(
+    resolvedProjectPath,
+    options,
+  )
+
+  // Log if config file was loaded
+  if (configFile.config && configFile.filePath) {
+    console.log(chalk.gray(`📄 Using configuration from ${configFile.filePath}`))
+  }
+
   const {
     projectPath = process.cwd(),
     name,
@@ -80,7 +94,7 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     skipInjection = false,
     outputDir,
     maxHtmlFiles,
-  } = options
+  } = mergedOptions
 
   const result: InitResult = {
     success: false,
