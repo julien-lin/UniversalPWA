@@ -35,9 +35,9 @@ export const ServiceWorkerConfigSchema = z.object({
   /** Claim clients on activate */
   clientsClaim: z.boolean().default(true),
   /** Offline fallback page */
-  offlinePage: z.string().optional(),
+  offlinePage: z.string().optional().default(undefined),
   /** Offline fallback image */
-  offlineImage: z.string().optional(),
+  offlineImage: z.string().optional().default(undefined),
 })
 
 /**
