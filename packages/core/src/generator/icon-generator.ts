@@ -13,6 +13,7 @@ import {
   getOptimalQuality,
 } from './icon-config.js'
 import { processInParallel } from '../utils/parallel-processor.js'
+import { generateAdaptiveIcon, generateAdaptiveIconFromSource } from './adaptive-icon-generator.js'
 
 export interface IconSize {
   width: number
@@ -323,6 +324,53 @@ export async function generateIconsAdvanced(
     const message = err instanceof Error ? err.message : String(err)
     // Don't fail generation if apple-touch-icon fails
     logger.warn({ module: 'icon-generator' }, `Failed to generate apple-touch-icon: ${message}`)
+  }
+
+  // Generate adaptive icons if configured
+  if (config.adaptiveIcons?.enabled) {
+    try {
+      const adaptiveOutputDir = join(outputDir, 'adaptive-icon')
+      const adaptiveConfig = config.adaptiveIcons
+
+      // Use foreground from config or fallback to best source
+      const foregroundSource = adaptiveConfig.foreground || bestSource
+      if (!foregroundSource) {
+        logger.warn({ module: 'icon-generator' }, 'Adaptive icons enabled but no foreground source available')
+      } else {
+        // Use background from config or create color background
+        const background = adaptiveConfig.background || {
+          type: 'color' as const,
+          value: '#ffffff',
+        }
+
+        const adaptiveResult = await generateAdaptiveIcon(
+          foregroundSource,
+          background,
+          adaptiveOutputDir,
+          adaptiveConfig,
+        )
+
+        // Add generated files to result
+        generatedFiles.push(...adaptiveResult.generatedFiles)
+
+        // Add adaptive icon to manifest icons
+        icons.push({
+          src: `/adaptive-icon/icon-foreground.png`,
+          sizes: '1024x1024',
+          type: 'image/png',
+          purpose: 'any maskable',
+        })
+
+        logger.info(
+          { module: 'icon-generator', files: adaptiveResult.generatedFiles.length },
+          'Generated adaptive icons',
+        )
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      // Don't fail generation if adaptive icons fail
+      logger.warn({ module: 'icon-generator' }, `Failed to generate adaptive icons: ${message}`)
+    }
   }
 
   return {
