@@ -40,6 +40,9 @@ export interface RouteConfig {
     /** URL pattern (glob or regex) */
     pattern: string | RegExp
 
+    /** Type of pattern (auto-detected if not specified) */
+    patternType?: 'regex' | 'glob'
+
     /** Caching strategy for this route */
     strategy: CachingStrategy
 
@@ -48,6 +51,76 @@ export interface RouteConfig {
 
     /** Route priority (higher = checked first) */
     priority?: number
+
+    /** Per-route TTL override */
+    ttl?: {
+        /** Maximum age in seconds */
+        maxAgeSeconds?: number
+        /** Maximum number of entries */
+        maxEntries?: number
+    }
+
+    /** Dependencies of this route (for cascade invalidation) */
+    dependencies?: string[]
+
+    /** Additional matching conditions */
+    conditions?: {
+        /** Required headers */
+        headers?: Record<string, string>
+        /** Allowed HTTP methods */
+        methods?: ('GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH')[]
+        /** Allowed origins */
+        origins?: string[]
+    }
+
+    /** Additional Workbox-specific options */
+    workboxOptions?: Record<string, unknown>
+}
+
+/**
+ * Advanced caching configuration
+ */
+export interface AdvancedCachingConfig {
+    /** Routes with caching strategies */
+    routes: RouteConfig[]
+
+    /** Global configuration */
+    global?: {
+        /** Cache version (for invalidation) */
+        version?: string
+        /** Prefix for cache names */
+        cacheNamePrefix?: string
+        /** Default strategy if route not matched */
+        defaultStrategy?: CachingStrategy
+    }
+
+    /** Versioning configuration */
+    versioning?: {
+        /** Auto-generate version from file hashes */
+        autoVersion?: boolean
+        /** Manual version */
+        manualVersion?: string
+        /** Auto-invalidate on file changes */
+        autoInvalidate?: boolean
+    }
+
+    /** Dependency tracking */
+    dependencies?: {
+        /** Enable tracking */
+        enabled: boolean
+        /** Files to track */
+        trackedFiles?: string[]
+    }
+
+    /** Invalidation strategies */
+    invalidation?: {
+        /** Invalidate on file change */
+        onFileChange?: boolean
+        /** Invalidate on version change */
+        onVersionChange?: boolean
+        /** File patterns to ignore for invalidation */
+        ignorePatterns?: string[]
+    }
 }
 
 /**
@@ -68,6 +141,9 @@ export interface ServiceWorkerConfig {
 
     /** Custom routes (merged after default ones) */
     customRoutes?: RouteConfig[]
+
+    /** Advanced caching configuration */
+    advanced?: AdvancedCachingConfig
 
     /** Offline handling configuration */
     offline?: {

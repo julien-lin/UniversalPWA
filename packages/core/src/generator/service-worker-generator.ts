@@ -260,10 +260,16 @@ export async function generateServiceWorkerFromConfig(
     ...config.apiRoutes,
     ...config.imageRoutes,
     ...(config.customRoutes || []),
+    ...(config.advanced?.routes || []),
   ]
 
-  // Future: Use for runtime caching injection
-  void RoutePatternResolver.toWorkboxFormat(allRoutes)
+  // Convert to Workbox format with global config
+  const workboxRoutes = RoutePatternResolver.toWorkboxFormat(allRoutes, {
+    cacheNamePrefix: config.advanced?.global?.cacheNamePrefix,
+  })
+
+  // Note: workboxRoutes can be used for runtime caching injection in templates
+  void workboxRoutes
 
   // Workbox configuration
   const workboxConfig: Parameters<typeof injectManifest>[0] = {
