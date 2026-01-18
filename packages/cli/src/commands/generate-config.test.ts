@@ -208,8 +208,9 @@ describe('generate-config', () => {
         interactive: true,
       })
 
+      // Should fail because overwrite was cancelled
       expect(result.success).toBe(false)
-      expect(result.errors.length).toBeGreaterThan(0)
+      expect(result.errors.some((e) => e.includes('overwrite') || e.includes('cancelled'))).toBe(true)
     })
   })
 })
