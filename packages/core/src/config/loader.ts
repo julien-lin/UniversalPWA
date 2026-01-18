@@ -132,9 +132,14 @@ async function loadTypeScriptConfig(filePath: string): Promise<ConfigLoadResult>
       config: mergeWithDefaults(config),
       filePath,
       format: 'ts',
+      validated: false, // Will be validated in loadConfig
     }
   } catch (error) {
-    throw new Error(`Failed to load TypeScript config: ${error instanceof Error ? error.message : String(error)}`)
+    throw new ConfigLoadError(
+      `Failed to load TypeScript config: ${error instanceof Error ? error.message : String(error)}`,
+      filePath,
+      error,
+    )
   }
 }
 
@@ -145,15 +150,21 @@ async function loadJavaScriptConfig(filePath: string): Promise<ConfigLoadResult>
   try {
     const fileUrl = pathToFileURL(filePath).href
     const module = await import(fileUrl)
-    const config = module.default || module.config || module
+    // Support both ESM and CommonJS exports
+    const config = module.default || module.config || (module as { config?: unknown }).config || module
 
     return {
       config: mergeWithDefaults(config),
       filePath,
       format: 'js',
+      validated: false, // Will be validated in loadConfig
     }
   } catch (error) {
-    throw new Error(`Failed to load JavaScript config: ${error instanceof Error ? error.message : String(error)}`)
+    throw new ConfigLoadError(
+      `Failed to load JavaScript config: ${error instanceof Error ? error.message : String(error)}`,
+      filePath,
+      error,
+    )
   }
 }
 
@@ -169,9 +180,14 @@ function loadJSONConfig(filePath: string): ConfigLoadResult {
       config: mergeWithDefaults(config),
       filePath,
       format: 'json',
+      validated: false, // Will be validated in loadConfig
     }
   } catch (error) {
-    throw new Error(`Failed to load JSON config: ${error instanceof Error ? error.message : String(error)}`)
+    throw new ConfigLoadError(
+      `Failed to load JSON config: ${error instanceof Error ? error.message : String(error)}`,
+      filePath,
+      error,
+    )
   }
 }
 
