@@ -5,5 +5,12 @@
  */
 
 export * from './schema.js'
-export { loadConfig, findConfigFile, type ConfigLoadResult } from './loader.js'
+export {
+  loadConfig,
+  findConfigFile,
+  type ConfigLoadResult,
+  type ConfigLoadOptions,
+  ConfigLoadError,
+  ConfigValidationError,
+} from './loader.js'
 export { validateConfig, type ConfigValidationResult } from './validator.js'
