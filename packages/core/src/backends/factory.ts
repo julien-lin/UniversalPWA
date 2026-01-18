@@ -8,6 +8,7 @@ import type { Framework } from '../scanner/framework-detector.js'
 import { LaravelIntegration } from './laravel.js'
 import { SymfonyIntegration } from './symfony.js'
 import { DjangoIntegration } from './django.js'
+import { FlaskIntegration } from './flask.js'
 
 /**
  * Default factory implementation
@@ -26,6 +27,8 @@ export class DefaultBackendIntegrationFactory implements BackendIntegrationFacto
                 return new SymfonyIntegration(projectPath)
             case 'django':
                 return new DjangoIntegration(projectPath)
+            case 'flask':
+                return new FlaskIntegration(projectPath)
             default:
                 return null
         }
@@ -35,7 +38,7 @@ export class DefaultBackendIntegrationFactory implements BackendIntegrationFacto
      * Get all available integration types (for detection)
      */
     private getAvailableIntegrationTypes(): Array<new (projectPath: string) => BackendIntegration> {
-        return [LaravelIntegration, SymfonyIntegration, DjangoIntegration]
+        return [LaravelIntegration, SymfonyIntegration, DjangoIntegration, FlaskIntegration]
     }
 
     /**

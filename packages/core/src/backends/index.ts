@@ -21,3 +21,4 @@ export { DefaultBackendIntegrationFactory, getBackendFactory, setBackendFactory,
 export { LaravelIntegration } from './laravel.js'
 export { SymfonyIntegration } from './symfony.js'
 export { DjangoIntegration } from './django.js'
+export { FlaskIntegration } from './flask.js'
