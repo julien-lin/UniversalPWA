@@ -283,13 +283,20 @@ describe('cache-invalidation', () => {
 
   describe('shouldIgnoreFile', () => {
     it('should ignore files matching patterns', () => {
-      expect(shouldIgnoreFile('/path/to/file.map', ['**/*.map'])).toBe(true)
-      expect(shouldIgnoreFile('/path/to/file.js', ['**/*.map'])).toBe(false)
+      // Use actual file paths for testing
+      const testFile = join(testDir, 'file.map')
+      writeFileSync(testFile, 'content')
+
+      expect(shouldIgnoreFile(testFile, ['**/*.map'])).toBe(true)
+      expect(shouldIgnoreFile(join(testDir, 'file.js'), ['**/*.map'])).toBe(false)
     })
 
     it('should handle multiple ignore patterns', () => {
-      expect(shouldIgnoreFile('/path/to/.DS_Store', ['**/*.map', '**/.DS_Store'])).toBe(true)
-      expect(shouldIgnoreFile('/path/to/file.js', ['**/*.map', '**/.DS_Store'])).toBe(false)
+      const dsStoreFile = join(testDir, '.DS_Store')
+      writeFileSync(dsStoreFile, 'content')
+
+      expect(shouldIgnoreFile(dsStoreFile, ['**/*.map', '**/.DS_Store'])).toBe(true)
+      expect(shouldIgnoreFile(join(testDir, 'file.js'), ['**/*.map', '**/.DS_Store'])).toBe(false)
     })
   })
 
