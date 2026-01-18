@@ -137,36 +137,60 @@ function loadYAMLConfig(filePath: string): ConfigLoadResult {
  * Merge user config with defaults
  */
 function mergeWithDefaults(userConfig: Partial<UniversalPWAConfig>): UniversalPWAConfig {
-  return {
+  const merged: UniversalPWAConfig = {
     ...DEFAULT_CONFIG,
     ...userConfig,
-    app: {
-      ...DEFAULT_CONFIG.app,
-      ...userConfig.app,
-    },
-    icons: {
-      ...DEFAULT_CONFIG.icons,
-      ...userConfig.icons,
-    },
-    serviceWorker: {
-      ...DEFAULT_CONFIG.serviceWorker,
-      ...userConfig.serviceWorker,
-    },
-    injection: {
-      ...DEFAULT_CONFIG.injection,
-      ...userConfig.injection,
-    },
-    scanner: {
-      ...DEFAULT_CONFIG.scanner,
-      ...userConfig.scanner,
-    },
-    advancedCaching: {
-      ...DEFAULT_CONFIG.advancedCaching,
-      ...userConfig.advancedCaching,
-    },
-    output: {
-      ...DEFAULT_CONFIG.output,
-      ...userConfig.output,
-    },
   }
+
+  // Merge nested objects only if they exist in user config
+  if (userConfig.app) {
+    merged.app = {
+      ...DEFAULT_CONFIG.app!,
+      ...userConfig.app,
+    }
+  }
+
+  if (userConfig.icons) {
+    merged.icons = {
+      ...DEFAULT_CONFIG.icons!,
+      ...userConfig.icons,
+    }
+  }
+
+  if (userConfig.serviceWorker) {
+    merged.serviceWorker = {
+      ...DEFAULT_CONFIG.serviceWorker!,
+      ...userConfig.serviceWorker,
+    }
+  }
+
+  if (userConfig.injection) {
+    merged.injection = {
+      ...DEFAULT_CONFIG.injection!,
+      ...userConfig.injection,
+    }
+  }
+
+  if (userConfig.scanner) {
+    merged.scanner = {
+      ...DEFAULT_CONFIG.scanner!,
+      ...userConfig.scanner,
+    }
+  }
+
+  if (userConfig.advancedCaching) {
+    merged.advancedCaching = {
+      ...DEFAULT_CONFIG.advancedCaching!,
+      ...userConfig.advancedCaching,
+    }
+  }
+
+  if (userConfig.output) {
+    merged.output = {
+      ...DEFAULT_CONFIG.output!,
+      ...userConfig.output,
+    }
+  }
+
+  return merged
 }
