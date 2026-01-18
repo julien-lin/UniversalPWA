@@ -111,15 +111,16 @@ describe('config-loader', () => {
       expect(result.format).toBe('js')
     })
 
-    it('should load JS config with module.exports.config', async () => {
+    it('should load JS config with different export formats', async () => {
+      // Test with default export
       writeFileSync(
         join(testDir, 'config.js'),
-        'module.exports.config = { app: { name: "Test App" } }',
+        'module.exports = { app: { name: "Test App Default" } }',
       )
 
       const result = await loadConfig(join(testDir, 'config.js'))
 
-      expect(result.config.app?.name).toBe('Test App')
+      expect(result.config.app?.name).toBe('Test App Default')
     })
   })
 
