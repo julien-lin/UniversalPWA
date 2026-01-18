@@ -274,6 +274,36 @@ export function validateRouteConfig(config: unknown): config is RouteConfig {
     // Validate optional properties
     if (c.description !== undefined && typeof c.description !== 'string') return false
     if (c.priority !== undefined && typeof c.priority !== 'number') return false
+    if (c.patternType !== undefined && !['regex', 'glob'].includes(c.patternType as string)) return false
+
+    // Validate TTL
+    if (c.ttl !== undefined) {
+        if (typeof c.ttl !== 'object') return false
+        const ttl = c.ttl as Record<string, unknown>
+        if (ttl.maxAgeSeconds !== undefined && typeof ttl.maxAgeSeconds !== 'number') return false
+        if (ttl.maxEntries !== undefined && typeof ttl.maxEntries !== 'number') return false
+    }
+
+    // Validate dependencies
+    if (c.dependencies !== undefined) {
+        if (!Array.isArray(c.dependencies) || !c.dependencies.every((d) => typeof d === 'string')) return false
+    }
+
+    // Validate conditions
+    if (c.conditions !== undefined) {
+        if (typeof c.conditions !== 'object') return false
+        const cond = c.conditions as Record<string, unknown>
+        if (cond.headers !== undefined && typeof cond.headers !== 'object') return false
+        if (cond.methods !== undefined) {
+            if (!Array.isArray(cond.methods) || !cond.methods.every((m) => typeof m === 'string')) return false
+        }
+        if (cond.origins !== undefined) {
+            if (!Array.isArray(cond.origins) || !cond.origins.every((o) => typeof o === 'string')) return false
+        }
+    }
+
+    // Validate workboxOptions
+    if (c.workboxOptions !== undefined && typeof c.workboxOptions !== 'object') return false
 
     return true
 }
