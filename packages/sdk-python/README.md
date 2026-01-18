@@ -114,10 +114,10 @@ client = UniversalPwaClient(config)
 
 ## 📖 Documentation
 
+- [Django Integration Guide](docs/DJANGO.md)
+- [Flask Integration Guide](docs/FLASK.md)
+- [Configuration Reference](docs/CONFIGURATION.md)
 - [API Reference](https://docs.universalpwa.dev/sdk/python)
-- [Django Integration](https://docs.universalpwa.dev/sdk/python/django)
-- [Flask Integration](https://docs.universalpwa.dev/sdk/python/flask)
-- [FastAPI Integration](https://docs.universalpwa.dev/sdk/python/fastapi)
 
 ## 🧪 Testing
 
