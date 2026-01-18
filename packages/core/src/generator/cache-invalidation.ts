@@ -278,35 +278,42 @@ export function getTrackedFiles(
 
 /**
  * Check if file matches ignore patterns
+ * Uses simple pattern matching for common cases
  */
 export function shouldIgnoreFile(filePath: string, ignorePatterns: string[]): boolean {
+  const fileName = filePath.split(/[/\\]/).pop() || ''
+  const fileExt = fileName.includes('.') ? fileName.substring(fileName.lastIndexOf('.')) : ''
+
   for (const pattern of ignorePatterns) {
+    // Simple extension matching (e.g., **/*.map)
+    if (pattern.includes('*') && pattern.endsWith(fileExt)) {
+      return true
+    }
+
+    // Exact filename matching (e.g., **/.DS_Store)
+    if (pattern.includes(fileName)) {
+      return true
+    }
+
+    // Simple string matching
+    if (filePath.includes(pattern.replace(/\*/g, ''))) {
+      return true
+    }
+
+    // Try glob matching as last resort
     try {
-      // Convert glob pattern to regex
-      const normalizedPattern = pattern
-        .replace(/\*\*/g, '<<DOUBLE_STAR>>')
+      // Convert simple glob to regex
+      const regexPattern = pattern
+        .replace(/\*\*/g, '.*')
         .replace(/\*/g, '[^/]*')
-        .replace(/<<DOUBLE_STAR>>/g, '.*')
         .replace(/\./g, '\\.')
       
-      const regex = new RegExp(`^${normalizedPattern}$`)
-      
-      // Check absolute path
-      if (regex.test(filePath)) {
-        return true
-      }
-      
-      // Check filename only
-      const fileName = filePath.split(/[/\\]/).pop() || ''
-      if (regex.test(fileName)) {
+      const regex = new RegExp(`^${regexPattern}$`)
+      if (regex.test(filePath) || regex.test(fileName)) {
         return true
       }
     } catch {
-      // Fallback to simple string matching
-      const cleanPattern = pattern.replace(/\*/g, '')
-      if (cleanPattern && filePath.includes(cleanPattern)) {
-        return true
-      }
+      // Ignore regex errors
     }
   }
 
