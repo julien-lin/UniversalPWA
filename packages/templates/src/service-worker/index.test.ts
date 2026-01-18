@@ -121,7 +121,7 @@ describe('service-worker templates', () => {
       expect(types).toContain('laravel-api')
       expect(types).toContain('symfony-spa')
       expect(types).toContain('symfony-api')
-      expect(types).toHaveLength(10)
+      expect(types).toHaveLength(12)
     })
   })
 
