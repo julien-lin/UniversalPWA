@@ -6,4 +6,4 @@
 
 export * from './schema.js'
 export { loadConfig, findConfigFile, type ConfigLoadResult } from './loader.js'
-export { validateConfig, type ValidationResult } from './validator.js'
+export { validateConfig, type ConfigValidationResult } from './validator.js'
