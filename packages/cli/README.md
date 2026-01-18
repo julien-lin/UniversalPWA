@@ -32,6 +32,35 @@ Or with pnpm:
 pnpm add -g @julien-lin/universal-pwa-cli
 ```
 
+## Configuration
+
+UniversalPWA peut être configuré via un fichier de configuration pour éviter de passer toutes les options en ligne de commande.
+
+### Génération automatique
+
+```bash
+universal-pwa generate-config
+```
+
+Cette commande génère un fichier `universal-pwa.config.ts` (ou `.js`, `.json`, `.yaml`) basé sur votre projet.
+
+### Formats supportés
+
+- `universal-pwa.config.ts` (TypeScript - recommandé)
+- `universal-pwa.config.js` (JavaScript)
+- `universal-pwa.config.json` (JSON)
+- `universal-pwa.config.yaml` (YAML)
+
+### Priorité de configuration
+
+1. **Arguments CLI** (priorité la plus haute)
+2. **Fichier de configuration**
+3. **Valeurs par défaut** (priorité la plus basse)
+
+### Documentation complète
+
+Voir [CONFIGURATION.md](../DOCUMENTATION/CONFIGURATION.md) pour la documentation complète avec tous les exemples.
+
 ## Usage
 
 ### `init` Command
