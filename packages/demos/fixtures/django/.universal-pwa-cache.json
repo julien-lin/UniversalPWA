@@ -1,0 +1,44 @@
+{
+  "version": "1.0.0",
+  "entries": {
+    "7a81f51055f476eb9c249cd129207e0f": {
+      "result": {
+        "framework": {
+          "framework": "django",
+          "confidence": "high",
+          "confidenceScore": 82,
+          "indicators": [
+            "manage.py and settings.py (Django)"
+          ],
+          "version": null,
+          "configuration": {
+            "language": "javascript",
+            "cssInJs": [],
+            "stateManagement": [],
+            "buildTool": null
+          }
+        },
+        "assets": {
+          "javascript": [],
+          "css": [],
+          "images": [],
+          "fonts": [],
+          "apiRoutes": []
+        },
+        "architecture": {
+          "architecture": "ssr",
+          "buildTool": null,
+          "confidence": "high",
+          "indicators": [
+            "HTML: SSR patterns detected (large content)"
+          ]
+        },
+        "timestamp": "2026-01-18T13:13:43.985Z",
+        "projectPath": "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/django"
+      },
+      "timestamp": "2026-01-18T13:13:43.988Z",
+      "fileHashes": {},
+      "ttl": 86400
+    }
+  }
+}

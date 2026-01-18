@@ -1,0 +1,45 @@
+{
+  "version": "1.0.0",
+  "entries": {
+    "0012ee32ada2116b620a0e6059af26bd": {
+      "result": {
+        "framework": {
+          "framework": "flask",
+          "confidence": "high",
+          "confidenceScore": 84,
+          "indicators": [
+            "requirements.txt: Flask",
+            "app.py or application.py"
+          ],
+          "version": null,
+          "configuration": {
+            "language": "javascript",
+            "cssInJs": [],
+            "stateManagement": [],
+            "buildTool": null
+          }
+        },
+        "assets": {
+          "javascript": [],
+          "css": [],
+          "images": [],
+          "fonts": [],
+          "apiRoutes": []
+        },
+        "architecture": {
+          "architecture": "ssr",
+          "buildTool": null,
+          "confidence": "high",
+          "indicators": [
+            "HTML: SSR patterns detected (large content)"
+          ]
+        },
+        "timestamp": "2026-01-18T13:14:00.119Z",
+        "projectPath": "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/flask"
+      },
+      "timestamp": "2026-01-18T13:14:00.120Z",
+      "fileHashes": {},
+      "ttl": 86400
+    }
+  }
+}

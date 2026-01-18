@@ -1,0 +1,95 @@
+{
+  "version": "1.0.0",
+  "entries": {
+    "7f3e5c6cbf2902f36cbb90b087d73f56": {
+      "result": {
+        "framework": {
+          "framework": "laravel",
+          "confidence": "high",
+          "confidenceScore": 94,
+          "indicators": [
+            "composer.json: laravel/framework",
+            "public/"
+          ],
+          "version": null,
+          "configuration": {
+            "language": "javascript",
+            "cssInJs": [],
+            "stateManagement": [],
+            "buildTool": "vite"
+          }
+        },
+        "assets": {
+          "javascript": [
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vite.config.js",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/resources/js/bootstrap.js",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/resources/js/app.js",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/symfony/var-dumper/Resources/js/htmlDescriptor.js",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/symfony/error-handler/Resources/assets/js/exception.js",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/filp/whoops/src/Whoops/Resources/js/zepto.min.js",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/filp/whoops/src/Whoops/Resources/js/whoops.base.js",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/filp/whoops/src/Whoops/Resources/js/prism.js",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/filp/whoops/src/Whoops/Resources/js/clipboard.min.js",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/phpunit/php-code-coverage/src/Report/Html/Renderer/Template/js/nv.d3.min.js",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/phpunit/php-code-coverage/src/Report/Html/Renderer/Template/js/jquery.min.js",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/phpunit/php-code-coverage/src/Report/Html/Renderer/Template/js/file.js",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/phpunit/php-code-coverage/src/Report/Html/Renderer/Template/js/d3.min.js",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/phpunit/php-code-coverage/src/Report/Html/Renderer/Template/js/bootstrap.bundle.min.js",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/laravel/framework/src/Illuminate/Foundation/resources/exceptions/renderer/vite.config.js",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/laravel/framework/src/Illuminate/Foundation/resources/exceptions/renderer/scripts.js"
+          ],
+          "css": [
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/resources/css/app.css",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/symfony/var-dumper/Resources/css/htmlDescriptor.css",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/symfony/error-handler/Resources/assets/css/exception_full.css",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/symfony/error-handler/Resources/assets/css/exception.css",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/symfony/error-handler/Resources/assets/css/error.css",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/filp/whoops/src/Whoops/Resources/css/whoops.base.css",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/filp/whoops/src/Whoops/Resources/css/prism.css",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/phpunit/php-code-coverage/src/Report/Html/Renderer/Template/css/style.css",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/phpunit/php-code-coverage/src/Report/Html/Renderer/Template/css/octicons.css",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/phpunit/php-code-coverage/src/Report/Html/Renderer/Template/css/nv.d3.min.css",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/phpunit/php-code-coverage/src/Report/Html/Renderer/Template/css/custom.css",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/phpunit/php-code-coverage/src/Report/Html/Renderer/Template/css/bootstrap.min.css",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/laravel/framework/src/Illuminate/Foundation/resources/exceptions/renderer/styles.css",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/laravel/framework/src/Illuminate/Mail/resources/views/html/themes/default.css"
+          ],
+          "images": [
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/symfony/error-handler/Resources/assets/images/symfony-logo.svg",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/symfony/error-handler/Resources/assets/images/icon-support.svg",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/symfony/error-handler/Resources/assets/images/icon-plus-square.svg",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/symfony/error-handler/Resources/assets/images/icon-plus-square-o.svg",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/symfony/error-handler/Resources/assets/images/icon-minus-square.svg",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/symfony/error-handler/Resources/assets/images/icon-minus-square-o.svg",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/symfony/error-handler/Resources/assets/images/icon-copy.svg",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/symfony/error-handler/Resources/assets/images/icon-book.svg",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/symfony/error-handler/Resources/assets/images/chevron-right.svg",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/phpunit/php-code-coverage/src/Report/Html/Renderer/Template/icons/file-directory.svg",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/vendor/phpunit/php-code-coverage/src/Report/Html/Renderer/Template/icons/file-code.svg",
+            "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel/public/favicon.ico"
+          ],
+          "fonts": [],
+          "apiRoutes": []
+        },
+        "architecture": {
+          "architecture": "static",
+          "buildTool": "vite",
+          "confidence": "high",
+          "indicators": [
+            "package.json: vite"
+          ]
+        },
+        "timestamp": "2026-01-18T10:36:52.165Z",
+        "projectPath": "/Users/julien/Desktop/UniversalPWA/packages/demos/fixtures/laravel"
+      },
+      "timestamp": "2026-01-18T10:36:52.170Z",
+      "fileHashes": {
+        "package.json": "07d7440dc017382991f9a7bd0151005a",
+        "composer.json": "c60b4a2a7a4f2b632f21a8c57899e7e7",
+        "vite.config.js": "60c40741a9c5b915a5e5542cfb23bc25",
+        "composer.lock": "fd9984c6f784a02e43ce90ca29faee11"
+      },
+      "ttl": 86400
+    }
+  }
+}
