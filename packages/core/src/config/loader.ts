@@ -9,11 +9,20 @@ import { join, dirname, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type { UniversalPWAConfig } from './schema.js'
 import { DEFAULT_CONFIG } from './schema.js'
+import { validateConfig, type ConfigValidationResult } from './validator.js'
 
 export interface ConfigLoadResult {
   config: UniversalPWAConfig
   filePath: string
   format: 'ts' | 'js' | 'json' | 'yaml'
+  validated: boolean
+}
+
+export interface ConfigLoadOptions {
+  /** Validate configuration after loading */
+  validate?: boolean
+  /** Throw error if validation fails */
+  strict?: boolean
 }
 
 /**
@@ -44,26 +53,68 @@ export async function findConfigFile(projectPath: string): Promise<string | null
 /**
  * Load configuration from file
  */
-export async function loadConfig(filePath: string): Promise<ConfigLoadResult> {
+export async function loadConfig(
+  filePath: string,
+  options: ConfigLoadOptions = { validate: true, strict: true },
+): Promise<ConfigLoadResult> {
   if (!existsSync(filePath)) {
-    throw new Error(`Configuration file not found: ${filePath}`)
+    throw new ConfigLoadError(`Configuration file not found: ${filePath}`, filePath)
   }
 
   const ext = filePath.split('.').pop()?.toLowerCase()
 
-  switch (ext) {
-    case 'ts':
-      return await loadTypeScriptConfig(filePath)
-    case 'js':
-      return await loadJavaScriptConfig(filePath)
-    case 'json':
-      return loadJSONConfig(filePath)
-    case 'yaml':
-    case 'yml':
-      return loadYAMLConfig(filePath)
-    default:
-      throw new Error(`Unsupported configuration file format: ${ext}`)
+  let result: ConfigLoadResult
+
+  try {
+    switch (ext) {
+      case 'ts':
+        result = await loadTypeScriptConfig(filePath)
+        break
+      case 'js':
+        result = await loadJavaScriptConfig(filePath)
+        break
+      case 'json':
+        result = loadJSONConfig(filePath)
+        break
+      case 'yaml':
+      case 'yml':
+        result = loadYAMLConfig(filePath)
+        break
+      default:
+        throw new ConfigLoadError(`Unsupported configuration file format: ${ext}. Supported formats: .ts, .js, .json, .yaml`, filePath)
+    }
+  } catch (error) {
+    if (error instanceof ConfigLoadError) {
+      throw error
+    }
+    throw new ConfigLoadError(
+      `Failed to load configuration: ${error instanceof Error ? error.message : String(error)}`,
+      filePath,
+      error,
+    )
   }
+
+  // Validate configuration if requested
+  if (options.validate !== false) {
+    const validation = validateConfig(result.config)
+
+    if (!validation.success) {
+      const errorMessage = formatValidationErrors(validation.errors || [], filePath)
+
+      if (options.strict !== false) {
+        throw new ConfigValidationError(errorMessage, filePath, validation.errors || [])
+      }
+
+      // In non-strict mode, log warnings but continue
+      console.warn(`⚠️  Configuration validation warnings in ${filePath}:\n${errorMessage}`)
+    }
+
+    result.validated = validation.success
+  } else {
+    result.validated = false
+  }
+
+  return result
 }
 
 /**
@@ -128,9 +179,94 @@ function loadJSONConfig(filePath: string): ConfigLoadResult {
  * Load YAML configuration
  */
 function loadYAMLConfig(filePath: string): ConfigLoadResult {
-  // YAML support requires js-yaml package
-  // For now, throw an error indicating it's not yet implemented
-  throw new Error('YAML configuration support is not yet implemented. Please use .ts, .js, or .json format.')
+  try {
+    const content = readFileSync(filePath, 'utf-8')
+    
+    // Try to parse YAML manually (simple implementation)
+    // For full YAML support, consider adding js-yaml package
+    const config = parseSimpleYAML(content)
+
+    return {
+      config: mergeWithDefaults(config),
+      filePath,
+      format: 'yaml',
+      validated: false, // Will be validated in loadConfig
+    }
+  } catch (error) {
+    throw new ConfigLoadError(
+      `Failed to load YAML config: ${error instanceof Error ? error.message : String(error)}. Note: Full YAML support requires js-yaml package.`,
+      filePath,
+      error,
+    )
+  }
+}
+
+/**
+ * Simple YAML parser (basic support)
+ * For production, consider using js-yaml package
+ */
+function parseSimpleYAML(content: string): Partial<UniversalPWAConfig> {
+  // Very basic YAML parsing - only handles simple key-value pairs
+  // This is a placeholder. For full support, install js-yaml:
+  // import yaml from 'js-yaml'
+  // return yaml.load(content) as Partial<UniversalPWAConfig>
+  
+  const lines = content.split('\n')
+  const config: Record<string, unknown> = {}
+  let currentSection: string | null = null
+  let currentSectionData: Record<string, unknown> = {}
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    
+    // Skip comments and empty lines
+    if (!trimmed || trimmed.startsWith('#')) {
+      continue
+    }
+
+    // Section header (e.g., "app:")
+    if (trimmed.endsWith(':')) {
+      if (currentSection) {
+        config[currentSection] = currentSectionData
+      }
+      currentSection = trimmed.slice(0, -1)
+      currentSectionData = {}
+      continue
+    }
+
+    // Key-value pair
+    const colonIndex = trimmed.indexOf(':')
+    if (colonIndex > 0) {
+      const key = trimmed.slice(0, colonIndex).trim()
+      let value: unknown = trimmed.slice(colonIndex + 1).trim()
+
+      // Remove quotes if present
+      if (typeof value === 'string' && ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'")))) {
+        value = value.slice(1, -1)
+      }
+
+      // Parse booleans
+      if (value === 'true') value = true
+      if (value === 'false') value = false
+
+      // Parse numbers
+      if (typeof value === 'string' && /^-?\d+$/.test(value)) {
+        value = Number.parseInt(value, 10)
+      }
+
+      if (currentSection) {
+        currentSectionData[key] = value
+      } else {
+        config[key] = value
+      }
+    }
+  }
+
+  if (currentSection) {
+    config[currentSection] = currentSectionData
+  }
+
+  return config as Partial<UniversalPWAConfig>
 }
 
 /**
@@ -193,4 +329,50 @@ function mergeWithDefaults(userConfig: Partial<UniversalPWAConfig>): UniversalPW
   }
 
   return merged
+}
+
+/**
+ * Format validation errors for display
+ */
+function formatValidationErrors(errors: Array<{ path: string; message: string }>, filePath: string): string {
+  if (errors.length === 0) {
+    return 'Unknown validation error'
+  }
+
+  const lines = [`Found ${errors.length} validation error(s):`]
+  
+  for (const error of errors) {
+    const path = error.path ? ` at "${error.path}"` : ''
+    lines.push(`  • ${error.message}${path}`)
+  }
+
+  return lines.join('\n')
+}
+
+/**
+ * Custom error class for configuration loading errors
+ */
+export class ConfigLoadError extends Error {
+  constructor(
+    message: string,
+    public readonly filePath: string,
+    public readonly cause?: unknown,
+  ) {
+    super(message)
+    this.name = 'ConfigLoadError'
+  }
+}
+
+/**
+ * Custom error class for configuration validation errors
+ */
+export class ConfigValidationError extends Error {
+  constructor(
+    message: string,
+    public readonly filePath: string,
+    public readonly errors: Array<{ path: string; message: string }>,
+  ) {
+    super(message)
+    this.name = 'ConfigValidationError'
+  }
 }
