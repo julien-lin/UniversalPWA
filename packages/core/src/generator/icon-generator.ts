@@ -14,6 +14,7 @@ import {
 } from './icon-config.js'
 import { processInParallel } from '../utils/parallel-processor.js'
 import { generateAdaptiveIcon, generateAdaptiveIconFromSource } from './adaptive-icon-generator.js'
+import { generateSplashScreens } from './splash-screen-generator.js'
 
 export interface IconSize {
   width: number
@@ -370,6 +371,60 @@ export async function generateIconsAdvanced(
       const message = err instanceof Error ? err.message : String(err)
       // Don't fail generation if adaptive icons fail
       logger.warn({ module: 'icon-generator' }, `Failed to generate adaptive icons: ${message}`)
+    }
+  }
+
+  // Generate advanced splash screens if configured
+  if (config.splashScreens?.enabled) {
+    try {
+      const splashOutputDir = join(outputDir, 'splash-screens')
+      const splashConfig = config.splashScreens
+
+      // Use source from config or fallback to best source
+      const splashSource = splashConfig.source || bestSource
+      if (!splashSource) {
+        logger.warn({ module: 'icon-generator' }, 'Splash screens enabled but no source available')
+      } else {
+        const splashResult = await generateSplashScreens(splashSource, splashConfig, splashOutputDir)
+
+        // Add generated files to result
+        generatedFiles.push(...splashResult.generatedFiles)
+
+        // Add iOS splash screens to manifest
+        for (const iosPath of splashResult.ios) {
+          const relativePath = iosPath.replace(outputDir, '').replace(/^\//, '')
+          const metadata = await sharp(iosPath).metadata()
+          if (metadata.width && metadata.height) {
+            splashScreens.push({
+              src: `/${relativePath}`,
+              sizes: `${metadata.width}x${metadata.height}`,
+              type: 'image/png',
+            })
+          }
+        }
+
+        // Add Android splash screens to manifest
+        for (const androidPath of splashResult.android) {
+          const relativePath = androidPath.replace(outputDir, '').replace(/^\//, '')
+          const metadata = await sharp(androidPath).metadata()
+          if (metadata.width && metadata.height) {
+            splashScreens.push({
+              src: `/${relativePath}`,
+              sizes: `${metadata.width}x${metadata.height}`,
+              type: 'image/png',
+            })
+          }
+        }
+
+        logger.info(
+          { module: 'icon-generator', ios: splashResult.ios.length, android: splashResult.android.length },
+          'Generated splash screens',
+        )
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      // Don't fail generation if splash screens fail
+      logger.warn({ module: 'icon-generator' }, `Failed to generate splash screens: ${message}`)
     }
   }
 
