@@ -282,20 +282,16 @@ export function getTrackedFiles(
 export function shouldIgnoreFile(filePath: string, ignorePatterns: string[]): boolean {
   for (const pattern of ignorePatterns) {
     try {
-      // Simple glob matching
-      try {
-        const matches = globSync(pattern, { absolute: true })
-        if (matches.includes(filePath)) {
-          return true
-        }
-      } catch {
-        // Fallback to simple string matching
-        if (filePath.includes(pattern)) {
-          return true
-        }
+      // Try glob matching
+      const matches = globSync(pattern, { absolute: true })
+      if (matches.some((match) => filePath === match || filePath.startsWith(match))) {
+        return true
       }
     } catch {
-      // Ignore invalid patterns
+      // Fallback to simple string matching
+      if (filePath.includes(pattern.replace(/\*/g, ''))) {
+        return true
+      }
     }
   }
 
