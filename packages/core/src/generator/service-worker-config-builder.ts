@@ -187,6 +187,7 @@ export class ServiceWorkerConfigBuilder {
             ...(config.apiRoutes || []),
             ...(config.imageRoutes || []),
             ...(config.customRoutes || []),
+            ...(config.advanced?.routes || []),
         ]
 
         const patternErrors = RoutePatternResolver.validatePatterns(allRoutes)

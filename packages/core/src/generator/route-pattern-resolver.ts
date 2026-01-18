@@ -167,7 +167,10 @@ export class RoutePatternResolver {
      * Convert RouteConfig patterns to Workbox format
      * Returns array suitable for Workbox runtimeCaching
      */
-    static toWorkboxFormat(routes: RouteConfig[]): Array<{
+    static toWorkboxFormat(
+        routes: RouteConfig[],
+        globalConfig?: { cacheNamePrefix?: string },
+    ): Array<{
         urlPattern: RegExp
         handler: string
         options?: Record<string, unknown>
@@ -175,26 +178,61 @@ export class RoutePatternResolver {
         const sorted = this.sortByPriority(routes)
 
         return sorted.map((route) => {
-            const urlPattern = typeof route.pattern === 'string' ? this.globToRegex(route.pattern) : route.pattern
+            // Determine pattern type and convert to RegExp
+            let urlPattern: RegExp
+            if (route.pattern instanceof RegExp) {
+                urlPattern = route.pattern
+            } else if (route.patternType === 'regex') {
+                urlPattern = new RegExp(route.pattern)
+            } else if (route.patternType === 'glob' || route.pattern.includes('*') || route.pattern.includes('**')) {
+                urlPattern = this.globToRegex(route.pattern)
+            } else {
+                // Auto-detect: try as regex first, fallback to glob
+                try {
+                    urlPattern = new RegExp(route.pattern)
+                } catch {
+                    urlPattern = this.globToRegex(route.pattern)
+                }
+            }
+
+            // Build cache name with prefix if provided
+            const cacheName = globalConfig?.cacheNamePrefix
+                ? `${globalConfig.cacheNamePrefix}${route.strategy.cacheName}`
+                : route.strategy.cacheName
 
             const options: Record<string, unknown> = {
-                cacheName: route.strategy.cacheName,
+                cacheName,
             }
 
             if (route.strategy.networkTimeoutSeconds !== undefined) {
                 options.networkTimeoutSeconds = route.strategy.networkTimeoutSeconds
             }
 
-            if (route.strategy.expiration !== undefined) {
-                options.expiration = route.strategy.expiration
+            // Use route TTL if provided, otherwise use strategy expiration
+            const expiration = route.ttl || route.strategy.expiration
+            if (expiration !== undefined) {
+                options.expiration = expiration
             }
 
             if (route.strategy.headers !== undefined) {
                 options.headers = route.strategy.headers
             }
 
-            if (route.strategy.workboxOptions !== undefined) {
+            // Merge workbox options (route-specific override strategy)
+            if (route.workboxOptions !== undefined) {
+                Object.assign(options, route.workboxOptions)
+            } else if (route.strategy.workboxOptions !== undefined) {
                 Object.assign(options, route.strategy.workboxOptions)
+            }
+
+            // Add conditions if specified
+            if (route.conditions) {
+                if (route.conditions.methods) {
+                    options.method = route.conditions.methods
+                }
+                if (route.conditions.origins) {
+                    options.origin = route.conditions.origins
+                }
             }
 
             return {
