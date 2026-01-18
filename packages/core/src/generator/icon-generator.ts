@@ -154,12 +154,21 @@ export async function generateIconsAdvanced(
   const icons: ManifestIcon[] = []
   const splashScreens: ManifestSplashScreen[] = []
 
-  // Load source image with Sharp
+  // Load source image with Sharp (clone to avoid memory issues)
   const image = sharp(sourceImage)
   const metadata = await image.metadata()
 
   if (!metadata.width || !metadata.height) {
     throw new Error('Unable to read image dimensions')
+  }
+
+  // Validate image is not too large (memory optimization)
+  const MAX_DIMENSION = 4096
+  if (metadata.width > MAX_DIMENSION || metadata.height > MAX_DIMENSION) {
+    logger.warn(
+      { module: 'icon-generator', width: metadata.width, height: metadata.height },
+      'Source image is very large, this may impact performance',
+    )
   }
 
   // Determine optimal format
@@ -174,7 +183,10 @@ export async function generateIconsAdvanced(
         const optimalQuality = optimize ? getOptimalQuality(size, quality) : quality
 
         try {
-          let pipeline = image.clone().resize(size.width, size.height, {
+          // Clone image for each size to avoid memory issues
+          const clonedImage = image.clone()
+          
+          let pipeline = clonedImage.resize(size.width, size.height, {
             fit: 'cover',
             position: 'center',
           })
@@ -189,6 +201,9 @@ export async function generateIconsAdvanced(
           }
 
           await pipeline.toFile(outputPath)
+          
+          // Explicitly cleanup cloned image to free memory
+          clonedImage.destroy()
 
           return {
             success: true as const,
