@@ -11,7 +11,7 @@
 
 import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
-import type { BackendDetectionResult } from './types.js'
+import type { BackendDetectionResult, BackendLanguage } from './types.js'
 import type { ServiceWorkerConfig } from '../generator/caching-strategy.js'
 import { PRESET_STRATEGIES } from '../generator/caching-strategy.js'
 import { BaseBackendIntegration } from './base.js'
@@ -247,9 +247,11 @@ export class FlaskIntegration extends BaseBackendIntegration {
 
         return {
             detected: indicators.length > 0,
+            framework: 'flask',
+            language: 'python',
             confidence,
             indicators,
-            version: version || undefined,
+            versions: version ? [version] : undefined,
         }
     }
 
@@ -257,36 +259,27 @@ export class FlaskIntegration extends BaseBackendIntegration {
      * Generate Flask-optimized Service Worker configuration
      */
     generateServiceWorkerConfig(): ServiceWorkerConfig {
-        const routes = [
-            // Static files - CacheFirst with long expiration
+        const staticRoutes = [
             {
                 pattern: '/static/**',
-                strategy: PRESET_STRATEGIES.StaticAssets,
-                options: {
+                strategy: {
+                    ...PRESET_STRATEGIES.StaticAssets,
                     cacheName: 'flask-static-cache',
                     expiration: {
                         maxEntries: 100,
                         maxAgeSeconds: 86400 * 30, // 30 days
                     },
                 },
+                priority: 10,
+                description: 'Flask static files',
             },
-            // Images - CacheFirst
-            {
-                pattern: '*.{png,jpg,jpeg,svg,webp,gif}',
-                strategy: PRESET_STRATEGIES.Images,
-                options: {
-                    cacheName: 'flask-images-cache',
-                    expiration: {
-                        maxEntries: 60,
-                        maxAgeSeconds: 86400 * 30, // 30 days
-                    },
-                },
-            },
-            // API routes - NetworkFirst
+        ]
+
+        const apiRoutes = [
             {
                 pattern: '/api/**',
-                strategy: PRESET_STRATEGIES.ApiEndpoints,
-                options: {
+                strategy: {
+                    ...PRESET_STRATEGIES.ApiEndpoints,
                     cacheName: 'flask-api-cache',
                     networkTimeoutSeconds: 3,
                     expiration: {
@@ -294,26 +287,47 @@ export class FlaskIntegration extends BaseBackendIntegration {
                         maxAgeSeconds: 300, // 5 minutes
                     },
                 },
+                priority: 20,
+                description: 'Flask API endpoints',
             },
         ]
 
-        // Add CSRF token route if Flask-WTF is detected
-        if (this.config.hasFlaskWTF) {
-            routes.push({
-                pattern: '/csrf-token/**',
-                strategy: PRESET_STRATEGIES.NetworkOnly,
-                options: {
-                    cacheName: 'flask-csrf-cache',
+        const imageRoutes = [
+            {
+                pattern: '*.{png,jpg,jpeg,svg,webp,gif}',
+                strategy: {
+                    ...PRESET_STRATEGIES.Images,
+                    cacheName: 'flask-images-cache',
+                    expiration: {
+                        maxEntries: 60,
+                        maxAgeSeconds: 86400 * 30, // 30 days
+                    },
                 },
-            })
-        }
+                priority: 5,
+                description: 'Flask images',
+            },
+        ]
+
+        const customRoutes = this.config.hasFlaskWTF
+            ? [
+                {
+                    pattern: '/csrf-token/**',
+                    strategy: {
+                        name: 'NetworkOnly' as const,
+                        cacheName: 'flask-csrf-cache',
+                    },
+                    priority: 30,
+                    description: 'CSRF token (always fresh)',
+                },
+            ]
+            : []
 
         return {
-            precache: [],
-            runtimeCaching: routes,
-            skipWaiting: true,
-            clientsClaim: true,
-            navigationPreload: false,
+            destination: 'sw.js',
+            staticRoutes,
+            apiRoutes,
+            imageRoutes,
+            customRoutes,
         }
     }
 
@@ -423,7 +437,7 @@ export class FlaskIntegration extends BaseBackendIntegration {
     injectMiddleware(): {
         code: string
         path: string
-        language: string
+        language: BackendLanguage
         instructions: string[]
     } {
         return {
@@ -445,7 +459,7 @@ def service_worker():
 if __name__ == '__main__':
     app.run(ssl_context='adhoc' if app.debug else None)`,
             path: 'app.py',
-            language: 'python',
+            language: 'python' as BackendLanguage,
             instructions: [
                 'Add PWA routes to your Flask app',
                 'Place manifest.json and sw.js in the static/ folder',

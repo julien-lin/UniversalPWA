@@ -39,7 +39,7 @@ describe('DjangoIntegration', () => {
 
             expect(result.detected).toBe(true)
             expect(result.confidence).toBe('high')
-            expect(result.version).toBe('4.2.0')
+            expect(result.versions).toEqual(['4.2.0'])
         })
 
         it('should detect Django 5.0 project', () => {
@@ -65,7 +65,7 @@ describe('DjangoIntegration', () => {
 
             expect(result.detected).toBe(true)
             expect(result.confidence).toBe('high')
-            expect(result.version).toBe('5.0.0')
+            expect(result.versions).toEqual(['5.0.0'])
         })
 
         it('should detect Django with pyproject.toml', () => {
@@ -118,25 +118,31 @@ describe('DjangoIntegration', () => {
         it('should generate Django-optimized service worker config', () => {
             const config = integration.generateServiceWorkerConfig()
 
-            expect(config.runtimeCaching).toBeDefined()
-            expect(Array.isArray(config.runtimeCaching)).toBe(true)
-            expect(config.runtimeCaching.length).toBeGreaterThan(0)
+            expect(config.staticRoutes).toBeDefined()
+            expect(Array.isArray(config.staticRoutes)).toBe(true)
+            expect(config.staticRoutes.length).toBeGreaterThan(0)
+
+            expect(config.apiRoutes).toBeDefined()
+            expect(Array.isArray(config.apiRoutes)).toBe(true)
 
             // Check for Django-specific routes
-            const patterns = config.runtimeCaching.map((r: { pattern: string }) => r.pattern)
-            expect(patterns).toContain('/static/**')
-            expect(patterns).toContain('/media/**')
-            expect(patterns).toContain('/api/**')
-            expect(patterns).toContain('/admin/**')
+            const staticPatterns = config.staticRoutes.map((r) => r.pattern)
+            const apiPatterns = config.apiRoutes.map((r) => r.pattern)
+            const imagePatterns = config.imageRoutes.map((r) => r.pattern)
+            const customPatterns = (config.customRoutes || []).map((r) => r.pattern)
+            const allPatterns = [...staticPatterns, ...apiPatterns, ...imagePatterns, ...customPatterns]
+            expect(allPatterns).toContain('/static/**')
+            expect(allPatterns).toContain('/media/**')
+            expect(allPatterns).toContain('/api/**')
+            expect(allPatterns).toContain('/admin/**')
 
-            expect(config.skipWaiting).toBe(true)
-            expect(config.clientsClaim).toBe(true)
+            expect(config.destination).toBe('sw.js')
         })
 
         it('should include CSRF token route', () => {
             const config = integration.generateServiceWorkerConfig()
-            const patterns = config.runtimeCaching.map((r: { pattern: string }) => r.pattern)
-            expect(patterns).toContain('/csrf-token/**')
+            const customPatterns = (config.customRoutes || []).map((r) => r.pattern)
+            expect(customPatterns).toContain('/csrf-token/**')
         })
     })
 
