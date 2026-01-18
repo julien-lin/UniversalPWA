@@ -6,6 +6,7 @@ import { initCommand } from './commands/init.js'
 import { previewCommand } from './commands/preview.js'
 import { verifyCommand } from './commands/verify.js'
 import { removeCommand } from './commands/remove.js'
+import { generateConfigCommand } from './commands/generate-config.js'
 import { scanProject } from '@julien-lin/universal-pwa-core'
 import { promptInitOptions } from './prompts.js'
 import packageJson from '../package.json' with { type: 'json' }
