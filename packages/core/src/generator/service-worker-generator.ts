@@ -270,13 +270,38 @@ export async function generateServiceWorkerFromConfig(
     ...(config.advanced?.routes || []),
   ]
 
+  // Handle cache versioning and invalidation
+  let cacheVersion: CacheVersion | null = null
+  if (config.advanced) {
+    // Generate or get cache version
+    cacheVersion = getOrGenerateCacheVersion(projectPath, config.advanced)
+
+    // Check if cache should be invalidated
+    if (config.advanced.versioning?.autoInvalidate) {
+      const invalidationResult = shouldInvalidateCache(projectPath, null, config.advanced)
+      if (invalidationResult.shouldInvalidate) {
+        logger.info({
+          reason: invalidationResult.reason,
+          newVersion: invalidationResult.newVersion,
+        }, 'Cache invalidation triggered')
+      }
+    }
+
+    // Build dependency graph for cascade invalidation
+    if (config.advanced.dependencies?.enabled) {
+      const dependencyGraph = buildDependencyGraph(allRoutes)
+      void dependencyGraph // Can be used for cascade invalidation
+    }
+  }
+
   // Convert to Workbox format with global config
   const workboxRoutes = RoutePatternResolver.toWorkboxFormat(allRoutes, {
     cacheNamePrefix: config.advanced?.global?.cacheNamePrefix,
   })
 
-  // Note: workboxRoutes can be used for runtime caching injection in templates
+  // Note: workboxRoutes and cacheVersion can be used for runtime caching injection in templates
   void workboxRoutes
+  void cacheVersion
 
   // Workbox configuration
   const workboxConfig: Parameters<typeof injectManifest>[0] = {
