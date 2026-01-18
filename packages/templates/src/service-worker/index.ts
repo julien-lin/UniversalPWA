@@ -8,6 +8,8 @@ import { laravelSsrServiceWorkerTemplate } from './laravel-ssr.js'
 import { laravelApiServiceWorkerTemplate } from './laravel-api.js'
 import { symfonySpaServiceWorkerTemplate } from './symfony-spa.js'
 import { symfonyApiServiceWorkerTemplate } from './symfony-api.js'
+import { djangoSpaServiceWorkerTemplate } from './django-spa.js'
+import { djangoApiServiceWorkerTemplate } from './django-api.js'
 
 export type ServiceWorkerTemplateType =
   | 'static'
@@ -20,6 +22,8 @@ export type ServiceWorkerTemplateType =
   | 'laravel-api'
   | 'symfony-spa'
   | 'symfony-api'
+  | 'django-spa'
+  | 'django-api'
 
 export interface ServiceWorkerTemplate {
   type: ServiceWorkerTemplateType
@@ -41,6 +45,8 @@ export function getServiceWorkerTemplate(type: ServiceWorkerTemplateType): Servi
     'laravel-api': laravelApiServiceWorkerTemplate,
     'symfony-spa': symfonySpaServiceWorkerTemplate,
     'symfony-api': symfonyApiServiceWorkerTemplate,
+    'django-spa': djangoSpaServiceWorkerTemplate,
+    'django-api': djangoApiServiceWorkerTemplate,
   }
 
   const content = templates[type]
@@ -70,6 +76,8 @@ export function getAvailableTemplateTypes(): ServiceWorkerTemplateType[] {
     'laravel-api',
     'symfony-spa',
     'symfony-api',
+    'django-spa',
+    'django-api',
   ]
 }
 
@@ -115,6 +123,11 @@ export function determineTemplateType(
     return 'laravel-api'
   }
 
+  // Python frameworks
+  if (framework === 'Django') {
+    return architecture === 'spa' ? 'django-spa' : 'django-api'
+  }
+
   // Backend frameworks (Python, Ruby, Go, Java, .NET) - use static or SSR template based on architecture
   // Django, Flask, FastAPI, Rails, Sinatra, Go, Spring, ASP.NET typically serve static files
   // They will use the architecture-based template (static/ssr/spa)
@@ -143,4 +156,6 @@ export { laravelSsrServiceWorkerTemplate } from './laravel-ssr.js'
 export { laravelApiServiceWorkerTemplate } from './laravel-api.js'
 export { symfonySpaServiceWorkerTemplate } from './symfony-spa.js'
 export { symfonyApiServiceWorkerTemplate } from './symfony-api.js'
+export { djangoSpaServiceWorkerTemplate } from './django-spa.js'
+export { djangoApiServiceWorkerTemplate } from './django-api.js'
 
