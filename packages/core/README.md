@@ -19,6 +19,22 @@ Or with pnpm:
 pnpm add @julien-lin/universal-pwa-core
 ```
 
+## Configuration
+
+UniversalPWA supporte la configuration via fichier. Voir [CONFIGURATION.md](../DOCUMENTATION/CONFIGURATION.md) pour la documentation complète.
+
+### Charger une configuration
+
+```typescript
+import { findConfigFile, loadConfig } from '@julien-lin/universal-pwa-core'
+
+const configPath = await findConfigFile('./my-project')
+if (configPath) {
+  const result = await loadConfig(configPath)
+  console.log(result.config)
+}
+```
+
 ## Usage
 
 ### Scan a Project
