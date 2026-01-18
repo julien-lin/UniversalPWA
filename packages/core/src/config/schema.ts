@@ -169,13 +169,13 @@ export const UniversalPWAConfigSchema = z.object({
  * TypeScript type for the configuration
  */
 export type UniversalPWAConfig = z.infer<typeof UniversalPWAConfigSchema>
-export type IconConfig = z.infer<typeof IconConfigSchema>
-export type ServiceWorkerConfig = z.infer<typeof ServiceWorkerConfigSchema>
-export type ManifestConfig = z.infer<typeof ManifestConfigSchema>
-export type InjectionConfig = z.infer<typeof InjectionConfigSchema>
-export type ScannerConfig = z.infer<typeof ScannerConfigSchema>
-export type AdvancedCachingConfig = z.infer<typeof AdvancedCachingConfigSchema>
-export type OutputConfig = z.infer<typeof OutputConfigSchema>
+export type ConfigIconConfig = z.infer<typeof IconConfigSchema>
+export type ConfigServiceWorkerConfig = z.infer<typeof ServiceWorkerConfigSchema>
+export type ConfigManifestConfig = z.infer<typeof ManifestConfigSchema>
+export type ConfigInjectionConfig = z.infer<typeof InjectionConfigSchema>
+export type ConfigScannerConfig = z.infer<typeof ScannerConfigSchema>
+export type ConfigAdvancedCachingConfig = z.infer<typeof AdvancedCachingConfigSchema>
+export type ConfigOutputConfig = z.infer<typeof OutputConfigSchema>
 
 /**
  * Default configuration
