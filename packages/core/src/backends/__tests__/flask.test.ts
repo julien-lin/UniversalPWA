@@ -39,7 +39,7 @@ describe('FlaskIntegration', () => {
 
             expect(result.detected).toBe(true)
             expect(result.confidence).toBe('high')
-            expect(result.version).toBe('3.0.0')
+            expect(result.versions).toEqual(['3.0.0'])
         })
 
         it('should detect Flask with application.py', () => {
@@ -101,17 +101,21 @@ describe('FlaskIntegration', () => {
         it('should generate Flask-optimized service worker config', () => {
             const config = integration.generateServiceWorkerConfig()
 
-            expect(config.runtimeCaching).toBeDefined()
-            expect(Array.isArray(config.runtimeCaching)).toBe(true)
-            expect(config.runtimeCaching.length).toBeGreaterThan(0)
+            expect(config.staticRoutes).toBeDefined()
+            expect(Array.isArray(config.staticRoutes)).toBe(true)
+            expect(config.staticRoutes.length).toBeGreaterThan(0)
+
+            expect(config.apiRoutes).toBeDefined()
+            expect(Array.isArray(config.apiRoutes)).toBe(true)
+            expect(config.apiRoutes.length).toBeGreaterThan(0)
 
             // Check for Flask-specific routes
-            const patterns = config.runtimeCaching.map((r: { pattern: string }) => r.pattern)
-            expect(patterns).toContain('/static/**')
-            expect(patterns).toContain('/api/**')
+            const staticPatterns = config.staticRoutes.map((r) => r.pattern)
+            const apiPatterns = config.apiRoutes.map((r) => r.pattern)
+            expect(staticPatterns).toContain('/static/**')
+            expect(apiPatterns).toContain('/api/**')
 
-            expect(config.skipWaiting).toBe(true)
-            expect(config.clientsClaim).toBe(true)
+            expect(config.destination).toBe('sw.js')
         })
 
         it('should include CSRF token route if Flask-WTF is detected', () => {
@@ -132,8 +136,8 @@ describe('FlaskIntegration', () => {
 
             const integrationWithWTF = new FlaskIntegration(projectRoot)
             const config = integrationWithWTF.generateServiceWorkerConfig()
-            const patterns = config.runtimeCaching.map((r: { pattern: string }) => r.pattern)
-            expect(patterns).toContain('/csrf-token/**')
+            const customPatterns = (config.customRoutes || []).map((r) => r.pattern)
+            expect(customPatterns).toContain('/csrf-token/**')
         })
     })
 

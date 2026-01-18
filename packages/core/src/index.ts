@@ -1,6 +1,7 @@
 export * from './scanner/index.js'
 export * from './generator/manifest-generator.js'
 export * from './generator/icon-generator.js'
+export * from './generator/icon-config.js'
 export * from './generator/service-worker-generator.js'
 export * from './generator/https-checker.js'
 export * from './injector/html-parser.js'

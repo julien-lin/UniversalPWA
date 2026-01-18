@@ -114,7 +114,7 @@ describe('icon-generator', () => {
           sourceImage: join(TEST_DIR, 'non-existent.png'),
           outputDir,
         }),
-      ).rejects.toThrow('Source image not found')
+      ).rejects.toThrow(/Source image not found|No valid icon source found/)
     })
 
     it('should create output directory if it does not exist', async () => {

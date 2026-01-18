@@ -11,7 +11,7 @@
 
 import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
-import type { BackendDetectionResult } from './types.js'
+import type { BackendDetectionResult, BackendLanguage } from './types.js'
 import type { ServiceWorkerConfig } from '../generator/caching-strategy.js'
 import { PRESET_STRATEGIES } from '../generator/caching-strategy.js'
 import { BaseBackendIntegration } from './base.js'
@@ -285,9 +285,11 @@ export class DjangoIntegration extends BaseBackendIntegration {
 
         return {
             detected: indicators.length > 0,
+            framework: 'django',
+            language: 'python',
             confidence,
             indicators,
-            version: version || undefined,
+            versions: version ? [version] : undefined,
         }
     }
 
@@ -295,36 +297,27 @@ export class DjangoIntegration extends BaseBackendIntegration {
      * Generate Django-optimized Service Worker configuration
      */
     generateServiceWorkerConfig(): ServiceWorkerConfig {
-        const routes = [
-            // Static files - CacheFirst with long expiration
+        const staticRoutes = [
             {
                 pattern: '/static/**',
-                strategy: PRESET_STRATEGIES.StaticAssets,
-                options: {
+                strategy: {
+                    ...PRESET_STRATEGIES.StaticAssets,
                     cacheName: 'django-static-cache',
                     expiration: {
                         maxEntries: 100,
                         maxAgeSeconds: 86400 * 30, // 30 days
                     },
                 },
+                priority: 10,
+                description: 'Django static files',
             },
-            // Media files - CacheFirst with shorter expiration
-            {
-                pattern: '/media/**',
-                strategy: PRESET_STRATEGIES.Images,
-                options: {
-                    cacheName: 'django-media-cache',
-                    expiration: {
-                        maxEntries: 50,
-                        maxAgeSeconds: 86400 * 7, // 7 days
-                    },
-                },
-            },
-            // API routes - NetworkFirst
+        ]
+
+        const apiRoutes = [
             {
                 pattern: '/api/**',
-                strategy: PRESET_STRATEGIES.ApiEndpoints,
-                options: {
+                strategy: {
+                    ...PRESET_STRATEGIES.ApiEndpoints,
                     cacheName: 'django-api-cache',
                     networkTimeoutSeconds: 3,
                     expiration: {
@@ -332,32 +325,56 @@ export class DjangoIntegration extends BaseBackendIntegration {
                         maxAgeSeconds: 300, // 5 minutes
                     },
                 },
-            },
-            // Admin routes - NetworkOnly (always fresh)
-            {
-                pattern: '/admin/**',
-                strategy: PRESET_STRATEGIES.NetworkOnly,
-                options: {
-                    cacheName: 'django-admin-cache',
-                },
+                priority: 20,
+                description: 'Django API endpoints',
             },
         ]
 
-        // Add CSRF token route if needed
-        routes.push({
-            pattern: '/csrf-token/**',
-            strategy: PRESET_STRATEGIES.NetworkOnly,
-            options: {
-                cacheName: 'django-csrf-cache',
+        const imageRoutes = [
+            {
+                pattern: '/media/**',
+                strategy: {
+                    ...PRESET_STRATEGIES.Images,
+                    cacheName: 'django-media-cache',
+                    expiration: {
+                        maxEntries: 50,
+                        maxAgeSeconds: 86400 * 7, // 7 days
+                    },
+                },
+                priority: 5,
+                description: 'Django media files',
             },
-        })
+        ]
+
+        const customRoutes = [
+            // Admin routes - NetworkOnly (always fresh)
+            {
+                pattern: '/admin/**',
+                strategy: {
+                    name: 'NetworkOnly' as const,
+                    cacheName: 'django-admin-cache',
+                },
+                priority: 30,
+                description: 'Django admin (always fresh)',
+            },
+            // CSRF token route - NetworkOnly
+            {
+                pattern: '/csrf-token/**',
+                strategy: {
+                    name: 'NetworkOnly' as const,
+                    cacheName: 'django-csrf-cache',
+                },
+                priority: 30,
+                description: 'CSRF token (always fresh)',
+            },
+        ]
 
         return {
-            precache: [],
-            runtimeCaching: routes,
-            skipWaiting: true,
-            clientsClaim: true,
-            navigationPreload: false,
+            destination: 'sw.js',
+            staticRoutes,
+            apiRoutes,
+            imageRoutes,
+            customRoutes,
         }
     }
 
@@ -478,7 +495,7 @@ export class DjangoIntegration extends BaseBackendIntegration {
     injectMiddleware(): {
         code: string
         path: string
-        language: string
+        language: BackendLanguage
         instructions: string[]
     } {
         return {

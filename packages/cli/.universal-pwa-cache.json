@@ -1,0 +1,73 @@
+{
+  "version": "1.0.0",
+  "entries": {
+    "452ad9d8276f53d7a86c3f53ad11a0c9": {
+      "result": {
+        "framework": {
+          "framework": null,
+          "confidence": "low",
+          "confidenceScore": 0,
+          "indicators": [
+            "TypeScript detected"
+          ],
+          "version": null,
+          "configuration": {
+            "language": "typescript",
+            "cssInJs": [],
+            "stateManagement": [],
+            "buildTool": null
+          }
+        },
+        "assets": {
+          "javascript": [
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/vitest.config.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/prompts.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/prompts.test.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/index.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/index.test.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/utils/transaction.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/utils/transaction.test.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/utils/suggestions.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/utils/suggestions.test.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/utils/progress.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/utils/progress.test.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/utils/progress.demo.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/utils/error-codes.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/utils/error-codes.test.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/utils/environment-detector.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/utils/environment-detector.test.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/commands/verify.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/commands/verify.test.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/commands/remove.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/commands/remove.test.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/commands/preview.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/commands/preview.test.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/commands/init.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/commands/init.test.ts"
+          ],
+          "css": [],
+          "images": [],
+          "fonts": [],
+          "apiRoutes": []
+        },
+        "architecture": {
+          "architecture": "ssr",
+          "buildTool": null,
+          "confidence": "high",
+          "indicators": [
+            "HTML: SSR patterns detected (large content)",
+            "HTML: very large content with real text → SSR"
+          ]
+        },
+        "timestamp": "2026-01-18T10:32:47.161Z",
+        "projectPath": "/Users/julien/Desktop/UniversalPWA/packages/cli"
+      },
+      "timestamp": "2026-01-18T10:32:47.164Z",
+      "fileHashes": {
+        "package.json": "5e953878c1bdaf5abd98503a0d007f14",
+        "tsconfig.json": "662557bd5328922fd7501b2eb749fdef"
+      },
+      "ttl": 86400
+    }
+  }
+}

@@ -4,6 +4,15 @@ import { join } from 'path'
 import type { ManifestIcon, ManifestSplashScreen } from './manifest-generator.js'
 import { validateIconSource, type IconValidationResult } from '../validator/icon-validator.js'
 import { logger } from '../utils/logger.js'
+import {
+  type IconGenerationConfig,
+  type IconSource,
+  detectIconSources,
+  findBestIconSource,
+  determineOptimalFormat,
+  getOptimalQuality,
+} from './icon-config.js'
+import { processInParallel } from '../utils/parallel-processor.js'
 
 export interface IconSize {
   width: number
@@ -45,10 +54,14 @@ export interface IconGeneratorOptions {
   outputDir: string
   iconSizes?: IconSize[]
   splashSizes?: SplashScreenSize[]
-  format?: 'png' | 'webp'
+  format?: 'png' | 'webp' | 'auto'
   quality?: number
   validate?: boolean // Validate icon before generation (default: false)
   strictValidation?: boolean // If true, throw error on validation failure (default: false)
+  // Options avancées
+  optimize?: boolean // Optimisation automatique (défaut: true)
+  parallel?: boolean // Génération parallèle (défaut: true)
+  concurrency?: number // Nombre de générations simultanées (défaut: 10)
 }
 
 export interface IconGenerationResult {
@@ -59,24 +72,64 @@ export interface IconGenerationResult {
 }
 
 /**
- * Generates all PWA icons from a source image
+ * Generates all PWA icons from a source image (legacy API)
+ * @deprecated Use generateIconsAdvanced for multi-source support
  */
 export async function generateIcons(options: IconGeneratorOptions): Promise<IconGenerationResult> {
+  // Convert legacy options to new config format
+  const config: IconGenerationConfig = {
+    sources: [
+      {
+        path: options.sourceImage,
+        priority: 1,
+        type: 'primary',
+      },
+    ],
+    outputDir: options.outputDir,
+    format: options.format || 'png',
+    quality: options.quality || 90,
+    iconSizes: options.iconSizes,
+    validate: options.validate,
+    strictValidation: options.strictValidation,
+    optimize: options.optimize !== false,
+    parallel: options.parallel !== false,
+    concurrency: options.concurrency || 10,
+  }
+
+  return generateIconsAdvanced(config, {
+    splashSizes: options.splashSizes,
+  })
+}
+
+/**
+ * Generates all PWA icons using advanced configuration with multi-source support
+ */
+export async function generateIconsAdvanced(
+  config: IconGenerationConfig,
+  options?: {
+    splashSizes?: SplashScreenSize[]
+  },
+): Promise<IconGenerationResult> {
   const {
-    sourceImage,
+    sources,
     outputDir,
-    iconSizes = STANDARD_ICON_SIZES,
-    splashSizes = STANDARD_SPLASH_SIZES,
     format = 'png',
     quality = 90,
+    iconSizes = STANDARD_ICON_SIZES,
     validate = false,
     strictValidation = false,
-  } = options
+    optimize = true,
+    parallel = true,
+    concurrency = 10,
+  } = config
 
-  // Check that source image exists
-  if (!existsSync(sourceImage)) {
-    throw new Error(`Source image not found: ${sourceImage}`)
+  // Find best source or use first available
+  const bestSource = findBestIconSource(sources)
+  if (!bestSource || !existsSync(bestSource.path)) {
+    throw new Error(`No valid icon source found. Checked ${sources.length} source(s)`)
   }
+
+  const sourceImage = bestSource.path
 
   // Validate icon if requested
   let validation: IconValidationResult | undefined
@@ -107,10 +160,69 @@ export async function generateIcons(options: IconGeneratorOptions): Promise<Icon
     throw new Error('Unable to read image dimensions')
   }
 
-  // Generate icons in parallel with Promise.all
-  const iconResults = await Promise.all(
-    iconSizes.map(async (size) => {
+  // Determine optimal format
+  const finalFormat = determineOptimalFormat(config)
+
+  // Generate icons (parallel or sequential)
+  if (parallel) {
+    const iconResults = await processInParallel(
+      iconSizes,
+      async (size) => {
+        const outputPath = join(outputDir, size.name)
+        const optimalQuality = optimize ? getOptimalQuality(size, quality) : quality
+
+        try {
+          let pipeline = image.clone().resize(size.width, size.height, {
+            fit: 'cover',
+            position: 'center',
+          })
+
+          if (finalFormat === 'png') {
+            pipeline = pipeline.png({
+              quality: optimalQuality,
+              compressionLevel: config.compressionLevel || 9,
+            })
+          } else {
+            pipeline = pipeline.webp({ quality: optimalQuality })
+          }
+
+          await pipeline.toFile(outputPath)
+
+          return {
+            success: true as const,
+            file: outputPath,
+            icon: {
+              src: `/${size.name}`,
+              sizes: `${size.width}x${size.height}`,
+              type: finalFormat === 'png' ? 'image/png' : 'image/webp',
+              purpose: size.width >= 192 && size.width <= 512 ? 'any' : undefined,
+            },
+          }
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err)
+          throw new Error(`Failed to generate icon ${size.name}: ${message}`)
+        }
+      },
+      {
+        concurrency,
+        continueOnError: false,
+      },
+    )
+
+    for (const result of iconResults.successful) {
+      generatedFiles.push(result.result.file)
+      icons.push(result.result.icon)
+    }
+
+    if (iconResults.failed.length > 0) {
+      const errors = iconResults.failed.map((f) => f.error).join('; ')
+      throw new Error(`Icon generation failed: ${errors}`)
+    }
+  } else {
+    // Sequential generation (fallback)
+    for (const size of iconSizes) {
       const outputPath = join(outputDir, size.name)
+      const optimalQuality = optimize ? getOptimalQuality(size, quality) : quality
 
       try {
         let pipeline = image.clone().resize(size.width, size.height, {
@@ -118,111 +230,99 @@ export async function generateIcons(options: IconGeneratorOptions): Promise<Icon
           position: 'center',
         })
 
-        if (format === 'png') {
-          pipeline = pipeline.png({ quality, compressionLevel: 9 })
+        if (finalFormat === 'png') {
+          pipeline = pipeline.png({
+            quality: optimalQuality,
+            compressionLevel: config.compressionLevel || 9,
+          })
         } else {
-          pipeline = pipeline.webp({ quality })
+          pipeline = pipeline.webp({ quality: optimalQuality })
         }
 
         await pipeline.toFile(outputPath)
 
-        return {
-          success: true,
-          file: outputPath,
-          icon: {
-            src: `/${size.name}`,
-            sizes: `${size.width}x${size.height}`,
-            type: format === 'png' ? 'image/png' : 'image/webp',
-            purpose: size.width >= 192 && size.width <= 512 ? 'any' : undefined,
-          },
-        }
+        generatedFiles.push(outputPath)
+        icons.push({
+          src: `/${size.name}`,
+          sizes: `${size.width}x${size.height}`,
+          type: finalFormat === 'png' ? 'image/png' : 'image/webp',
+          purpose: size.width >= 192 && size.width <= 512 ? 'any' : undefined,
+        })
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err)
-        return {
-          success: false as const,
-          error: `Failed to generate icon ${size.name}: ${message}`,
-          size: size.name,
-        }
+        throw new Error(`Failed to generate icon ${size.name}: ${message}`)
       }
-    })
-  )
-
-  // Process icon results
-  for (const result of iconResults) {
-    if (result.success) {
-      generatedFiles.push(result.file)
-      icons.push(result.icon)
-    } else {
-      throw new Error(result.error)
     }
   }
 
-  // Generate splash screens in parallel with Promise.all
-  const splashResults = await Promise.all(
-    splashSizes.map(async (size) => {
-      const outputPath = join(outputDir, size.name)
+  // Generate splash screens if requested
+  const splashSizes = options?.splashSizes || STANDARD_SPLASH_SIZES
+  if (splashSizes.length > 0) {
+    const splashResults = await Promise.all(
+      splashSizes.map(async (size) => {
+        const outputPath = join(outputDir, size.name)
 
-      try {
-        let pipeline = image.clone().resize(size.width, size.height, {
-          fit: 'cover',
-          position: 'center',
-        })
+        try {
+          let pipeline = image.clone().resize(size.width, size.height, {
+            fit: 'cover',
+            position: 'center',
+          })
 
-        if (format === 'png') {
-          pipeline = pipeline.png({ quality, compressionLevel: 9 })
-        } else {
-          pipeline = pipeline.webp({ quality })
+          if (finalFormat === 'png') {
+            pipeline = pipeline.png({
+              quality: optimize ? getOptimalQuality({ width: size.width, height: size.height, name: size.name }, quality) : quality,
+              compressionLevel: config.compressionLevel || 9,
+            })
+          } else {
+            pipeline = pipeline.webp({
+              quality: optimize ? getOptimalQuality({ width: size.width, height: size.height, name: size.name }, quality) : quality,
+            })
+          }
+
+          await pipeline.toFile(outputPath)
+
+          return {
+            success: true as const,
+            file: outputPath,
+            splash: {
+              src: `/${size.name}`,
+              sizes: `${size.width}x${size.height}`,
+              type: finalFormat === 'png' ? ('image/png' as const) : ('image/webp' as const),
+            },
+          }
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err)
+          throw new Error(`Failed to generate splash screen ${size.name}: ${message}`)
         }
+      })
+    )
 
-        await pipeline.toFile(outputPath)
-
-        return {
-          success: true as const,
-          file: outputPath,
-          splash: {
-            src: `/${size.name}`,
-            sizes: `${size.width}x${size.height}`,
-            type: format === 'png' ? ('image/png' as const) : ('image/webp' as const),
-          },
-        }
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err)
-        return {
-          success: false as const,
-          error: `Failed to generate splash screen ${size.name}: ${message}`,
-          size: size.name,
-        }
+    for (const result of splashResults) {
+      if (result.success) {
+        generatedFiles.push(result.file)
+        splashScreens.push(result.splash)
       }
-    })
-  )
-
-  // Process splash results
-  for (const result of splashResults) {
-    if (result.success) {
-      generatedFiles.push(result.file)
-      splashScreens.push(result.splash)
-    } else {
-      throw new Error(result.error)
     }
   }
 
-  // Generate apple-touch-icon.png (180x180) if PNG format
-  if (format === 'png') {
-    try {
-      const appleIconPath = join(outputDir, 'apple-touch-icon.png')
-      await image.clone()
-        .resize(180, 180, {
-          fit: 'cover',
-          position: 'center',
-        })
-        .png({ quality, compressionLevel: 9 })
-        .toFile(appleIconPath)
-      generatedFiles.push(appleIconPath)
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      // Don't fail generation if apple-touch-icon fails
-      logger.warn({ module: 'icon-generator' }, `Failed to generate apple-touch-icon: ${message}`)
-    }
+  // Generate apple-touch-icon.png (180x180) - always PNG for iOS compatibility
+  try {
+    const appleIconPath = join(outputDir, 'apple-touch-icon.png')
+    await image.clone()
+      .resize(180, 180, {
+        fit: 'cover',
+        position: 'center',
+      })
+      .png({
+        quality: optimize ? getOptimalQuality({ width: 180, height: 180, name: 'apple-touch-icon.png' }, quality) : quality,
+        compressionLevel: config.compressionLevel || 9,
+      })
+      .toFile(appleIconPath)
+    generatedFiles.push(appleIconPath)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    // Don't fail generation if apple-touch-icon fails
+    logger.warn({ module: 'icon-generator' }, `Failed to generate apple-touch-icon: ${message}`)
   }
 
   return {
