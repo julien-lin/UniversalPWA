@@ -13,6 +13,13 @@ import {
   buildDependencyGraph,
   type CacheVersion,
 } from './cache-invalidation.js'
+import { logger } from '../utils/logger.js'
+import {
+  getOrGenerateCacheVersion,
+  shouldInvalidateCache,
+  buildDependencyGraph,
+  type CacheVersion,
+} from './cache-invalidation.js'
 // Use string to avoid type lint issues in this unit
 // import type { Framework } from '../scanner/framework-detector'
 
