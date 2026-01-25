@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from "vitest";
 import {
   parseHTMLWithLimits,
   validateHTMLStructure,
@@ -7,12 +7,12 @@ import {
   formatParserResult,
   type ParserConfig,
   type ParserResult,
-} from './html-parser-limiter';
+} from "./html-parser-limiter";
 
-describe('HTML Parser Limiter - P3.1', () => {
-  describe('parseHTMLWithLimits', () => {
-    it('should parse valid simple HTML', () => {
-      const html = '<div><p>Hello</p></div>';
+describe("HTML Parser Limiter - P3.1", () => {
+  describe("parseHTMLWithLimits", () => {
+    it("should parse valid simple HTML", () => {
+      const html = "<div><p>Hello</p></div>";
       const result = parseHTMLWithLimits(html);
 
       expect(result.success).toBe(true);
@@ -21,7 +21,7 @@ describe('HTML Parser Limiter - P3.1', () => {
       expect(result.parseTime).toBeLessThan(100);
     });
 
-    it('should parse self-closing tags correctly', () => {
+    it("should parse self-closing tags correctly", () => {
       const html = '<img src="test.png" /><br/><input type="text" />';
       const result = parseHTMLWithLimits(html);
 
@@ -29,7 +29,7 @@ describe('HTML Parser Limiter - P3.1', () => {
       expect(result.nodeCount).toBeGreaterThan(0);
     });
 
-    it('should handle meta tags', () => {
+    it("should handle meta tags", () => {
       const html =
         '<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head><body></body></html>';
       const result = parseHTMLWithLimits(html);
@@ -38,15 +38,15 @@ describe('HTML Parser Limiter - P3.1', () => {
       expect(result.depth).toBeGreaterThan(0);
     });
 
-    it('should reject HTML exceeding max depth', () => {
-      let html = '<div>';
+    it("should reject HTML exceeding max depth", () => {
+      let html = "<div>";
       for (let i = 0; i < 25; i++) {
-        html += '<div>';
+        html += "<div>";
       }
       for (let i = 0; i < 25; i++) {
-        html += '</div>';
+        html += "</div>";
       }
-      html += '</div>';
+      html += "</div>";
 
       const config: ParserConfig = { maxDepth: 20, timeout: 2000 };
       const result = parseHTMLWithLimits(html, config);
@@ -56,16 +56,16 @@ describe('HTML Parser Limiter - P3.1', () => {
       expect(result.depth).toBeGreaterThan(20);
     });
 
-    it('should allow HTML with depth at or below limit', () => {
-      let html = '<div>';
+    it("should allow HTML with depth at or below limit", () => {
+      let html = "<div>";
       for (let i = 0; i < 18; i++) {
-        html += '<div>';
+        html += "<div>";
       }
-      html += '<p>Content</p>';
+      html += "<p>Content</p>";
       for (let i = 0; i < 18; i++) {
-        html += '</div>';
+        html += "</div>";
       }
-      html += '</div>';
+      html += "</div>";
 
       const config: ParserConfig = { maxDepth: 20, timeout: 2000 };
       const result = parseHTMLWithLimits(html, config);
@@ -74,22 +74,22 @@ describe('HTML Parser Limiter - P3.1', () => {
       expect(result.depth).toBeLessThanOrEqual(20);
     });
 
-    it('should count nodes correctly', () => {
-      const html = '<div><p>Text1</p><p>Text2</p><p>Text3</p></div>';
+    it("should count nodes correctly", () => {
+      const html = "<div><p>Text1</p><p>Text2</p><p>Text3</p></div>";
       const result = parseHTMLWithLimits(html);
 
       expect(result.success).toBe(true);
       expect(result.nodeCount).toBeGreaterThanOrEqual(4);
     });
 
-    it('should respect custom config', () => {
-      let html = '<div>';
+    it("should respect custom config", () => {
+      let html = "<div>";
       for (let i = 0; i < 15; i++) {
-        html += '<div>';
+        html += "<div>";
       }
-      html += '</div>';
+      html += "</div>";
       for (let i = 0; i < 15; i++) {
-        html += '</div>';
+        html += "</div>";
       }
 
       const config: ParserConfig = { maxDepth: 10, timeout: 2000 };
@@ -99,7 +99,7 @@ describe('HTML Parser Limiter - P3.1', () => {
       expect(result.exceeded?.depth).toBe(true);
     });
 
-    it('should handle attributes in tags', () => {
+    it("should handle attributes in tags", () => {
       const html =
         '<div class="container" id="main"><p data-test="value">Content</p></div>';
       const result = parseHTMLWithLimits(html);
@@ -108,7 +108,7 @@ describe('HTML Parser Limiter - P3.1', () => {
       expect(result.nodeCount).toBeGreaterThan(0);
     });
 
-    it('should handle mixed self-closing and regular tags', () => {
+    it("should handle mixed self-closing and regular tags", () => {
       const html =
         '<div><img src="a.png"/><p>Text</p><br/><input type="text"/></div>';
       const result = parseHTMLWithLimits(html);
@@ -117,7 +117,7 @@ describe('HTML Parser Limiter - P3.1', () => {
       expect(result.depth).toBeGreaterThan(0);
     });
 
-    it('should handle nested lists', () => {
+    it("should handle nested lists", () => {
       const html = `<ul>
         <li>Item 1
           <ul>
@@ -135,28 +135,28 @@ describe('HTML Parser Limiter - P3.1', () => {
       expect(result.depth).toBeGreaterThan(3);
     });
 
-    it('should handle comments', () => {
-      const html = '<div><!-- This is a comment --><p>Text</p></div>';
+    it("should handle comments", () => {
+      const html = "<div><!-- This is a comment --><p>Text</p></div>";
       const result = parseHTMLWithLimits(html);
 
       expect(result.success).toBe(true);
     });
 
-    it('should handle empty HTML', () => {
-      const result = parseHTMLWithLimits('');
+    it("should handle empty HTML", () => {
+      const result = parseHTMLWithLimits("");
 
       expect(result.success).toBe(true);
       expect(result.nodeCount).toBe(0);
       expect(result.depth).toBe(0);
     });
 
-    it('should handle HTML with only text', () => {
-      const result = parseHTMLWithLimits('Just plain text without tags');
+    it("should handle HTML with only text", () => {
+      const result = parseHTMLWithLimits("Just plain text without tags");
 
       expect(result.success).toBe(true);
     });
 
-    it('should handle complex real-world HTML', () => {
+    it("should handle complex real-world HTML", () => {
       const html = `<html>
         <head>
           <meta charset="utf-8">
@@ -187,7 +187,7 @@ describe('HTML Parser Limiter - P3.1', () => {
       expect(result.depth).toBeGreaterThan(3);
     });
 
-    it('should handle DOCTYPE declarations', () => {
+    it("should handle DOCTYPE declarations", () => {
       const html = `<!DOCTYPE html>
         <html>
           <head><title>Test</title></head>
@@ -198,13 +198,13 @@ describe('HTML Parser Limiter - P3.1', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should handle HTML with entities', () => {
-      const html = '<div>&nbsp;&lt;test&gt;&amp;</div>';
+    it("should handle HTML with entities", () => {
+      const html = "<div>&nbsp;&lt;test&gt;&amp;</div>";
       const result = parseHTMLWithLimits(html);
       expect(result.success).toBe(true);
     });
 
-    it('should handle table structures', () => {
+    it("should handle table structures", () => {
       const html = `<table>
         <tr><td>Cell 1</td><td>Cell 2</td></tr>
         <tr><td>Cell 3</td><td>Cell 4</td></tr>
@@ -215,10 +215,10 @@ describe('HTML Parser Limiter - P3.1', () => {
       expect(result.nodeCount).toBeGreaterThan(5);
     });
 
-    it('should measure performance on reasonable HTML', () => {
+    it("should measure performance on reasonable HTML", () => {
       const html = `<html>
         <body>
-          ${Array.from({ length: 100 }, (_, i) => `<div id="item-${i}">Item ${i}</div>`).join('')}
+          ${Array.from({ length: 100 }, (_, i) => `<div id="item-${i}">Item ${i}</div>`).join("")}
         </body>
       </html>`;
 
@@ -228,12 +228,12 @@ describe('HTML Parser Limiter - P3.1', () => {
       expect(result.parseTime).toBeLessThan(500);
     });
 
-    it('should handle forms with many inputs', () => {
-      let html = '<form>';
+    it("should handle forms with many inputs", () => {
+      let html = "<form>";
       for (let i = 0; i < 100; i++) {
         html += `<input type="text" name="field-${i}" />`;
       }
-      html += '</form>';
+      html += "</form>";
 
       const result = parseHTMLWithLimits(html);
       expect(result.success).toBe(true);
@@ -241,9 +241,9 @@ describe('HTML Parser Limiter - P3.1', () => {
     });
   });
 
-  describe('validateHTMLStructure', () => {
-    it('should validate simple valid HTML', () => {
-      const html = '<div><p>Hello</p></div>';
+  describe("validateHTMLStructure", () => {
+    it("should validate simple valid HTML", () => {
+      const html = "<div><p>Hello</p></div>";
       const result = validateHTMLStructure(html);
 
       expect(result.valid).toBe(true);
@@ -251,37 +251,40 @@ describe('HTML Parser Limiter - P3.1', () => {
       expect(result.depth).toBeGreaterThan(0);
     });
 
-    it('should report depth issues', () => {
-      let html = '<div>';
+    it("should report depth issues", () => {
+      let html = "<div>";
       for (let i = 0; i < 25; i++) {
-        html += '<div>';
+        html += "<div>";
       }
       for (let i = 0; i < 25; i++) {
-        html += '</div>';
+        html += "</div>";
       }
-      html += '</div>';
+      html += "</div>";
 
-      const result = validateHTMLStructure(html, { maxDepth: 20, timeout: 2000 });
+      const result = validateHTMLStructure(html, {
+        maxDepth: 20,
+        timeout: 2000,
+      });
 
       expect(result.valid).toBe(false);
       expect(result.issues.length).toBeGreaterThan(0);
-      expect(result.issues[0]).toContain('depth');
+      expect(result.issues[0]).toContain("depth");
     });
 
-    it('should include all relevant validation info', () => {
-      const html = '<div><p>Test</p></div>';
+    it("should include all relevant validation info", () => {
+      const html = "<div><p>Test</p></div>";
       const result = validateHTMLStructure(html);
 
-      expect(result).toHaveProperty('valid');
-      expect(result).toHaveProperty('depth');
-      expect(result).toHaveProperty('nodeCount');
-      expect(result).toHaveProperty('issues');
-      expect(result).toHaveProperty('timeMs');
+      expect(result).toHaveProperty("valid");
+      expect(result).toHaveProperty("depth");
+      expect(result).toHaveProperty("nodeCount");
+      expect(result).toHaveProperty("issues");
+      expect(result).toHaveProperty("timeMs");
     });
   });
 
-  describe('extractMetaTags', () => {
-    it('should extract meta tags from HTML', () => {
+  describe("extractMetaTags", () => {
+    it("should extract meta tags from HTML", () => {
       const html = `<html>
         <head>
           <meta charset="utf-8">
@@ -294,11 +297,11 @@ describe('HTML Parser Limiter - P3.1', () => {
 
       expect(result.valid).toBe(true);
       expect(result.tags.length).toBeGreaterThanOrEqual(2);
-      expect(result.tags.some((t) => t.name === 'viewport')).toBe(true);
-      expect(result.tags.some((t) => t.name === 'description')).toBe(true);
+      expect(result.tags.some((t) => t.name === "viewport")).toBe(true);
+      expect(result.tags.some((t) => t.name === "description")).toBe(true);
     });
 
-    it('should extract property-based meta tags', () => {
+    it("should extract property-based meta tags", () => {
       const html = `<html>
         <head>
           <meta property="og:title" content="Page Title">
@@ -312,15 +315,15 @@ describe('HTML Parser Limiter - P3.1', () => {
       expect(result.tags.length).toBeGreaterThanOrEqual(2);
     });
 
-    it('should handle missing meta tags', () => {
-      const html = '<html><head></head><body></body></html>';
+    it("should handle missing meta tags", () => {
+      const html = "<html><head></head><body></body></html>";
       const result = extractMetaTags(html);
 
       expect(result.valid).toBe(true);
       expect(result.tags).toHaveLength(0);
     });
 
-    it('should handle meta tags with various attributes', () => {
+    it("should handle meta tags with various attributes", () => {
       const html = `<html>
         <head>
           <meta charset="utf-8" lang="en">
@@ -333,25 +336,25 @@ describe('HTML Parser Limiter - P3.1', () => {
     });
   });
 
-  describe('sanitizeNestedHTML', () => {
-    it('should return valid HTML unchanged', () => {
-      const html = '<div><p>Test</p></div>';
+  describe("sanitizeNestedHTML", () => {
+    it("should return valid HTML unchanged", () => {
+      const html = "<div><p>Test</p></div>";
       const result = sanitizeNestedHTML(html, 10);
 
-      expect(result).toContain('<div>');
-      expect(result).toContain('</div>');
+      expect(result).toContain("<div>");
+      expect(result).toContain("</div>");
     });
 
-    it('should truncate deeply nested HTML', () => {
-      let html = '<div>';
+    it("should truncate deeply nested HTML", () => {
+      let html = "<div>";
       for (let i = 0; i < 15; i++) {
-        html += '<div>';
+        html += "<div>";
       }
-      html += 'Content';
+      html += "Content";
       for (let i = 0; i < 15; i++) {
-        html += '</div>';
+        html += "</div>";
       }
-      html += '</div>';
+      html += "</div>";
 
       const result = sanitizeNestedHTML(html, 10);
 
@@ -359,8 +362,8 @@ describe('HTML Parser Limiter - P3.1', () => {
       expect(result.length).toBeLessThanOrEqual(html.length);
     });
 
-    it('should close unclosed tags properly', () => {
-      const html = '<div><p>Text</div>';
+    it("should close unclosed tags properly", () => {
+      const html = "<div><p>Text</div>";
       const result = sanitizeNestedHTML(html, 10);
 
       // Should have balanced tags
@@ -370,15 +373,15 @@ describe('HTML Parser Limiter - P3.1', () => {
       expect(openCount).toBeLessThanOrEqual(closeCount + 1);
     });
 
-    it('should preserve content when possible', () => {
-      const html = '<div><p>Important Content</p></div>';
+    it("should preserve content when possible", () => {
+      const html = "<div><p>Important Content</p></div>";
       const result = sanitizeNestedHTML(html, 10);
 
-      expect(result).toContain('Important Content');
+      expect(result).toContain("Important Content");
     });
 
-    it('should handle max depth of 1', () => {
-      const html = '<div><p>Text</p></div>';
+    it("should handle max depth of 1", () => {
+      const html = "<div><p>Text</p></div>";
       const result = sanitizeNestedHTML(html, 1);
 
       expect(result).toBeTruthy();
@@ -386,8 +389,8 @@ describe('HTML Parser Limiter - P3.1', () => {
     });
   });
 
-  describe('formatParserResult', () => {
-    it('should format successful parse result', () => {
+  describe("formatParserResult", () => {
+    it("should format successful parse result", () => {
       const result: ParserResult = {
         success: true,
         depth: 5,
@@ -397,36 +400,36 @@ describe('HTML Parser Limiter - P3.1', () => {
 
       const formatted = formatParserResult(result);
 
-      expect(formatted).toContain('Parse Success: true');
-      expect(formatted).toContain('Depth Reached: 5');
-      expect(formatted).toContain('Nodes Parsed: 10');
-      expect(formatted).toContain('Parse Time: 42ms');
+      expect(formatted).toContain("Parse Success: true");
+      expect(formatted).toContain("Depth Reached: 5");
+      expect(formatted).toContain("Nodes Parsed: 10");
+      expect(formatted).toContain("Parse Time: 42ms");
     });
 
-    it('should format failed parse result', () => {
+    it("should format failed parse result", () => {
       const result: ParserResult = {
         success: false,
         depth: 25,
         nodeCount: 100,
         parseTime: 150,
-        error: 'Max depth exceeded',
+        error: "Max depth exceeded",
         exceeded: { depth: true },
       };
 
       const formatted = formatParserResult(result);
 
-      expect(formatted).toContain('Parse Success: false');
-      expect(formatted).toContain('Max depth exceeded');
-      expect(formatted).toContain('Limits Exceeded');
+      expect(formatted).toContain("Parse Success: false");
+      expect(formatted).toContain("Max depth exceeded");
+      expect(formatted).toContain("Limits Exceeded");
     });
 
-    it('should handle multiple exceeded limits', () => {
+    it("should handle multiple exceeded limits", () => {
       const result: ParserResult = {
         success: false,
         depth: 25,
         nodeCount: 15000,
         parseTime: 2500,
-        error: 'Multiple limits exceeded',
+        error: "Multiple limits exceeded",
         exceeded: {
           depth: true,
           timeout: true,
@@ -436,8 +439,8 @@ describe('HTML Parser Limiter - P3.1', () => {
 
       const formatted = formatParserResult(result);
 
-      expect(formatted).toContain('Limits Exceeded');
-      expect(formatted.split(', ').length).toBeGreaterThan(1);
+      expect(formatted).toContain("Limits Exceeded");
+      expect(formatted.split(", ").length).toBeGreaterThan(1);
     });
   });
 });

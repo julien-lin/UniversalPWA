@@ -6,7 +6,7 @@
  * - Incremental validation during parsing
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 export interface ParserConfig {
   maxDepth: number;
@@ -42,7 +42,12 @@ const ParserConfigSchema = z.object({
   maxDepth: z.number().int().min(1).max(100).default(20),
   timeout: z.number().int().min(1).max(10000).default(2000),
   maxAttributes: z.number().int().min(1).optional().default(50),
-  maxNodeSize: z.number().int().min(1).optional().default(1024 * 1024), // 1MB
+  maxNodeSize: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .default(1024 * 1024), // 1MB
 });
 
 /**
@@ -50,7 +55,7 @@ const ParserConfigSchema = z.object({
  */
 export function parseHTMLWithLimits(
   html: string,
-  config: ParserConfig = {}
+  config: ParserConfig = {},
 ): ParserResult {
   const startTime = Date.now();
   const validConfig = ParserConfigSchema.parse(config);
@@ -64,7 +69,9 @@ export function parseHTMLWithLimits(
       const elapsed = Date.now() - startTime;
       if (elapsed > validConfig.timeout) {
         parseTimeout = true;
-        throw new Error(`Parse timeout exceeded: ${elapsed}ms > ${validConfig.timeout}ms`);
+        throw new Error(
+          `Parse timeout exceeded: ${elapsed}ms > ${validConfig.timeout}ms`,
+        );
       }
     };
 
@@ -75,23 +82,23 @@ export function parseHTMLWithLimits(
     while (i < html.length) {
       checkTimeout();
 
-      if (html[i] === '<') {
-        if (html.substring(i, i + 2) === '</') {
+      if (html[i] === "<") {
+        if (html.substring(i, i + 2) === "</") {
           // Closing tag
           if (depth > 0) {
             depth--;
           }
-          const endPos = html.indexOf('>', i);
+          const endPos = html.indexOf(">", i);
           if (endPos === -1) {
-            throw new Error('Malformed HTML: unclosed tag');
+            throw new Error("Malformed HTML: unclosed tag");
           }
           i = endPos + 1;
           stack.pop();
         } else {
           // Opening/Processing/Comment tag
-          const endPos = html.indexOf('>', i);
+          const endPos = html.indexOf(">", i);
           if (endPos === -1) {
-            throw new Error('Malformed HTML: unclosed tag');
+            throw new Error("Malformed HTML: unclosed tag");
           }
 
           const tagContent = html.substring(i + 1, endPos);
@@ -100,20 +107,20 @@ export function parseHTMLWithLimits(
           // Check tag content size
           if (tagSize > (validConfig.maxNodeSize || 1024 * 1024)) {
             throw new Error(
-              `Node size exceeded: ${tagSize} > ${validConfig.maxNodeSize}`
+              `Node size exceeded: ${tagSize} > ${validConfig.maxNodeSize}`,
             );
           }
 
           // Track node count
           nodeCount++;
           if (nodeCount > 10000) {
-            throw new Error('Node count exceeded: >10000 nodes');
+            throw new Error("Node count exceeded: >10000 nodes");
           }
 
           // DOCTYPE, comments, processing instructions - don't affect depth
-          if (tagContent.startsWith('!') || tagContent.startsWith('?')) {
+          if (tagContent.startsWith("!") || tagContent.startsWith("?")) {
             i = endPos + 1;
-          } else if (tagContent.endsWith('/') || isSelfClosingTag(tagContent)) {
+          } else if (tagContent.endsWith("/") || isSelfClosingTag(tagContent)) {
             // Self-closing tags
             i = endPos + 1;
           } else {
@@ -123,7 +130,7 @@ export function parseHTMLWithLimits(
 
             if (depth > validConfig.maxDepth) {
               throw new Error(
-                `Max nesting depth exceeded: ${depth} > ${validConfig.maxDepth}`
+                `Max nesting depth exceeded: ${depth} > ${validConfig.maxDepth}`,
               );
             }
 
@@ -158,10 +165,10 @@ export function parseHTMLWithLimits(
       parseTime: elapsed,
       error: message,
       exceeded: {
-        depth: message.includes('depth'),
+        depth: message.includes("depth"),
         timeout: parseTimeout,
-        nodeCount: message.includes('Node count'),
-        nodeSize: message.includes('Node size'),
+        nodeCount: message.includes("Node count"),
+        nodeSize: message.includes("Node size"),
       },
     };
   }
@@ -172,7 +179,7 @@ export function parseHTMLWithLimits(
  */
 export function validateHTMLStructure(
   html: string,
-  config: ParserConfig = {}
+  config: ParserConfig = {},
 ): {
   valid: boolean;
   depth: number;
@@ -185,27 +192,29 @@ export function validateHTMLStructure(
   const issues: string[] = [];
 
   if (!result.success) {
-    issues.push(result.error || 'Unknown error');
+    issues.push(result.error || "Unknown error");
   }
 
   if (result.exceeded?.depth) {
     issues.push(
-      `Exceeds max depth: ${result.depth} > ${config.maxDepth || 20}`
+      `Exceeds max depth: ${result.depth} > ${config.maxDepth || 20}`,
     );
   }
 
   if (result.exceeded?.timeout) {
     issues.push(
-      `Parsing timeout: ${result.parseTime}ms > ${config.timeout || 2000}ms`
+      `Parsing timeout: ${result.parseTime}ms > ${config.timeout || 2000}ms`,
     );
   }
 
   if (result.exceeded?.nodeCount) {
-    issues.push('Exceeds maximum node count (>10000)');
+    issues.push("Exceeds maximum node count (>10000)");
   }
 
   if (result.exceeded?.nodeSize) {
-    issues.push(`Exceeds max node size: ${config.maxNodeSize || 1024 * 1024} bytes`);
+    issues.push(
+      `Exceeds max node size: ${config.maxNodeSize || 1024 * 1024} bytes`,
+    );
   }
 
   return {
@@ -222,7 +231,7 @@ export function validateHTMLStructure(
  */
 export function extractMetaTags(
   html: string,
-  config: ParserConfig = {}
+  config: ParserConfig = {},
 ): {
   tags: Array<{ name: string; content: string }>;
   valid: boolean;
@@ -234,7 +243,7 @@ export function extractMetaTags(
     return {
       tags: [],
       valid: false,
-      errors: [result.error || 'Parse failed'],
+      errors: [result.error || "Parse failed"],
     };
   }
 
@@ -242,7 +251,8 @@ export function extractMetaTags(
   const errors: string[] = [];
 
   try {
-    const metaRegex = /<meta\s+(?:[^>]*\s)?(?:name|property)="([^"]+)"[^>]*content="([^"]*)"/gi;
+    const metaRegex =
+      /<meta\s+(?:[^>]*\s)?(?:name|property)="([^"]+)"[^>]*content="([^"]*)"/gi;
     let match;
 
     while ((match = metaRegex.exec(html))) {
@@ -252,7 +262,9 @@ export function extractMetaTags(
       });
     }
   } catch (error) {
-    errors.push(error instanceof Error ? error.message : 'Meta extraction failed');
+    errors.push(
+      error instanceof Error ? error.message : "Meta extraction failed",
+    );
   }
 
   return {
@@ -267,8 +279,20 @@ export function extractMetaTags(
  */
 function isSelfClosingTag(tagContent: string): boolean {
   const selfClosingTags = [
-    'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
-    'link', 'meta', 'param', 'source', 'track', 'wbr',
+    "area",
+    "base",
+    "br",
+    "col",
+    "embed",
+    "hr",
+    "img",
+    "input",
+    "link",
+    "meta",
+    "param",
+    "source",
+    "track",
+    "wbr",
   ];
 
   const tagName = tagContent.split(/\s+/)[0].toLowerCase();
@@ -280,7 +304,7 @@ function isSelfClosingTag(tagContent: string): boolean {
  */
 export function sanitizeNestedHTML(
   html: string,
-  maxDepth: number = 10
+  maxDepth: number = 10,
 ): string {
   const validConfig = ParserConfigSchema.parse({ maxDepth });
   const result = parseHTMLWithLimits(html, validConfig);
@@ -292,21 +316,25 @@ export function sanitizeNestedHTML(
   // If depth exceeded, return truncated version
   if (result.exceeded?.depth) {
     let depth = 0;
-    let output = '';
+    let output = "";
     let i = 0;
 
     while (i < html.length) {
       const char = html[i];
 
-      if (char === '<') {
-        const endPos = html.indexOf('>', i);
+      if (char === "<") {
+        const endPos = html.indexOf(">", i);
         if (endPos === -1) break;
 
         const tagContent = html.substring(i + 1, endPos);
-        if (tagContent.startsWith('/')) {
+        if (tagContent.startsWith("/")) {
           if (depth > 0) depth--;
-        } else if (!isSelfClosingTag(tagContent) && !tagContent.endsWith('/') &&
-                  !tagContent.startsWith('!') && !tagContent.startsWith('?')) {
+        } else if (
+          !isSelfClosingTag(tagContent) &&
+          !tagContent.endsWith("/") &&
+          !tagContent.startsWith("!") &&
+          !tagContent.startsWith("?")
+        ) {
           depth++;
         }
 
@@ -326,11 +354,11 @@ export function sanitizeNestedHTML(
     }
 
     // Close any open tags
-    let openCount = (output.match(/<(?!\/)(?!\?)/g) || []).length;
+    const openCount = (output.match(/<(?!\/)(?!\?)/g) || []).length;
     let closeCount = (output.match(/<\/[^>]+>/g) || []).length;
 
     while (openCount > closeCount) {
-      output += '</div>';
+      output += "</div>";
       closeCount++;
     }
 
@@ -359,11 +387,11 @@ export function formatParserResult(result: ParserResult): string {
     const exceeded = Object.entries(result.exceeded)
       .filter(([, v]) => v)
       .map(([k]) => k)
-      .join(', ');
+      .join(", ");
     if (exceeded) {
       lines.push(`Limits Exceeded: ${exceeded}`);
     }
   }
 
-  return lines.join('\n');
+  return lines.join("\n");
 }
