@@ -17,6 +17,7 @@ pnpm lint && pnpm typecheck && pnpm test
 ```
 
 **NO EXCEPTIONS.** If any check fails:
+
 - ❌ **Lint errors** → Fix them, do not bypass
 - ❌ **Type errors** → Fix them, do not add `@ts-ignore`
 - ❌ **Test failures** → Fix the code or add missing tests
@@ -36,6 +37,7 @@ Only when **all three pass** can you commit and push.
 - Validate all inputs (no pass-through to shell, eval, or dynamic import)
 
 **Examples:**
+
 - ✅ `loadConfig(path, { allowUnsafeConfig: true })` — explicit opt-in
 - ❌ `import(userPath)` without validation
 - ✅ File size limits (1MB config max)
@@ -69,13 +71,13 @@ Only when **all three pass** can you commit and push.
 
 #### By Package:
 
-| Package     | Line Coverage | Branch Coverage | Error Scenarios |
-| ----------- | ------------- | --------------- | --------------- |
-| **core**    | ≥85%          | ≥80%            | ≥90% of error paths |
-| **cli**     | ≥80%          | ≥75%            | ≥85% of error paths |
-| **templates** | ≥85%        | ≥80%            | ≥85% of error paths |
-| **web-ui**  | ≥70%          | ≥65%            | Not strict        |
-| **sdks**    | Language-specific (min 75%) | - | - |
+| Package       | Line Coverage               | Branch Coverage | Error Scenarios     |
+| ------------- | --------------------------- | --------------- | ------------------- |
+| **core**      | ≥85%                        | ≥80%            | ≥90% of error paths |
+| **cli**       | ≥80%                        | ≥75%            | ≥85% of error paths |
+| **templates** | ≥85%                        | ≥80%            | ≥85% of error paths |
+| **web-ui**    | ≥70%                        | ≥65%            | Not strict          |
+| **sdks**      | Language-specific (min 75%) | -               | -                   |
 
 #### Test Organization (AAA Pattern):
 
@@ -117,12 +119,12 @@ describe("ClassName.methodName()", () => {
 
 #### CLI Performance Targets:
 
-| Operation | Target | Measurement |
-| --------- | ------ | ----------- |
-| Startup (--help) | <100ms | `time pnpm universal-pwa --help` |
-| Small project (init) | <500ms | <50 files, no assets |
-| Medium project (init) | <2s | 50-100 files, 10-20 assets |
-| Large project (init) | <5s | 500+ files, 100+ assets |
+| Operation             | Target | Measurement                      |
+| --------------------- | ------ | -------------------------------- |
+| Startup (--help)      | <100ms | `time pnpm universal-pwa --help` |
+| Small project (init)  | <500ms | <50 files, no assets             |
+| Medium project (init) | <2s    | 50-100 files, 10-20 assets       |
+| Large project (init)  | <5s    | 500+ files, 100+ assets          |
 
 **Validation:** Performance baseline tests must exist in `performance.baseline.test.ts`
 
@@ -145,7 +147,9 @@ describe("ClassName.methodName()", () => {
 
 ```typescript
 // ✅ Good
-throw new Error("Config file not found: /path/to/config.json\nUse: universal-pwa init --config <path>");
+throw new Error(
+  "Config file not found: /path/to/config.json\nUse: universal-pwa init --config <path>",
+);
 
 // ❌ Bad
 throw new Error("ENOENT");
@@ -176,12 +180,14 @@ Every PR must address:
 Location: `DOCUMENTATION/` (not in repo, but in PRs if user requests)
 
 Mandatory docs:
+
 - **API changes**: Document in code comments + type hints
 - **New features**: Add tests that demonstrate usage
 - **Breaking changes**: Changelog entry + migration guide
 - **CLI commands**: Help text via `--help`
 
 **No docs required for:**
+
 - Internal refactoring
 - Bug fixes (unless behavior changes)
 - Test-only changes
@@ -202,6 +208,7 @@ docs: add security guidelines
 ```
 
 **Rules:**
+
 - Subject: ≤50 characters, lowercase, no period
 - Scope (optional): `(core)`, `(cli)`, `(templates)`
 - Body (optional): Explain WHY, not WHAT
@@ -232,6 +239,7 @@ Version bumps:
 - **Major** (X.y.z): Breaking changes, removed features
 
 **For breaking changes:**
+
 - Document in `CHANGELOG.md`
 - Provide migration guide
 - Tag with `BREAKING CHANGE:` in commit message
@@ -270,7 +278,7 @@ Version bumps:
 4. **Build** (`pnpm -r build`)
    - Output size checked (core: <500KB)
 
-#### On Release (tag v*):
+#### On Release (tag v\*):
 
 All of the above + :
 
@@ -327,9 +335,10 @@ console.log("DEBUG: config loaded:", config);
 See `.github/workflows/`:
 
 - **ci.yml**: Runs on manual trigger (workflow_dispatch)
-- **release.yml**: Runs on version tags (v*)
+- **release.yml**: Runs on version tags (v\*)
 
 Both workflows enforce:
+
 - pnpm lint
 - pnpm typecheck
 - pnpm test
@@ -340,14 +349,14 @@ Both workflows enforce:
 
 ## 🚨 Violations & Remediation
 
-| Violation | Severity | Action |
-| --------- | -------- | ------ |
-| Push without lint/test passing | 🔴 BLOCKER | Revert immediately + fix |
-| Security vulnerability | 🔴 BLOCKER | Revert + hotfix |
-| Breaking change undocumented | 🟡 WARNING | Add docs before merge |
-| Missing tests | 🟡 WARNING | Add tests or reduce scope |
-| Type errors (@ts-ignore) | 🟡 WARNING | Fix types properly |
-| Performance regression | 🟠 CAUTION | Profile + optimize |
+| Violation                      | Severity   | Action                    |
+| ------------------------------ | ---------- | ------------------------- |
+| Push without lint/test passing | 🔴 BLOCKER | Revert immediately + fix  |
+| Security vulnerability         | 🔴 BLOCKER | Revert + hotfix           |
+| Breaking change undocumented   | 🟡 WARNING | Add docs before merge     |
+| Missing tests                  | 🟡 WARNING | Add tests or reduce scope |
+| Type errors (@ts-ignore)       | 🟡 WARNING | Fix types properly        |
+| Performance regression         | 🟠 CAUTION | Profile + optimize        |
 
 ---
 
