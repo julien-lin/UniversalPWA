@@ -11,66 +11,65 @@
  * - Brace expansion safety checks
  */
 
-import type { MinimatchOptions } from 'minimatch'
-import { Minimatch } from 'minimatch'
+import { Minimatch } from "minimatch";
 
 export interface GlobValidationConfig {
   /** Maximum number of files allowed from glob expansion */
-  maxFiles: number
+  maxFiles: number;
   /** Maximum recursion depth (** nesting levels) */
-  maxRecursionDepth: number
+  maxRecursionDepth: number;
   /** Timeout for glob operations in milliseconds */
-  timeout: number
+  timeout: number;
   /** Enable brace expansion validation */
-  allowBraceExpansion: boolean
+  allowBraceExpansion: boolean;
 }
 
 export interface GlobValidationResult {
   /** Whether the pattern is valid and safe */
-  isValid: boolean
+  isValid: boolean;
   /** Reason if invalid */
-  reason?: string
+  reason?: string;
   /** Pattern analysis details */
   analysis: {
     /** Number of ** (recursive globstar) patterns */
-    globstarCount: number
+    globstarCount: number;
     /** Detected brace expansion patterns */
-    hasBraceExpansion: boolean
+    hasBraceExpansion: boolean;
     /** Potential file count estimate (if valid) */
-    estimatedFileCount?: number
+    estimatedFileCount?: number;
     /** Whether pattern uses negation */
-    hasNegation: boolean
-  }
+    hasNegation: boolean;
+  };
 }
 
 export interface GlobExpansionResult {
   /** Whether expansion succeeded */
-  success: boolean
+  success: boolean;
   /** Expanded file paths */
-  files: string[]
+  files: string[];
   /** Total file count */
-  count: number
+  count: number;
   /** Whether result was truncated */
-  truncated: boolean
+  truncated: boolean;
   /** Reason if failed */
-  error?: string
+  error?: string;
 }
 
 export interface PatternAnalysis {
   /** Pattern string */
-  pattern: string
+  pattern: string;
   /** Is valid for safe expansion */
-  isValid: boolean
+  isValid: boolean;
   /** Number of recursive globstar patterns */
-  globstarCount: number
+  globstarCount: number;
   /** Pattern uses braces {} */
-  usesBraces: boolean
+  usesBraces: boolean;
   /** Pattern uses negation ! */
-  usesNegation: boolean
+  usesNegation: boolean;
   /** Estimated complexity level */
-  complexity: 'low' | 'medium' | 'high'
+  complexity: "low" | "medium" | "high";
   /** Detailed issues if invalid */
-  issues: string[]
+  issues: string[];
 }
 
 /**
@@ -81,7 +80,7 @@ const DEFAULT_CONFIG: GlobValidationConfig = {
   maxRecursionDepth: 10,
   timeout: 2000,
   allowBraceExpansion: true,
-}
+};
 
 /**
  * Validate glob pattern for safety before expansion
@@ -96,159 +95,178 @@ export function validatePattern(
   pattern: string,
   config: Partial<GlobValidationConfig> = {},
 ): GlobValidationResult {
-  const mergedConfig: GlobValidationConfig = { ...DEFAULT_CONFIG, ...config }
+  const mergedConfig: GlobValidationConfig = { ...DEFAULT_CONFIG, ...config };
 
-  const analysis: GlobValidationResult['analysis'] = {
+  const analysis: GlobValidationResult["analysis"] = {
     globstarCount: 0,
     hasBraceExpansion: false,
     hasNegation: false,
-  }
+  };
 
-  const issues: string[] = []
+  const issues: string[] = [];
 
   // Check for empty pattern
   if (!pattern || pattern.trim().length === 0) {
     return {
       isValid: false,
-      reason: 'Pattern cannot be empty',
+      reason: "Pattern cannot be empty",
       analysis,
-    }
+    };
   }
 
   // Check for negation pattern
-  analysis.hasNegation = pattern.startsWith('!')
+  analysis.hasNegation = pattern.startsWith("!");
 
   // Check for dangerous escape sequences
-  if (pattern.includes('\\x') || pattern.includes('\\u') || pattern.includes('\\0')) {
-    issues.push('Pattern contains dangerous escape sequences')
+  if (
+    pattern.includes("\\x") ||
+    pattern.includes("\\u") ||
+    pattern.includes("\\0")
+  ) {
+    issues.push("Pattern contains dangerous escape sequences");
   }
 
   // Check for regex metacharacters outside of glob context
-  const regexMeta = /[()[\]{}?+^$|]/g
-  const metaMatches = pattern.match(regexMeta) || []
+  const regexMeta = /[()[\]{}?+^$|]/g;
+  const metaMatches = pattern.match(regexMeta) || [];
   if (metaMatches.length > 5) {
-    issues.push('Pattern contains excessive regex metacharacters (potential injection)')
+    issues.push(
+      "Pattern contains excessive regex metacharacters (potential injection)",
+    );
   }
 
   // Count globstar patterns (**)
-  const globstarMatches = pattern.match(/\*\*/g) || []
-  analysis.globstarCount = globstarMatches.length
+  const globstarMatches = pattern.match(/\*\*/g) || [];
+  analysis.globstarCount = globstarMatches.length;
 
   if (analysis.globstarCount > mergedConfig.maxRecursionDepth) {
     issues.push(
       `Pattern has ${analysis.globstarCount} globstar patterns (max ${mergedConfig.maxRecursionDepth})`,
-    )
+    );
   }
 
   // Check brace expansion
-  if (pattern.includes('{') && pattern.includes('}')) {
-    analysis.hasBraceExpansion = true
+  if (pattern.includes("{") && pattern.includes("}")) {
+    analysis.hasBraceExpansion = true;
 
     // Check for brace explosion (e.g., {1..1000})
-    const braceExpansionPattern = /\{([0-9]+)\.\.([0-9]+)\}/g
-    let braceMatch: RegExpExecArray | null
-    let totalBraceExpansions = 1
+    const braceExpansionPattern = /\{([0-9]+)\.\.([0-9]+)\}/g;
+    let braceMatch: RegExpExecArray | null;
+    let totalBraceExpansions = 1;
 
     while ((braceMatch = braceExpansionPattern.exec(pattern)) !== null) {
-      const start = parseInt(braceMatch[1], 10)
-      const end = parseInt(braceMatch[2], 10)
-      const range = Math.abs(end - start) + 1
+      const start = parseInt(braceMatch[1], 10);
+      const end = parseInt(braceMatch[2], 10);
+      const range = Math.abs(end - start) + 1;
 
       if (range > 1000) {
-        issues.push(`Brace range ${braceMatch[0]} expands to ${range} items (max 1000)`)
+        issues.push(
+          `Brace range ${braceMatch[0]} expands to ${range} items (max 1000)`,
+        );
       }
 
-      totalBraceExpansions *= range
+      totalBraceExpansions *= range;
     }
 
     if (totalBraceExpansions > 10000) {
-      issues.push(`Brace expansion would create ${totalBraceExpansions} patterns (max 10000)`)
+      issues.push(
+        `Brace expansion would create ${totalBraceExpansions} patterns (max 10000)`,
+      );
     }
 
     if (!mergedConfig.allowBraceExpansion) {
-      issues.push('Brace expansion not allowed in current configuration')
+      issues.push("Brace expansion not allowed in current configuration");
     }
   }
 
   // Check for patterns that could cause excessive matching
-  if (pattern.includes('**/**')) {
-    issues.push('Nested globstar patterns (**/**) can cause excessive file matching')
+  if (pattern.includes("**/**")) {
+    issues.push(
+      "Nested globstar patterns (**/**) can cause excessive file matching",
+    );
   }
 
   // Check pattern ends with ** (recursive at end)
-  if (pattern.endsWith('/**')) {
-    analysis.globstarCount += 1 // Extra consideration for recursive search
+  if (pattern.endsWith("/**")) {
+    analysis.globstarCount += 1; // Extra consideration for recursive search
   }
 
   // Estimate potential file count based on pattern complexity
-  analysis.estimatedFileCount = estimateFileCount(pattern)
+  analysis.estimatedFileCount = estimateFileCount(pattern);
 
   if (analysis.estimatedFileCount > mergedConfig.maxFiles) {
     issues.push(
       `Pattern could match ~${analysis.estimatedFileCount} files (max ${mergedConfig.maxFiles})`,
-    )
+    );
   }
 
   // Check for absolute paths (should be relative)
-  if (pattern.startsWith('/') || pattern.startsWith('C:')) {
-    issues.push('Absolute paths are not allowed; use relative patterns')
+  if (pattern.startsWith("/") || pattern.startsWith("C:")) {
+    issues.push("Absolute paths are not allowed; use relative patterns");
   }
 
   // Validate minimatch compatibility
   try {
-    new Minimatch(pattern, { dot: true })
+    new Minimatch(pattern, { dot: true });
   } catch (error) {
-    issues.push(`Invalid glob pattern: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    issues.push(
+      `Invalid glob pattern: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 
   return {
     isValid: issues.length === 0,
     reason: issues.length > 0 ? issues[0] : undefined,
     analysis,
-  }
+  };
 }
 
 /**
  * Analyze glob pattern complexity and characteristics
  */
 export function analyzePattern(pattern: string): PatternAnalysis {
-  const issues: string[] = []
-  const globstarCount = (pattern.match(/\*\*/g) || []).length
-  const usesBraces = pattern.includes('{') && pattern.includes('}')
-  const usesNegation = pattern.startsWith('!')
+  const issues: string[] = [];
+  const globstarCount = (pattern.match(/\*\*/g) || []).length;
+  const usesBraces = pattern.includes("{") && pattern.includes("}");
+  const usesNegation = pattern.startsWith("!");
 
-  let complexity: 'low' | 'medium' | 'high' = 'low'
+  let complexity: "low" | "medium" | "high" = "low";
 
   if (globstarCount >= 3 || usesBraces || pattern.length > 200) {
-    complexity = 'high'
+    complexity = "high";
   } else if (globstarCount >= 2 || usesBraces || pattern.length > 100) {
-    complexity = 'medium'
+    complexity = "medium";
   }
 
   if (globstarCount > 10) {
-    issues.push('Excessive globstar patterns')
+    issues.push("Excessive globstar patterns");
   }
 
   if (usesBraces) {
-    const braceMatches = pattern.match(/\{[^}]+\}/g) || []
-    const braceExpansionCount = braceMatches.reduce((sum: number, brace: string) => {
-      // Check for range expansion {1..N}
-      const rangeMatch = brace.match(/\{([0-9]+)\.\.([0-9]+)\}/)
-      if (rangeMatch) {
-        const start = parseInt(rangeMatch[1], 10)
-        const end = parseInt(rangeMatch[2], 10)
-        const range = Math.abs(end - start) + 1
-        if (range > 1000) {
-          issues.push(`Brace range ${brace} expands to ${range} items (max 1000)`)
+    const braceMatches = pattern.match(/\{[^}]+\}/g) || [];
+    const braceExpansionCount = braceMatches.reduce(
+      (sum: number, brace: string) => {
+        // Check for range expansion {1..N}
+        const rangeMatch = brace.match(/\{([0-9]+)\.\.([0-9]+)\}/);
+        if (rangeMatch) {
+          const start = parseInt(rangeMatch[1], 10);
+          const end = parseInt(rangeMatch[2], 10);
+          const range = Math.abs(end - start) + 1;
+          if (range > 1000) {
+            issues.push(
+              `Brace range ${brace} expands to ${range} items (max 1000)`,
+            );
+          }
+          return sum * range;
         }
-        return sum * range
-      }
-      const items = brace.split(',').length
-      return sum * items
-    }, 1)
+        const items = brace.split(",").length;
+        return sum * items;
+      },
+      1,
+    );
 
     if (braceExpansionCount > 10000) {
-      issues.push('Brace expansion exceeds limit')
+      issues.push("Brace expansion exceeds limit");
     }
   }
 
@@ -260,7 +278,7 @@ export function analyzePattern(pattern: string): PatternAnalysis {
     usesNegation,
     complexity,
     issues,
-  }
+  };
 }
 
 /**
@@ -273,27 +291,27 @@ export function analyzePattern(pattern: string): PatternAnalysis {
  * - Complex patterns = higher estimates
  */
 export function estimateFileCount(pattern: string): number {
-  let estimate = 1
+  let estimate = 1;
 
   // Count single star matches
-  const singleStars = (pattern.match(/(?<!\*)\*(?!\*)/g) || []).length
-  estimate += singleStars * 100
+  const singleStars = (pattern.match(/(?<!\*)\*(?!\*)/g) || []).length;
+  estimate += singleStars * 100;
 
   // Count double star (globstar) matches
-  const doubleStars = (pattern.match(/\*\*/g) || []).length
-  estimate += doubleStars * 500
+  const doubleStars = (pattern.match(/\*\*/g) || []).length;
+  estimate += doubleStars * 500;
 
   // Account for brace expansion
-  if (pattern.includes('{') && pattern.includes('}')) {
-    const braceMatches = pattern.match(/\{[^}]*\}/g) || []
+  if (pattern.includes("{") && pattern.includes("}")) {
+    const braceMatches = pattern.match(/\{[^}]*\}/g) || [];
     for (const brace of braceMatches) {
-      const itemCount = brace.split(',').length
-      estimate *= itemCount
+      const itemCount = brace.split(",").length;
+      estimate *= itemCount;
     }
   }
 
   // Cap at practical maximum
-  return Math.min(estimate, 100000)
+  return Math.min(estimate, 100000);
 }
 
 /**
@@ -308,16 +326,16 @@ export function expandGlob(
   pattern: string,
   basePath: string,
   fileSystem: {
-    readdir: (path: string) => string[]
-    isDirectory: (path: string) => boolean
-    exists: (path: string) => boolean
+    readdir: (path: string) => string[];
+    isDirectory: (path: string) => boolean;
+    exists: (path: string) => boolean;
   },
   config: Partial<GlobValidationConfig> = {},
 ): GlobExpansionResult {
-  const mergedConfig: GlobValidationConfig = { ...DEFAULT_CONFIG, ...config }
+  const mergedConfig: GlobValidationConfig = { ...DEFAULT_CONFIG, ...config };
 
   // Validate pattern first
-  const validation = validatePattern(pattern, mergedConfig)
+  const validation = validatePattern(pattern, mergedConfig);
 
   if (!validation.isValid) {
     return {
@@ -326,75 +344,78 @@ export function expandGlob(
       count: 0,
       truncated: false,
       error: validation.reason,
-    }
+    };
   }
 
   try {
-    const startTime = Date.now()
-    const files: string[] = []
+    const startTime = Date.now();
+    const files: string[] = [];
 
     // Simple glob expansion using minimatch
     const globber = new Minimatch(pattern, {
       dot: true,
       noglobstar: false,
-    })
+    });
 
     // Recursive directory traversal with limits
     const traverseDirectory = (dir: string, currentDepth: number): string[] => {
-      const elapsed = Date.now() - startTime
+      const elapsed = Date.now() - startTime;
       if (elapsed > mergedConfig.timeout) {
-        throw new Error('Glob expansion timeout exceeded')
+        throw new Error("Glob expansion timeout exceeded");
       }
 
       if (currentDepth > mergedConfig.maxRecursionDepth) {
-        return []
+        return [];
       }
 
-      const results: string[] = []
+      const results: string[] = [];
 
       try {
-        const entries = fileSystem.readdir(dir)
+        const entries = fileSystem.readdir(dir);
 
         for (const entry of entries) {
           if (files.length + results.length >= mergedConfig.maxFiles) {
-            return results
+            return results;
           }
 
-          const fullPath = `${dir}/${entry}`
+          const fullPath = `${dir}/${entry}`;
 
           if (globber.match(fullPath)) {
-            results.push(fullPath)
+            results.push(fullPath);
           }
 
           if (fileSystem.isDirectory(fullPath)) {
-            const subResults = traverseDirectory(fullPath, currentDepth + 1)
-            results.push(...subResults)
+            const subResults = traverseDirectory(fullPath, currentDepth + 1);
+            results.push(...subResults);
           }
         }
       } catch {
         // Ignore directory traversal errors
       }
 
-      return results
-    }
+      return results;
+    };
 
-    const expanded = traverseDirectory(basePath, 0)
-    const truncated = expanded.length >= mergedConfig.maxFiles
+    const expanded = traverseDirectory(basePath, 0);
+    const truncated = expanded.length >= mergedConfig.maxFiles;
 
     return {
       success: true,
       files: truncated ? expanded.slice(0, mergedConfig.maxFiles) : expanded,
       count: expanded.length,
       truncated,
-    }
+    };
   } catch (error) {
     return {
       success: false,
       files: [],
       count: 0,
       truncated: false,
-      error: error instanceof Error ? error.message : 'Unknown error during glob expansion',
-    }
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unknown error during glob expansion",
+    };
   }
 }
 
@@ -413,23 +434,27 @@ export function getSafeGlobOptions(
     nonegate: false,
     nocomment: false,
     braceExpansion: config.allowBraceExpansion !== false,
-  }
+  };
 }
 
 /**
  * Format validation result for logging/display
  */
 export function formatValidationResult(result: GlobValidationResult): string {
-  const status = result.isValid ? '✓ Valid' : '✗ Invalid'
-  const reason = result.reason ? ` (${result.reason})` : ''
-  const globstars = `globstars: ${result.analysis.globstarCount}`
-  const braces = result.analysis.hasBraceExpansion ? 'braces: yes' : 'braces: no'
-  const negation = result.analysis.hasNegation ? 'negation: yes' : 'negation: no'
+  const status = result.isValid ? "✓ Valid" : "✗ Invalid";
+  const reason = result.reason ? ` (${result.reason})` : "";
+  const globstars = `globstars: ${result.analysis.globstarCount}`;
+  const braces = result.analysis.hasBraceExpansion
+    ? "braces: yes"
+    : "braces: no";
+  const negation = result.analysis.hasNegation
+    ? "negation: yes"
+    : "negation: no";
   const files = result.analysis.estimatedFileCount
     ? `~${result.analysis.estimatedFileCount} files`
-    : 'unknown'
+    : "unknown";
 
-  return `${status}${reason} | ${globstars}, ${braces}, ${negation}, ${files}`
+  return `${status}${reason} | ${globstars}, ${braces}, ${negation}, ${files}`;
 }
 
 /**
@@ -437,12 +462,12 @@ export function formatValidationResult(result: GlobValidationResult): string {
  */
 export function formatExpansionResult(result: GlobExpansionResult): string {
   if (!result.success) {
-    return `✗ Failed: ${result.error}`
+    return `✗ Failed: ${result.error}`;
   }
 
-  const status = result.truncated ? '⚠ Truncated' : '✓ Success'
-  const count = `${result.count} files`
-  const truncNote = result.truncated ? ' (limit reached)' : ''
+  const status = result.truncated ? "⚠ Truncated" : "✓ Success";
+  const count = `${result.count} files`;
+  const truncNote = result.truncated ? " (limit reached)" : "";
 
-  return `${status}: ${count}${truncNote}`
+  return `${status}: ${count}${truncNote}`;
 }
