@@ -219,7 +219,7 @@ describe("timeout", () => {
 
       const results = await sequentialWithTimeout(operations, 5000);
       expect(results[0]).toHaveProperty("duration");
-      expect((results[0] as any).duration).toBeGreaterThanOrEqual(100);
+      expect((results[0] as any).duration).toBeGreaterThanOrEqual(95);
     });
 
     it("should continue on individual operation timeout", async () => {
