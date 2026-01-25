@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: true # Stop immediately on first failure (no tolerance)
       matrix:
-        node-version: ['20', '22']
+        node-version: ["20", "22"]
         os: [ubuntu-latest, macos-latest]
 
     steps:
@@ -31,7 +31,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -78,8 +78,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: "20"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -142,8 +142,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: "20"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -157,4 +157,3 @@ jobs:
           echo "=== SECURITY CHECK COMPLETE ==="
           echo "Review npm audit output above for vulnerabilities"
           echo "HIGH/CRITICAL vulnerabilities must be fixed before release"
-

@@ -129,7 +129,9 @@ describe("config-loader", () => {
         'module.exports = { app: { name: "Test App" } }',
       );
 
-      const result = await loadConfig(join(testDir, "config.js"), { allowUnsafeConfig: true });
+      const result = await loadConfig(join(testDir, "config.js"), {
+        allowUnsafeConfig: true,
+      });
 
       expect(result.config.app?.name).toBe("Test App");
       expect(result.format).toBe("js");
@@ -142,7 +144,9 @@ describe("config-loader", () => {
         'module.exports = { app: { name: "Test App Default" } }',
       );
 
-      const result = await loadConfig(join(testDir, "config.js"), { allowUnsafeConfig: true });
+      const result = await loadConfig(join(testDir, "config.js"), {
+        allowUnsafeConfig: true,
+      });
 
       expect(result.config.app?.name).toBe("Test App Default");
     });
@@ -190,7 +194,6 @@ describe("config-loader", () => {
       ).rejects.toThrow("too large");
     });
   });
-
 
   describe("loadConfig - YAML", () => {
     it("should load simple YAML config", async () => {

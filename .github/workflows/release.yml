@@ -3,7 +3,7 @@ name: Release - Production Deployment
 on:
   push:
     tags:
-      - 'v*' # Déclenche sur tags version (v1.0.0, v2.0.0, etc.)
+      - "v*" # Déclenche sur tags version (v1.0.0, v2.0.0, etc.)
 
 jobs:
   validate:
@@ -22,8 +22,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: "20"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -65,9 +65,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "20"
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -133,21 +133,21 @@ jobs:
           name: "Release ${{ github.ref_name }}"
           body: |
             ## Release ${{ github.ref_name }}
-            
+
             ✅ **Validation Status**: All checks passed (lint, typecheck, test)  
             📦 **Published Packages**:
             - @julien-lin/universal-pwa-core
             - @julien-lin/universal-pwa-cli
             - @julien-lin/universal-pwa-templates
             - @julien-lin/universal-pwa-web-ui
-            
+
             ### Engineering Rules Applied
             - ✅ Lint: 100% pass
             - ✅ Typecheck: 100% pass
             - ✅ Tests: 100% pass
             - ✅ Build artifacts verified
             - ✅ Bundle size <500KB (core)
-            
+
             For details, see `.github/ENGINEERING_RULES.md`
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
