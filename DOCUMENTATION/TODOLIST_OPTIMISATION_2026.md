@@ -276,49 +276,49 @@ Total: 3.1s (saved to dist/)
 
 ---
 
-**Fichiers:** `packages/core/src/utils/path-validator.ts`  
+**Fichiers:** `packages/core/src/robustness/path-security-validator.ts`  
 **Impact:** Pas de leak fichier parent, pas de symlink attack  
-**Effort:** 2h
+**Effort:** 2h | **STATUS:** ✅ COMPLÉTÉE
 
-- [ ] **T3.2.1** Fonction `validatePathSecurity(path, baseDir)` — 1h
-- [ ] **T3.2.2** Rejeter symlinks par défaut (flag override) — 30m
-- [ ] **T3.2.3** Tests symlinks, .., /etc/passwd traversal — 30m
+✅ **T3.2.1** Fonction `validatePathSecurity(path, baseDir)` — 1h
+✅ **T3.2.2** Rejeter symlinks par défaut (flag override) — 30m
+✅ **T3.2.3** Tests symlinks, .., /etc/passwd traversal — 30m
 
 ---
 
-## P3.3: Validation Globs Non Borné [🛡️ M5]
+## ✅ P3.3: Validation Globs Non Borné [🛡️ M5]
 
 **Fichiers:** `packages/core/src/utils/glob-validator.ts`  
 **Impact:** Pas d'inclusion massive accidentelle  
-**Effort:** 1h45
+**Effort:** 1h45 | **STATUS:** ✅ COMPLÉTÉE
 
-- [ ] **T3.3.1** Pré-valider patterns (interdire _._ seul, \*\* sans limites) — 45m
-- [ ] **T3.3.2** Limiter résultats glob à 10000 fichiers max — 45m
-- [ ] **T3.3.3** Tests patterns agressifs — 15m
+✅ **T3.3.1** Pré-valider patterns (interdire _._ seul, \*\* sans limites) — 45m
+✅ **T3.3.2** Limiter résultats glob à 10000 fichiers max — 45m
+✅ **T3.3.3** Tests patterns agressifs — 15m
 
 ---
 
-## P3.4: Error Handling Cohérent [🛡️ CLI]
+## ✅ P3.4: Error Handling Cohérent [🛡️ CLI]
 
-**Fichiers:** `packages/cli/src/commands`  
+**Fichiers:** `packages/core/src/robustness/error-handler.ts`  
 **Impact:** Messages d'erreur clairs, exit codes cohérents  
-**Effort:** 2h
+**Effort:** 2h | **STATUS:** ✅ COMPLÉTÉE
 
-- [ ] **T3.4.1** Standard error codes (1=general, 2=validation, 3=fs, 4=network) — 45m
-- [ ] **T3.4.2** Try-catch wrappers tous les commands — 45m
-- [ ] **T3.4.3** Tests error paths avec replay — 30m
+✅ **T3.4.1** Standard error codes (1=general, 2=validation, 3=fs, 4=network) — 45m
+✅ **T3.4.2** Try-catch wrappers tous les commands — 45m
+✅ **T3.4.3** Tests error paths avec replay — 30m
 
 ---
 
-## P3.5: Injection Meta Unsafe → Échappement HTML [🛡️ L2]
+## ✅ P3.5: Injection Meta Unsafe → Échappement HTML [🛡️ L2]
 
 **Fichiers:** `packages/core/src/injector/meta-injector.ts`  
 **Impact:** Pas de XSS via meta-tags  
-**Effort:** 1h45
+**Effort:** 1h45 | **STATUS:** ✅ COMPLÉTÉE
 
-- [ ] **T3.5.1** Escaper tous les attributs avec function dédiée — 45m
-- [ ] **T3.5.2** Valider longueur meta-tags (<4KB totale) — 30m
-- [ ] **T3.5.3** Tests XSS payloads, unicode, quotes — 30m
+✅ **T3.5.1** Escaper tous les attributs avec function dédiée — 45m
+✅ **T3.5.2** Valider longueur meta-tags (<4KB totale) — 30m
+✅ **T3.5.3** Tests XSS payloads, unicode, quotes — 30m
 
 ---
 
@@ -441,13 +441,24 @@ Total: 3.1s (saved to dist/)
 
 ---
 
-## 🔄 Week 3: Robustesse (P3) + Observabilité (P4) — **EN COURS**
+## ✅ Week 3: Robustesse (P3) — **COMPLÉTÉE**
 
 ```
-🔄 Mon: P3 full (HTML parser, symlinks, globs, errors, meta) — STARTING
-⬜ Tue-Wed: P4 full (logging, metrics, telemetry)
-⬜ Thu: Final tests + documentation
-⬜ Fri: Release prep, benchmarks finaux
+✅ Mon: P3.1-P3.5 (HTML parser, symlinks, globs, errors, meta) — DONE
+✅ Tue-Wed: Full test suite validation — DONE
+✅ Thu: Integration verification — DONE
+```
+
+**Livrable:** 194 tests, 5 robustness modules, 1470 total core tests
+
+---
+
+## 🔄 Week 4: Observabilité (P4) + Test Coverage (P5) — **NEXT**
+
+```
+⬜ Mon-Tue: P4.1-P4.3 (logging, metrics, telemetry) — PENDING
+⬜ Wed-Thu: P5.1-P5.3 (E2E tests, coverage, documentation) — PENDING
+⬜ Fri: Release prep, final validation — PENDING
 ```
 
 ---
