@@ -23,6 +23,8 @@ export interface ConfigLoadOptions {
   validate?: boolean;
   /** Throw error if validation fails */
   strict?: boolean;
+  /** Allow loading TS/JS config files (SECURITY: disabled by default due to RCE risk) */
+  allowUnsafeConfig?: boolean;
 }
 
 /**
@@ -55,7 +57,7 @@ export function findConfigFile(projectPath: string): string | null {
  */
 export async function loadConfig(
   filePath: string,
-  options: ConfigLoadOptions = { validate: true, strict: true },
+  options: ConfigLoadOptions = { validate: true, strict: true, allowUnsafeConfig: false },
 ): Promise<ConfigLoadResult> {
   if (!existsSync(filePath)) {
     throw new ConfigLoadError(
@@ -64,7 +66,29 @@ export async function loadConfig(
     );
   }
 
+  // Validate file size (max 1MB for safety)
+  const stats = require("node:fs").statSync(filePath);
+  const maxSize = 1024 * 1024; // 1MB
+  if (stats.size > maxSize) {
+    throw new ConfigLoadError(
+      `Configuration file too large: ${(stats.size / 1024).toFixed(2)}KB (max: 1MB). This may indicate an invalid config file.`,
+      filePath,
+    );
+  }
+
   const ext = filePath.split(".").pop()?.toLowerCase();
+
+  // Security: Reject TS/JS files by default unless explicitly allowed
+  if ((ext === "ts" || ext === "js") && options.allowUnsafeConfig !== true) {
+    throw new ConfigLoadError(
+      `❌ SECURITY REJECTION: TypeScript/JavaScript config files (.ts/.js) are disabled by default due to potential code execution risks (RCE).\n\n` +
+      `ℹ️  Use JSON or YAML configuration instead:\n` +
+      `   - universal-pwa.config.json\n` +
+      `   - universal-pwa.config.yaml\n\n` +
+      `⚠️  Advanced (at your own risk): Pass allowUnsafeConfig=true to enable TS/JS loading in your code.`,
+      filePath,
+    );
+  }
 
   let result: ConfigLoadResult;
 
