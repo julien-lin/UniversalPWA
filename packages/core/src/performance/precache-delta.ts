@@ -164,7 +164,7 @@ export function loadPreviousManifest(
 
   try {
     const content = readFileSync(manifestCachePath, "utf-8");
-     
+
     const parsed: unknown = JSON.parse(content);
     return Array.isArray(parsed) ? (parsed as PrecacheEntry[]) : [];
   } catch {
