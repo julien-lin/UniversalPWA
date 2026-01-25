@@ -1,56 +1,103 @@
-import { injectManifest, generateSW } from 'workbox-build'
-import { writeFileSync, mkdirSync, existsSync } from 'fs'
-import { join } from 'path'
-import { getServiceWorkerTemplate, determineTemplateType, type ServiceWorkerTemplateType } from '@julien-lin/universal-pwa-templates'
-import type { Architecture } from '../scanner/architecture-detector.js'
-import type { BackendIntegration } from '../backends/types.js'
-import type { ServiceWorkerConfig, RouteConfig } from './caching-strategy.js'
-import { RoutePatternResolver } from './route-pattern-resolver.js'
-import { ServiceWorkerConfigBuilder } from './service-worker-config-builder.js'
+import { injectManifest, generateSW } from "workbox-build";
+import { writeFileSync, mkdirSync, existsSync } from "fs";
+import { join } from "path";
+import {
+  getServiceWorkerTemplate,
+  determineTemplateType,
+  type ServiceWorkerTemplateType,
+} from "@julien-lin/universal-pwa-templates";
+import type { Architecture } from "../scanner/architecture-detector.js";
+import type { BackendIntegration } from "../backends/types.js";
+import type { ServiceWorkerConfig, RouteConfig } from "./caching-strategy.js";
+import { RoutePatternResolver } from "./route-pattern-resolver.js";
+import { ServiceWorkerConfigBuilder } from "./service-worker-config-builder.js";
 import {
   getOrGenerateCacheVersion,
   shouldInvalidateCache,
   buildDependencyGraph,
   type CacheVersion,
-} from './cache-invalidation.js'
-import { logger } from '../utils/logger.js'
+} from "./cache-invalidation.js";
+import { logger } from "../utils/logger.js";
+import {
+  getLimitsForFramework,
+  validatePrecachePatterns,
+  formatLimits,
+} from "../security/precache-limits.js";
 // Use string to avoid type lint issues in this unit
 // import type { Framework } from '../scanner/framework-detector'
 
-type StrategyName = 'CacheFirst' | 'NetworkFirst' | 'NetworkOnly' | 'StaleWhileRevalidate' | 'CacheOnly'
+type StrategyName =
+  | "CacheFirst"
+  | "NetworkFirst"
+  | "NetworkOnly"
+  | "StaleWhileRevalidate"
+  | "CacheOnly";
 
 export interface ServiceWorkerGeneratorOptions {
-  projectPath: string
-  outputDir: string
-  architecture: Architecture
-  framework?: string | null
-  templateType?: ServiceWorkerTemplateType
-  globDirectory?: string
-  globPatterns?: string[]
-  swDest?: string
-  swSrc?: string
-  skipWaiting?: boolean
-  clientsClaim?: boolean
-  offlinePage?: string
+  projectPath: string;
+  outputDir: string;
+  architecture: Architecture;
+  framework?: string | null;
+  templateType?: ServiceWorkerTemplateType;
+  globDirectory?: string;
+  globPatterns?: string[];
+  swDest?: string;
+  swSrc?: string;
+  skipWaiting?: boolean;
+  clientsClaim?: boolean;
+  offlinePage?: string;
   runtimeCaching?: Array<{
-    urlPattern: RegExp | string
-    handler: 'NetworkFirst' | 'CacheFirst' | 'StaleWhileRevalidate' | 'NetworkOnly' | 'CacheOnly'
+    urlPattern: RegExp | string;
+    handler:
+      | "NetworkFirst"
+      | "CacheFirst"
+      | "StaleWhileRevalidate"
+      | "NetworkOnly"
+      | "CacheOnly";
     options?: {
-      cacheName?: string
+      cacheName?: string;
       expiration?: {
-        maxEntries?: number
-        maxAgeSeconds?: number
-      }
-    }
-  }>
+        maxEntries?: number;
+        maxAgeSeconds?: number;
+      };
+    };
+  }>;
 }
 
 export interface ServiceWorkerGenerationResult {
-  swPath: string
-  count: number
-  size: number
-  warnings: string[]
-  filePaths: string[]
+  swPath: string;
+  count: number;
+  size: number;
+  warnings: string[];
+  filePaths: string[];
+}
+
+/**
+ * Apply P1.2 security: validate and enforce Workbox precache limits
+ * Prevents DoS and memory exhaustion attacks through unbounded glob patterns
+ */
+function validateAndLimitPrecachePatterns(
+  patterns: string[],
+  framework: string | null | undefined,
+): { patterns: string[]; warnings: string[] } {
+  const limits = getLimitsForFramework(framework as string | null);
+
+  // Run P1.2 validation
+  const { patterns: sanitizedPatterns, warnings } = validatePrecachePatterns(
+    patterns,
+    limits,
+  );
+
+  if (warnings.length > 0) {
+    logger.warn("P1.2 Security: Precache patterns validation warnings:");
+    warnings.forEach((w) => logger.warn(`  ${w}`));
+    logger.info(`Limits applied: ${formatLimits(limits)}`);
+  }
+
+  return {
+    patterns: sanitizedPatterns,
+    warnings,
+  };
 }
 
 /**
@@ -66,42 +113,52 @@ export async function generateServiceWorker(
     framework,
     templateType,
     globDirectory,
-    globPatterns = ['**/*.{js,css,html,png,jpg,jpeg,svg,webp,woff,woff2,ttf,otf}'],
-    swDest = 'sw.js',
+    globPatterns = [
+      "**/*.{js,css,html,png,jpg,jpeg,svg,webp,woff,woff2,ttf,otf}",
+    ],
+    swDest = "sw.js",
     offlinePage,
-  } = options
+  } = options;
+
+  // P1.2: Validate and limit precache patterns (security: prevent DoS)
+  const { patterns: validatedPatterns, warnings: patternWarnings } =
+    validateAndLimitPrecachePatterns(globPatterns, framework);
 
   // Create output directory if necessary
-  mkdirSync(outputDir, { recursive: true })
+  mkdirSync(outputDir, { recursive: true });
 
   // Determine template type
-  const finalTemplateType: ServiceWorkerTemplateType = templateType ?? determineTemplateType(architecture, framework ?? null)
-  const template = getServiceWorkerTemplate(finalTemplateType)
+  const finalTemplateType: ServiceWorkerTemplateType =
+    templateType ?? determineTemplateType(architecture, framework ?? null);
+  const template = getServiceWorkerTemplate(finalTemplateType);
 
   // Create temporary source file with template
-  const swSrcPath = join(outputDir, 'sw-src.js')
-  writeFileSync(swSrcPath, template.content, 'utf-8')
+  const swSrcPath = join(outputDir, "sw-src.js");
+  writeFileSync(swSrcPath, template.content, "utf-8");
 
-  const swDestPath = join(outputDir, swDest)
+  const swDestPath = join(outputDir, swDest);
 
   // Workbox configuration (injectManifest only accepts globDirectory, globPatterns, swDest, swSrc, injectionPoint)
   const workboxConfig: Parameters<typeof injectManifest>[0] = {
     globDirectory: globDirectory ?? projectPath,
-    globPatterns,
+    globPatterns: validatedPatterns,
     swDest: swDestPath,
     swSrc: swSrcPath,
     // Inject manifest into template
-    injectionPoint: 'self.__WB_MANIFEST',
-  }
+    injectionPoint: "self.__WB_MANIFEST",
+  };
 
   // Add offline page if specified
   if (offlinePage) {
-    workboxConfig.globPatterns = [...(workboxConfig.globPatterns ?? []), offlinePage]
+    workboxConfig.globPatterns = [
+      ...(workboxConfig.globPatterns ?? []),
+      offlinePage,
+    ];
   }
 
   try {
     // Use injectManifest to inject precache manifest into template
-    const result = await injectManifest(workboxConfig)
+    const result = await injectManifest(workboxConfig);
 
     // Clean up temporary source file
     try {
@@ -113,23 +170,27 @@ export async function generateServiceWorker(
       // Ignore cleanup errors
     }
 
-    const resultFilePaths = result.filePaths ?? []
+    const resultFilePaths = result.filePaths ?? [];
     // Add offlinePage to report if specified and absent (robust for some Workbox behaviors)
-    const normalizedOffline = offlinePage ? offlinePage.replace(/^\.\//, '') : undefined
-    const finalFilePaths = normalizedOffline && !resultFilePaths.some((p) => p.includes(normalizedOffline))
-      ? [...resultFilePaths, normalizedOffline]
-      : resultFilePaths
+    const normalizedOffline = offlinePage
+      ? offlinePage.replace(/^\.\//, "")
+      : undefined;
+    const finalFilePaths =
+      normalizedOffline &&
+      !resultFilePaths.some((p) => p.includes(normalizedOffline))
+        ? [...resultFilePaths, normalizedOffline]
+        : resultFilePaths;
 
     return {
       swPath: swDestPath,
       count: result.count,
       size: result.size,
-      warnings: result.warnings ?? [],
+      warnings: [...(result.warnings ?? []), ...patternWarnings],
       filePaths: finalFilePaths,
-    }
+    };
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err)
-    throw new Error(`Failed to generate service worker: ${message}`)
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`Failed to generate service worker: ${message}`);
   }
 }
 
@@ -137,80 +198,90 @@ export async function generateServiceWorker(
  * Generates a simple service worker without template (uses generateSW)
  */
 export async function generateSimpleServiceWorker(
-  options: Omit<ServiceWorkerGeneratorOptions, 'templateType' | 'swSrc'>,
+  options: Omit<ServiceWorkerGeneratorOptions, "templateType" | "swSrc">,
 ): Promise<ServiceWorkerGenerationResult> {
   const {
     projectPath,
     outputDir,
+    framework,
     globDirectory,
-    globPatterns = ['**/*.{js,css,html,png,jpg,jpeg,svg,webp,woff,woff2,ttf,otf}'],
-    swDest = 'sw.js',
+    globPatterns = [
+      "**/*.{js,css,html,png,jpg,jpeg,svg,webp,woff,woff2,ttf,otf}",
+    ],
+    swDest = "sw.js",
     skipWaiting = true,
     clientsClaim = true,
     runtimeCaching,
-  } = options
+  } = options;
+
+  // P1.2: Validate and limit precache patterns (security: prevent DoS)
+  const { patterns: validatedPatterns, warnings: patternWarnings } =
+    validateAndLimitPrecachePatterns(globPatterns, framework);
 
   // Create output directory if necessary
-  mkdirSync(outputDir, { recursive: true })
+  mkdirSync(outputDir, { recursive: true });
 
-  const swDestPath = join(outputDir, swDest)
+  const swDestPath = join(outputDir, swDest);
 
   // Workbox configuration
   const workboxConfig: Parameters<typeof generateSW>[0] = {
     globDirectory: globDirectory ?? projectPath,
-    globPatterns,
+    globPatterns: validatedPatterns,
     swDest: swDestPath,
     skipWaiting,
     clientsClaim,
-    mode: 'production' as const,
+    mode: "production" as const,
     sourcemap: false,
-  }
+  };
 
   // Add runtime caching if specified
   if (runtimeCaching && runtimeCaching.length > 0) {
     workboxConfig.runtimeCaching = runtimeCaching.map((cache) => {
       const handlerMap: Record<string, StrategyName> = {
-        NetworkFirst: 'NetworkFirst',
-        CacheFirst: 'CacheFirst',
-        StaleWhileRevalidate: 'StaleWhileRevalidate',
-        NetworkOnly: 'NetworkOnly',
-        CacheOnly: 'CacheOnly',
-      }
-      const handler = handlerMap[cache.handler] ?? cache.handler
+        NetworkFirst: "NetworkFirst",
+        CacheFirst: "CacheFirst",
+        StaleWhileRevalidate: "StaleWhileRevalidate",
+        NetworkOnly: "NetworkOnly",
+        CacheOnly: "CacheOnly",
+      };
+      const handler = handlerMap[cache.handler] ?? cache.handler;
       return {
-        urlPattern: typeof cache.urlPattern === 'string' ? new RegExp(cache.urlPattern) : cache.urlPattern,
+        urlPattern:
+          typeof cache.urlPattern === "string"
+            ? new RegExp(cache.urlPattern)
+            : cache.urlPattern,
         handler: handler,
         options: cache.options
           ? {
-            cacheName: cache.options.cacheName,
-            expiration: cache.options.expiration
-              ? {
-                maxEntries: cache.options.expiration.maxEntries,
-                maxAgeSeconds: cache.options.expiration.maxAgeSeconds,
-              }
-              : undefined,
-          }
+              cacheName: cache.options.cacheName,
+              expiration: cache.options.expiration
+                ? {
+                    maxEntries: cache.options.expiration.maxEntries,
+                    maxAgeSeconds: cache.options.expiration.maxAgeSeconds,
+                  }
+                : undefined,
+            }
           : undefined,
-      }
-    })
+      };
+    });
   }
 
   try {
-    const result = await generateSW(workboxConfig)
+    const result = await generateSW(workboxConfig);
 
     return {
       swPath: swDestPath,
       count: result.count,
       size: result.size,
-      warnings: result.warnings ?? [],
-      filePaths:
-        ((result as { manifestEntries?: Array<string | { url: string }> }).manifestEntries ?? []).map((entry) =>
-          typeof entry === 'string' ? entry : entry.url,
-        ),
-    }
+      warnings: [...(result.warnings ?? []), ...patternWarnings],
+      filePaths: (
+        (result as { manifestEntries?: Array<string | { url: string }> })
+          .manifestEntries ?? []
+      ).map((entry) => (typeof entry === "string" ? entry : entry.url)),
+    };
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err)
-    throw new Error(`Failed to generate service worker: ${message}`)
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`Failed to generate service worker: ${message}`);
   }
 }
 
@@ -220,7 +291,7 @@ export async function generateSimpleServiceWorker(
 export async function generateAndWriteServiceWorker(
   options: ServiceWorkerGeneratorOptions,
 ): Promise<ServiceWorkerGenerationResult> {
-  return generateServiceWorker(options)
+  return generateServiceWorker(options);
 }
 
 /**
@@ -230,36 +301,37 @@ export async function generateAndWriteServiceWorker(
 export async function generateServiceWorkerFromConfig(
   config: ServiceWorkerConfig,
   options: {
-    projectPath: string
-    globDirectory?: string
-    outputDir: string
-    architecture?: Architecture
-    framework?: string | null
-    templateType?: ServiceWorkerTemplateType
-    swDest?: string
-    skipWaiting?: boolean
-    clientsClaim?: boolean
+    projectPath: string;
+    globDirectory?: string;
+    outputDir: string;
+    architecture?: Architecture;
+    framework?: string | null;
+    templateType?: ServiceWorkerTemplateType;
+    swDest?: string;
+    skipWaiting?: boolean;
+    clientsClaim?: boolean;
   },
 ): Promise<ServiceWorkerGenerationResult> {
   const {
     projectPath,
     globDirectory,
     outputDir,
-    architecture = 'static',
+    architecture = "static",
     framework,
     templateType,
-    swDest = 'sw.js',
-  } = options
+    swDest = "sw.js",
+  } = options;
 
   // Determine template type
-  const finalTemplateType: ServiceWorkerTemplateType = templateType ?? determineTemplateType(architecture, framework ?? null)
-  const template = getServiceWorkerTemplate(finalTemplateType)
+  const finalTemplateType: ServiceWorkerTemplateType =
+    templateType ?? determineTemplateType(architecture, framework ?? null);
+  const template = getServiceWorkerTemplate(finalTemplateType);
 
   // Create temporary source file with template
-  const swSrcPath = join(outputDir, 'sw-src.js')
-  writeFileSync(swSrcPath, template.content, 'utf-8')
+  const swSrcPath = join(outputDir, "sw-src.js");
+  writeFileSync(swSrcPath, template.content, "utf-8");
 
-  const swDestPath = join(outputDir, swDest)
+  const swDestPath = join(outputDir, swDest);
 
   // Convert route configs to Workbox format
   const allRoutes = [
@@ -268,59 +340,71 @@ export async function generateServiceWorkerFromConfig(
     ...config.imageRoutes,
     ...(config.customRoutes || []),
     ...(config.advanced?.routes || []),
-  ]
+  ];
 
   // Handle cache versioning and invalidation
-  let cacheVersion: CacheVersion | null = null
+  let cacheVersion: CacheVersion | null = null;
   if (config.advanced) {
     // Generate or get cache version
-    cacheVersion = getOrGenerateCacheVersion(projectPath, config.advanced)
+    cacheVersion = getOrGenerateCacheVersion(projectPath, config.advanced);
 
     // Check if cache should be invalidated
     if (config.advanced.versioning?.autoInvalidate) {
-      const invalidationResult = shouldInvalidateCache(projectPath, null, config.advanced)
+      const invalidationResult = shouldInvalidateCache(
+        projectPath,
+        null,
+        config.advanced,
+      );
       if (invalidationResult.shouldInvalidate) {
-        logger.info({
-          reason: invalidationResult.reason,
-          newVersion: invalidationResult.newVersion,
-        }, 'Cache invalidation triggered')
+        logger.info(
+          {
+            reason: invalidationResult.reason,
+            newVersion: invalidationResult.newVersion,
+          },
+          "Cache invalidation triggered",
+        );
       }
     }
 
     // Build dependency graph for cascade invalidation
     if (config.advanced.dependencies?.enabled) {
-      const dependencyGraph = buildDependencyGraph(allRoutes)
-      void dependencyGraph // Can be used for cascade invalidation
+      const dependencyGraph = buildDependencyGraph(allRoutes);
+      void dependencyGraph; // Can be used for cascade invalidation
     }
   }
 
   // Convert to Workbox format with global config
   const workboxRoutes = RoutePatternResolver.toWorkboxFormat(allRoutes, {
     cacheNamePrefix: config.advanced?.global?.cacheNamePrefix,
-  })
+  });
 
   // Note: workboxRoutes and cacheVersion can be used for runtime caching injection in templates
-  void workboxRoutes
-  void cacheVersion
+  void workboxRoutes;
+  void cacheVersion;
 
   // Workbox configuration
   const workboxConfig: Parameters<typeof injectManifest>[0] = {
     globDirectory: globDirectory ?? projectPath,
-    globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,svg,webp,woff,woff2,ttf,otf}'],
+    globPatterns: [
+      "**/*.{js,css,html,png,jpg,jpeg,svg,webp,woff,woff2,ttf,otf}",
+    ],
     swDest: swDestPath,
     swSrc: swSrcPath,
-    injectionPoint: 'self.__WB_MANIFEST',
-  }
+    injectionPoint: "self.__WB_MANIFEST",
+  };
 
   // Add offline page if configured
   if (config.offline?.fallbackPage) {
-    workboxConfig.globPatterns = [...(workboxConfig.globPatterns ?? []), config.offline.fallbackPage]
+    workboxConfig.globPatterns = [
+      ...(workboxConfig.globPatterns ?? []),
+      config.offline.fallbackPage,
+    ];
   }
 
   try {
-    const result = await injectManifest(workboxConfig)
+    const result = await injectManifest(workboxConfig);
 
-    const resultFilePaths = result.filePaths ?? []
+    const resultFilePaths = result.filePaths ?? [];
 
     return {
       swPath: swDestPath,
@@ -328,10 +412,12 @@ export async function generateServiceWorkerFromConfig(
       size: result.size,
       warnings: result.warnings ?? [],
       filePaths: resultFilePaths,
-    }
+    };
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err)
-    throw new Error(`Failed to generate service worker from config: ${message}`)
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `Failed to generate service worker from config: ${message}`,
+    );
   }
 }
 
@@ -343,24 +429,25 @@ export async function generateServiceWorkerFromBackend(
   backend: BackendIntegration,
   architecture: Architecture,
   options: {
-    projectPath: string
-    globDirectory?: string
-    outputDir: string
-    swDest?: string
-    customRoutes?: RouteConfig[]
+    projectPath: string;
+    globDirectory?: string;
+    outputDir: string;
+    swDest?: string;
+    customRoutes?: RouteConfig[];
   },
 ): Promise<ServiceWorkerGenerationResult> {
   // Build config from backend integration
 
   // ServiceWorkerConfigBuilder.fromBackendIntegration correctly returns ServiceWorkerConfig
-  const config: ServiceWorkerConfig = ServiceWorkerConfigBuilder.fromBackendIntegration(
-    backend,
-    options.outputDir,
-    {
-      customRoutes: options.customRoutes,
-      validate: true,
-    },
-  )
+  const config: ServiceWorkerConfig =
+    ServiceWorkerConfigBuilder.fromBackendIntegration(
+      backend,
+      options.outputDir,
+      {
+        customRoutes: options.customRoutes,
+        validate: true,
+      },
+    );
   return generateServiceWorkerFromConfig(config, {
     projectPath: options.projectPath,
     globDirectory: options.globDirectory,
@@ -368,5 +455,5 @@ export async function generateServiceWorkerFromBackend(
     architecture,
     framework: backend.framework,
     swDest: options.swDest,
-  })
+  });
 }
