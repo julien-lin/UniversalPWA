@@ -51,8 +51,17 @@ describe("precache-limits", () => {
 
     it("should include ignore patterns for each framework", () => {
       // Only test frameworks that include node_modules in their ignore list
-      const frameworksWithNodeModules = ['react', 'vue', 'svelte', 'angular', 'nextjs', 'nuxt', 'static', 'other']
-      
+      const frameworksWithNodeModules = [
+        "react",
+        "vue",
+        "svelte",
+        "angular",
+        "nextjs",
+        "nuxt",
+        "static",
+        "other",
+      ];
+
       for (const framework of frameworksWithNodeModules) {
         const limits = PRECACHE_LIMITS_BY_FRAMEWORK[framework];
         if (!limits) {
@@ -134,12 +143,12 @@ describe("precache-limits", () => {
 
     it("should warn about overly deep recursive patterns", () => {
       const limits = PRECACHE_LIMITS_BY_FRAMEWORK.static; // maxDepth = 4
-      const deepPattern = '**/a/**/b/**/c/**/d/**/*.js' // 6 slashes > 4
+      const deepPattern = "**/a/**/b/**/c/**/d/**/*.js"; // 6 slashes > 4
 
-      const result = validatePrecachePatterns([deepPattern], limits)
-      expect(result.warnings.length).toBeGreaterThan(0)
+      const result = validatePrecachePatterns([deepPattern], limits);
+      expect(result.warnings.length).toBeGreaterThan(0);
       // Could be either 'recursive globs' warning or 'depth' warning, depending on heuristics
-      expect(result.warnings[0]).toMatch(/recursive globs|depth/)
+      expect(result.warnings[0]).toMatch(/recursive globs|depth/);
     });
 
     it("should warn about patterns with many recursive globs", () => {
@@ -245,7 +254,7 @@ describe("precache-limits", () => {
 
   describe("Ignore patterns by framework", () => {
     it("should include common patterns for all frameworks", () => {
-      for (const framework of ['react', 'vue', 'svelte', 'static']) {
+      for (const framework of ["react", "vue", "svelte", "static"]) {
         const limits = PRECACHE_LIMITS_BY_FRAMEWORK[framework];
         if (!limits) {
           continue;
