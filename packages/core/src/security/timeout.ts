@@ -11,11 +11,11 @@
  */
 export interface TimeoutOptions {
   /** Timeout in milliseconds */
-  timeoutMs: number
+  timeoutMs: number;
   /** Custom error message */
-  errorMessage?: string
+  errorMessage?: string;
   /** Whether to reject or cancel (for AbortController support) */
-  abortSignal?: AbortSignal
+  abortSignal?: AbortSignal;
 }
 
 /**
@@ -34,7 +34,7 @@ export const DEFAULT_TIMEOUTS = {
   initCommand: 120000, // 2 minutes
   /** Parallel batch operation */
   batchOperation: 60000, // 1 minute
-}
+};
 
 /**
  * Error for timeout violations
@@ -44,8 +44,8 @@ export class TimeoutError extends Error {
     public readonly operation: string,
     public readonly timeoutMs: number,
   ) {
-    super(`Operation '${operation}' exceeded timeout of ${timeoutMs}ms`)
-    this.name = 'TimeoutError'
+    super(`Operation '${operation}' exceeded timeout of ${timeoutMs}ms`);
+    this.name = "TimeoutError";
   }
 }
 
@@ -61,31 +61,26 @@ export function withTimeout<T>(
   promise: Promise<T>,
   options: TimeoutOptions,
 ): Promise<T> {
-  const { timeoutMs, errorMessage } = options
+  const { timeoutMs, errorMessage } = options;
 
   return Promise.race([
     promise,
     new Promise<T>((_, reject) => {
       const timeoutId = setTimeout(() => {
-        reject(
-          new TimeoutError(
-            'unknown',
-            timeoutMs,
-          ),
-        )
-      }, timeoutMs)
+        reject(new TimeoutError("unknown", timeoutMs));
+      }, timeoutMs);
 
       // Cleanup timeout if promise settles first
       promise
         .then(() => clearTimeout(timeoutId))
-        .catch(() => clearTimeout(timeoutId))
+        .catch(() => clearTimeout(timeoutId));
     }),
   ]).catch((err) => {
     if (err instanceof TimeoutError && errorMessage) {
-      throw new TimeoutError(errorMessage, timeoutMs)
+      throw new TimeoutError(errorMessage, timeoutMs);
     }
-    throw err
-  })
+    throw err;
+  });
 }
 
 /**
@@ -101,8 +96,8 @@ export function withTimeoutAsync<Args extends unknown[], T>(
     return withTimeout(fn(...args), {
       timeoutMs,
       errorMessage: `${operationName} exceeded ${timeoutMs}ms timeout`,
-    })
-  }
+    });
+  };
 }
 
 /**
@@ -111,11 +106,16 @@ export function withTimeoutAsync<Args extends unknown[], T>(
  */
 export async function parallelWithTimeout<T>(
   operations: Array<{
-    name: string
-    fn: () => Promise<T>
+    name: string;
+    fn: () => Promise<T>;
   }>,
   timeoutPerOperation: number,
-): Promise<Array<{ name: string; result: T; error?: undefined } | { name: string; error: Error; result?: undefined }>> {
+): Promise<
+  Array<
+    | { name: string; result: T; error?: undefined }
+    | { name: string; error: Error; result?: undefined }
+  >
+> {
   const results = await Promise.allSettled(
     operations.map((op) =>
       withTimeout(op.fn(), {
@@ -125,17 +125,17 @@ export async function parallelWithTimeout<T>(
         .then((result) => ({ name: op.name, result }))
         .catch((error) => ({ name: op.name, error })),
     ),
-  )
+  );
 
   return results.map((r) => {
-    if (r.status === 'fulfilled') {
-      return r.value
+    if (r.status === "fulfilled") {
+      return r.value;
     }
     return {
-      name: 'unknown',
-      error: new Error('Promise rejected'),
-    }
-  })
+      name: "unknown",
+      error: new Error("Promise rejected"),
+    };
+  });
 }
 
 /**
@@ -144,36 +144,44 @@ export async function parallelWithTimeout<T>(
  */
 export async function sequentialWithTimeout<T>(
   operations: Array<{
-    name: string
-    fn: () => Promise<T>
+    name: string;
+    fn: () => Promise<T>;
   }>,
   timeoutPerOperation: number,
-): Promise<Array<{ name: string; result: T; duration: number } | { name: string; error: Error; duration: number }>> {
-  type Result = { name: string; result?: T; error?: Error; duration: number }
-  const results: Result[] = []
+): Promise<
+  Array<
+    | { name: string; result: T; duration: number }
+    | { name: string; error: Error; duration: number }
+  >
+> {
+  type Result = { name: string; result?: T; error?: Error; duration: number };
+  const results: Result[] = [];
 
   for (const op of operations) {
-    const startTime = Date.now()
+    const startTime = Date.now();
     try {
       const result = await withTimeout(op.fn(), {
         timeoutMs: timeoutPerOperation,
         errorMessage: `Operation '${op.name}' exceeded timeout`,
-      })
+      });
       results.push({
         name: op.name,
         result,
         duration: Date.now() - startTime,
-      })
+      });
     } catch (error) {
       results.push({
         name: op.name,
         error: error instanceof Error ? error : new Error(String(error)),
         duration: Date.now() - startTime,
-      })
+      });
     }
   }
 
-  return results as Array<{ name: string; result: T; duration: number } | { name: string; error: Error; duration: number }>
+  return results as Array<
+    | { name: string; result: T; duration: number }
+    | { name: string; error: Error; duration: number }
+  >;
 }
 
 /**
@@ -183,12 +191,15 @@ export async function sequentialWithTimeout<T>(
 export function createBatchProcessor<T, R>(
   batchSize: number,
   timeoutPerBatch: number,
-): (items: T[], processor: (item: T) => Promise<R>) => Promise<Array<R | Error>> {
+): (
+  items: T[],
+  processor: (item: T) => Promise<R>,
+) => Promise<Array<R | Error>> {
   return async (items: T[], processor: (item: T) => Promise<R>) => {
-    const results: Array<R | Error> = []
+    const results: Array<R | Error> = [];
 
     for (let i = 0; i < items.length; i += batchSize) {
-      const batch = items.slice(i, i + batchSize)
+      const batch = items.slice(i, i + batchSize);
 
       try {
         const batchResults = await withTimeout(
@@ -197,17 +208,18 @@ export function createBatchProcessor<T, R>(
             timeoutMs: timeoutPerBatch,
             errorMessage: `Batch processing exceeded timeout (${batch.length} items)`,
           },
-        )
-        results.push(...batchResults)
+        );
+        results.push(...batchResults);
       } catch (error) {
         // Add error for the entire batch
-        const batchError = error instanceof Error ? error : new Error(String(error))
-        batch.forEach(() => results.push(batchError))
+        const batchError =
+          error instanceof Error ? error : new Error(String(error));
+        batch.forEach(() => results.push(batchError));
       }
     }
 
-    return results
-  }
+    return results;
+  };
 }
 
 /**
@@ -215,54 +227,57 @@ export function createBatchProcessor<T, R>(
  * Stops retrying after repeated failures
  */
 export class CircuitBreaker<T> {
-  private failureCount = 0
-  private readonly maxFailures: number
-  private readonly resetTimeoutMs: number
-  private state: 'closed' | 'open' | 'half-open' = 'closed'
-  private lastFailureTime: number = 0
+  private failureCount = 0;
+  private readonly maxFailures: number;
+  private readonly resetTimeoutMs: number;
+  private state: "closed" | "open" | "half-open" = "closed";
+  private lastFailureTime: number = 0;
 
   constructor(maxFailures: number = 3, resetTimeoutMs: number = 60000) {
-    this.maxFailures = maxFailures
-    this.resetTimeoutMs = resetTimeoutMs
+    this.maxFailures = maxFailures;
+    this.resetTimeoutMs = resetTimeoutMs;
   }
 
   /**
    * Execute operation with circuit breaker protection
    */
-  async execute(fn: () => Promise<T>, operationName: string = 'unknown'): Promise<T> {
+  async execute(
+    fn: () => Promise<T>,
+    operationName: string = "unknown",
+  ): Promise<T> {
     // Check if circuit is open and can be half-opened
-    if (this.state === 'open') {
-      const timeSinceLastFailure = Date.now() - this.lastFailureTime
+    if (this.state === "open") {
+      const timeSinceLastFailure = Date.now() - this.lastFailureTime;
       if (timeSinceLastFailure < this.resetTimeoutMs) {
         throw new Error(
           `Circuit breaker is open for '${operationName}'. ` +
-          `Will retry in ${this.resetTimeoutMs - timeSinceLastFailure}ms`,
-        )
+            `Will retry in ${this.resetTimeoutMs - timeSinceLastFailure}ms`,
+        );
       }
-      this.state = 'half-open'
+      this.state = "half-open";
     }
 
     try {
-      const result = await fn()
-      this.onSuccess()
-      return result
+      const result = await fn();
+      this.onSuccess();
+      return result;
     } catch (error) {
-      this.onFailure()
-      throw error
+      this.onFailure();
+      throw error;
     }
   }
 
   private onSuccess(): void {
-    this.failureCount = 0
-    this.state = 'closed'
+    this.failureCount = 0;
+    this.state = "closed";
   }
 
   private onFailure(): void {
-    this.failureCount++
-    this.lastFailureTime = Date.now()
+    this.failureCount++;
+    this.lastFailureTime = Date.now();
 
     if (this.failureCount >= this.maxFailures) {
-      this.state = 'open'
+      this.state = "open";
     }
   }
 
@@ -270,25 +285,25 @@ export class CircuitBreaker<T> {
    * Get current state for monitoring
    */
   getState(): {
-    state: 'closed' | 'open' | 'half-open'
-    failureCount: number
-    isClosed: boolean
-    isOpen: boolean
+    state: "closed" | "open" | "half-open";
+    failureCount: number;
+    isClosed: boolean;
+    isOpen: boolean;
   } {
     return {
       state: this.state,
       failureCount: this.failureCount,
-      isClosed: this.state === 'closed',
-      isOpen: this.state === 'open',
-    }
+      isClosed: this.state === "closed",
+      isOpen: this.state === "open",
+    };
   }
 
   /**
    * Manually reset the circuit breaker
    */
   reset(): void {
-    this.failureCount = 0
-    this.state = 'closed'
+    this.failureCount = 0;
+    this.state = "closed";
   }
 }
 
@@ -301,20 +316,23 @@ export async function retryWithBackoff<T>(
   initialDelayMs: number = 100,
   maxDelayMs: number = 5000,
 ): Promise<T> {
-  let lastError: Error | undefined
+  let lastError: Error | undefined;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      return await fn()
+      return await fn();
     } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error))
+      lastError = error instanceof Error ? error : new Error(String(error));
 
       if (attempt < maxRetries) {
-        const delayMs = Math.min(initialDelayMs * Math.pow(2, attempt), maxDelayMs)
-        await new Promise((resolve) => setTimeout(resolve, delayMs))
+        const delayMs = Math.min(
+          initialDelayMs * Math.pow(2, attempt),
+          maxDelayMs,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
     }
   }
 
-  throw lastError || new Error('Retry exhausted')
+  throw lastError || new Error("Retry exhausted");
 }
