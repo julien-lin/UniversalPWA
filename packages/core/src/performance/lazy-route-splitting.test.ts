@@ -58,14 +58,21 @@ describe("lazy-route-splitting", () => {
     it("should detect lazy-loaded routes", () => {
       const routes: RouteDefinition[] = [
         createRoute("/", { lazy: false, component: "HomePage" }),
-        createRoute("/admin", { lazy: true, component: "lazy(() => import('./Admin'))" }),
+        createRoute("/admin", {
+          lazy: true,
+          component: "lazy(() => import('./Admin'))",
+        }),
         createRoute("/user", { component: "lazy-component" }),
       ];
 
       const analysis = analyzeRouteStructure(routes);
 
       expect(analysis.lazyRoutes).toBeGreaterThan(0);
-      expect(analysis.splits.some((s) => s.preloadHint === "low" || s.preloadHint === "medium")).toBe(true);
+      expect(
+        analysis.splits.some(
+          (s) => s.preloadHint === "low" || s.preloadHint === "medium",
+        ),
+      ).toBe(true);
     });
 
     it("should calculate preload recommendations", () => {
