@@ -536,7 +536,9 @@ describe("precache-delta", () => {
       const delta = computePrecacheDelta(build2, previous);
 
       expect(delta.filesToCache).toHaveLength(2);
-      expect(delta.deltas.filter((d) => d.changeType === "modified")).toHaveLength(1);
+      expect(
+        delta.deltas.filter((d) => d.changeType === "modified"),
+      ).toHaveLength(1);
     });
 
     it("should support manifest versioning", () => {
