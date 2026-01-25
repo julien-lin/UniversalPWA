@@ -1,4 +1,4 @@
-name: CI
+name: CI - Engineering Rules Validation
 
 # Désactivé temporairement - sera réactivé plus tard
 # on:
@@ -12,10 +12,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  lint-and-test:
+  validate:
+    name: Lint + Typecheck + Test (MANDATORY)
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: true # Stop immediately on first failure (no tolerance)
       matrix:
         node-version: ['20', '22']
         os: [ubuntu-latest, macos-latest]
@@ -25,7 +26,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        # Version détectée automatiquement depuis package.json "packageManager"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -42,21 +42,80 @@ jobs:
           rm -rf packages/*/.tsbuildinfo
           find packages -name "*.tsbuildinfo" -delete || true
 
-      - name: Lint
+      # === MANDATORY VALIDATION (ALL 3 MUST PASS) ===
+
+      - name: "✅ Step 1/3: Lint (pnpm -r lint)"
         run: pnpm -r lint
         continue-on-error: false
 
-      - name: Test (with coverage)
-        run: pnpm -r --filter '!universal-pwa-demos' --workspace-root test -- --coverage
+      - name: "✅ Step 2/3: Typecheck (pnpm -r typecheck)"
+        run: pnpm -r typecheck
+        continue-on-error: false
 
-      - name: Verify coverage files exist
+      - name: "✅ Step 3/3: Test + Coverage (pnpm -r test)"
+        run: pnpm -r --filter '!universal-pwa-demos' test -- --coverage
+        continue-on-error: false
+
+      # === COVERAGE REPORTING ===
+
+      - name: Report test coverage
+        if: always()
         run: |
-          echo "Checking coverage files..."
-          ls -la packages/*/coverage/coverage-final.json || echo "Some coverage files missing"
-          find packages -name "coverage-final.json" -type f || echo "No coverage files found"
+          echo "=== COVERAGE SUMMARY ==="
+          find packages -name "coverage/coverage-final.json" -exec sh -c 'echo "File: {}"; cat {} | head -20' \; || true
 
-      - name: Build
+  build:
+    name: Build (verify artifacts)
+    runs-on: ubuntu-latest
+    needs: validate # Only runs if validate passes
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Clear TypeScript cache
+        run: |
+          rm -rf packages/*/tsconfig.tsbuildinfo
+          rm -rf packages/*/.tsbuildinfo
+          find packages -name "*.tsbuildinfo" -delete || true
+
+      - name: Build all packages
         run: pnpm -r build
+
+      - name: Verify build artifacts exist
+        run: |
+          echo "Checking build artifacts..."
+          packages_to_check=("core" "cli" "templates")
+          for pkg in "${packages_to_check[@]}"; do
+            if [ ! -d "packages/$pkg/dist" ]; then
+              echo "❌ FAILED: packages/$pkg/dist not found!"
+              exit 1
+            else
+              echo "✅ packages/$pkg/dist exists ($(du -sh packages/$pkg/dist | cut -f1))"
+            fi
+          done
+
+      - name: Check bundle size (core should be <500KB)
+        run: |
+          CORE_SIZE=$(du -sb packages/core/dist | cut -f1)
+          MAX_SIZE=$((500 * 1024))
+          if [ $CORE_SIZE -gt $MAX_SIZE ]; then
+            echo "❌ FAILED: core bundle too large ($((CORE_SIZE / 1024))KB > 500KB)"
+            exit 1
+          else
+            echo "✅ core bundle size OK ($((CORE_SIZE / 1024))KB)"
+          fi
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
@@ -67,4 +126,35 @@ jobs:
           flags: core,cli,templates,web-ui
           name: codecov-umbrella
           fail_ci_if_error: false
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    needs: validate
+    continue-on-error: true # Report but don't block
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run npm audit (production dependencies)
+        run: pnpm audit --prod || true
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "=== SECURITY CHECK COMPLETE ==="
+          echo "Review npm audit output above for vulnerabilities"
+          echo "HIGH/CRITICAL vulnerabilities must be fixed before release"
 

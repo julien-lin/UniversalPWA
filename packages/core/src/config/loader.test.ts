@@ -129,7 +129,7 @@ describe("config-loader", () => {
         'module.exports = { app: { name: "Test App" } }',
       );
 
-      const result = await loadConfig(join(testDir, "config.js"));
+      const result = await loadConfig(join(testDir, "config.js"), { allowUnsafeConfig: true });
 
       expect(result.config.app?.name).toBe("Test App");
       expect(result.format).toBe("js");
@@ -142,11 +142,55 @@ describe("config-loader", () => {
         'module.exports = { app: { name: "Test App Default" } }',
       );
 
-      const result = await loadConfig(join(testDir, "config.js"));
+      const result = await loadConfig(join(testDir, "config.js"), { allowUnsafeConfig: true });
 
       expect(result.config.app?.name).toBe("Test App Default");
     });
+
+    it("should reject JS config by default (security)", async () => {
+      writeFileSync(
+        join(testDir, "config.js"),
+        'module.exports = { app: { name: "Test App" } }',
+      );
+
+      await expect(loadConfig(join(testDir, "config.js"))).rejects.toThrow(
+        "SECURITY REJECTION",
+      );
+    });
+
+    it("should reject TS config by default (security)", async () => {
+      writeFileSync(
+        join(testDir, "config.ts"),
+        'export default { app: { name: "Test App" } }',
+      );
+
+      await expect(loadConfig(join(testDir, "config.ts"))).rejects.toThrow(
+        "SECURITY REJECTION",
+      );
+    });
   });
+
+  describe("Security - Config size limits", () => {
+    it("should reject config files larger than 1MB", async () => {
+      // Create a 2MB JSON file
+      const largeConfig = {
+        app: {
+          name: "Test",
+          description: "x".repeat(2 * 1024 * 1024),
+        },
+      };
+
+      writeFileSync(
+        join(testDir, "large-config.json"),
+        JSON.stringify(largeConfig),
+      );
+
+      await expect(
+        loadConfig(join(testDir, "large-config.json")),
+      ).rejects.toThrow("too large");
+    });
+  });
+
 
   describe("loadConfig - YAML", () => {
     it("should load simple YAML config", async () => {
