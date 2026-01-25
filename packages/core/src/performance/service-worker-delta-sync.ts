@@ -128,7 +128,10 @@ export function computeSWDelta(
   const netChange = downloadSize - removedSize;
   const savingsPercentage =
     previous.totalSize > 0
-      ? Math.max(0, ((previous.totalSize - netChange) / previous.totalSize) * 100)
+      ? Math.max(
+          0,
+          ((previous.totalSize - netChange) / previous.totalSize) * 100,
+        )
       : 100;
 
   // Determine sync strategy
@@ -144,7 +147,8 @@ export function computeSWDelta(
 
   // Estimate download time (in milliseconds at network speed)
   // downloadSize in bytes, networkSpeed in Mbps
-  const timeMs = (downloadSize * 8) / (mergedConfig.networkSpeed * 1_000_000) * 1000;
+  const timeMs =
+    ((downloadSize * 8) / (mergedConfig.networkSpeed * 1_000_000)) * 1000;
 
   return {
     toAdd,
@@ -223,9 +227,7 @@ export function validateManifests(
     };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      throw new DeltaSyncError(
-        `Invalid manifest: ${error.message}`,
-      );
+      throw new DeltaSyncError(`Invalid manifest: ${error.message}`);
     }
     throw error;
   }
@@ -260,9 +262,7 @@ export function formatDeltaSyncReport(delta: DeltaSyncResult): string {
       "  update remaining in background",
     );
   } else {
-    lines.push(
-      "  Delta sync - only download changed assets for fast updates",
-    );
+    lines.push("  Delta sync - only download changed assets for fast updates");
   }
 
   return lines.join("\n");
@@ -282,10 +282,7 @@ function formatBytes(bytes: number): string {
 /**
  * Create a service worker manifest from assets
  */
-export function createManifest(
-  version: string,
-  assets: SWAsset[],
-): SWManifest {
+export function createManifest(version: string, assets: SWAsset[]): SWManifest {
   const totalSize = assets.reduce((sum, a) => sum + a.size, 0);
   const criticalSize = assets
     .filter((a) => a.critical)

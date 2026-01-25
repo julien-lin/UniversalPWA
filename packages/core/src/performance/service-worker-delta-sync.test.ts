@@ -91,7 +91,9 @@ describe("service-worker-delta-sync", () => {
 
       const delta = computeSWDelta(current, previous);
 
-      expect(delta.toAdd).toContainEqual(expect.objectContaining({ path: "/app.js" }));
+      expect(delta.toAdd).toContainEqual(
+        expect.objectContaining({ path: "/app.js" }),
+      );
     });
 
     it("should calculate download size", () => {
@@ -184,10 +186,7 @@ describe("service-worker-delta-sync", () => {
     });
 
     it("should handle identical manifests", () => {
-      const assets = [
-        createAsset("/index.html"),
-        createAsset("/app.js"),
-      ];
+      const assets = [createAsset("/index.html"), createAsset("/app.js")];
 
       const manifest = createManifestWithAssets("1.0.0", assets);
 
@@ -491,7 +490,10 @@ describe("service-worker-delta-sync", () => {
       for (let i = 0; i < 150; i++) {
         assets2.push(createAsset(`/chunk${i}.js`, { size: 50 * 1024 }));
       }
-      const previous2 = createManifestWithAssets("1.0.0", assets2.slice(0, 100));
+      const previous2 = createManifestWithAssets(
+        "1.0.0",
+        assets2.slice(0, 100),
+      );
       const current2 = createManifestWithAssets("2.0.0", assets2);
       const delta2 = computeSWDelta(current2, previous2);
       // 50 new chunks * 50KB = 2.5MB, which is under 5MB threshold
@@ -561,7 +563,9 @@ describe("service-worker-delta-sync", () => {
       const manifest = createManifest("1.0.0", assets);
 
       // All assets either have strategy OR are not critical
-      expect(manifest.assets.every((a) => a.strategy || !a.critical)).toBe(true);
+      expect(manifest.assets.every((a) => a.strategy || !a.critical)).toBe(
+        true,
+      );
       // Two critical assets: 50KB + 50KB = 100KB
       expect(manifest.criticalSize).toBe(100 * 1024);
     });

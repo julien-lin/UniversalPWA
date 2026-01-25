@@ -144,10 +144,7 @@ export function analyzeRouteStructure(
   let totalRoutes = 0;
   let totalEstimatedReduction = 0;
 
-  const processRoute = (
-    route: RouteDefinition,
-    depth: number = 0,
-  ): void => {
+  const processRoute = (route: RouteDefinition, depth: number = 0): void => {
     totalRoutes++;
 
     const isLazy = route.lazy ?? route.component?.includes("lazy");
@@ -156,7 +153,8 @@ export function analyzeRouteStructure(
     }
 
     const componentSize =
-      route.size ?? estimateComponentSize(route.component, route.children?.length ?? 0);
+      route.size ??
+      estimateComponentSize(route.component, route.children?.length ?? 0);
     const gzipSize = estimateGzipSize(componentSize);
     const priority = route.priority ?? (isLazy ? 25 : 75);
     const preloadHint: "high" | "medium" | "low" =
@@ -171,7 +169,10 @@ export function analyzeRouteStructure(
       preloadHint,
     });
 
-    if (componentSize < mergedConfig.optimalChunkSize && route.children?.length) {
+    if (
+      componentSize < mergedConfig.optimalChunkSize &&
+      route.children?.length
+    ) {
       colocatedRoutes += route.children.length;
     }
 
@@ -246,7 +247,10 @@ export function generateSplitStrategy(
       splitRoutes.push(split.path);
     }
 
-    if (split.preloadHint === "high" && split.componentSize < mergedConfig.optimalChunkSize * 2) {
+    if (
+      split.preloadHint === "high" &&
+      split.componentSize < mergedConfig.optimalChunkSize * 2
+    ) {
       preloadRoutes.push(split.path);
     }
 
