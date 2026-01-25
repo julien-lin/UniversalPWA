@@ -1,27 +1,26 @@
 /**
  * Cache Invalidation System
- * 
+ *
  * Handles smart cache invalidation with versioning, dependency tracking,
  * and automatic invalidation on file changes.
  */
 
-import { createHash } from 'node:crypto'
-import { readFileSync, existsSync, statSync } from 'node:fs'
-import { join, relative } from 'node:path'
-import { globSync } from 'glob'
-import type { AdvancedCachingConfig, RouteConfig } from './caching-strategy.js'
-import { logger } from '../utils/logger.js'
+import { createHash } from "node:crypto";
+import { readFileSync, existsSync } from "node:fs";
+import { relative } from "node:path";
+import { globSync } from "glob";
+import type { AdvancedCachingConfig, RouteConfig } from "./caching-strategy.js";
 
 /**
  * Cache version information
  */
 export interface CacheVersion {
   /** Version string */
-  version: string
+  version: string;
   /** Timestamp of version generation */
-  timestamp: number
+  timestamp: number;
   /** File hashes used to generate version */
-  fileHashes: Record<string, string>
+  fileHashes: Record<string, string>;
 }
 
 /**
@@ -29,9 +28,9 @@ export interface CacheVersion {
  */
 export interface DependencyGraph {
   /** Map of file → files that depend on it */
-  dependents: Map<string, string[]>
+  dependents: Map<string, string[]>;
   /** Map of file → files it depends on */
-  dependencies: Map<string, string[]>
+  dependencies: Map<string, string[]>;
 }
 
 /**
@@ -39,13 +38,13 @@ export interface DependencyGraph {
  */
 export interface InvalidationResult {
   /** Whether cache should be invalidated */
-  shouldInvalidate: boolean
+  shouldInvalidate: boolean;
   /** Reason for invalidation */
-  reason?: string
+  reason?: string;
   /** Files that changed */
-  changedFiles?: string[]
+  changedFiles?: string[];
   /** New version if invalidated */
-  newVersion?: string
+  newVersion?: string;
 }
 
 /**
@@ -53,10 +52,10 @@ export interface InvalidationResult {
  */
 function hashFile(filePath: string): string {
   try {
-    const content = readFileSync(filePath)
-    return createHash('md5').update(content).digest('hex').substring(0, 8)
+    const content = readFileSync(filePath);
+    return createHash("md5").update(content).digest("hex").substring(0, 8);
   } catch {
-    return ''
+    return "";
   }
 }
 
@@ -64,15 +63,15 @@ function hashFile(filePath: string): string {
  * Generate hash for multiple files
  */
 function hashFiles(filePaths: string[]): Record<string, string> {
-  const hashes: Record<string, string> = {}
+  const hashes: Record<string, string> = {};
 
   for (const filePath of filePaths) {
     if (existsSync(filePath)) {
-      hashes[filePath] = hashFile(filePath)
+      hashes[filePath] = hashFile(filePath);
     }
   }
 
-  return hashes
+  return hashes;
 }
 
 /**
@@ -84,7 +83,7 @@ export function generateCacheVersion(
   ignorePatterns: string[] = [],
 ): CacheVersion {
   // Find all files matching tracked patterns
-  const allFiles: string[] = []
+  const allFiles: string[] = [];
 
   for (const pattern of trackedFiles) {
     try {
@@ -92,59 +91,65 @@ export function generateCacheVersion(
         cwd: projectPath,
         absolute: true,
         ignore: ignorePatterns,
-      })
-      allFiles.push(...matches)
+      });
+      allFiles.push(...matches);
     } catch {
       // Ignore invalid patterns
     }
   }
 
   // Remove duplicates and sort
-  const uniqueFiles = [...new Set(allFiles)].sort()
+  const uniqueFiles = [...new Set(allFiles)].sort();
 
   // Generate hashes
-  const fileHashes = hashFiles(uniqueFiles)
+  const fileHashes = hashFiles(uniqueFiles);
 
   // Generate version from all hashes
   const hashString = Object.entries(fileHashes)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([file, hash]) => `${relative(projectPath, file)}:${hash}`)
-    .join('|')
+    .join("|");
 
-  const version = createHash('md5').update(hashString).digest('hex').substring(0, 12)
+  const version = createHash("md5")
+    .update(hashString)
+    .digest("hex")
+    .substring(0, 12);
 
   return {
     version,
     timestamp: Date.now(),
     fileHashes,
-  }
+  };
 }
 
 /**
  * Build dependency graph from route configurations
  */
 export function buildDependencyGraph(routes: RouteConfig[]): DependencyGraph {
-  const dependents = new Map<string, string[]>()
-  const dependencies = new Map<string, string[]>()
+  const dependents = new Map<string, string[]>();
+  const dependencies = new Map<string, string[]>();
 
   for (const route of routes) {
     if (route.dependencies && route.dependencies.length > 0) {
-      const patternStr = typeof route.pattern === 'string' ? route.pattern : route.pattern.toString()
+      const patternStr =
+        typeof route.pattern === "string"
+          ? route.pattern
+          : route.pattern.toString();
 
       // Add dependencies for this route
-      dependencies.set(patternStr, route.dependencies)
+      dependencies.set(patternStr, route.dependencies);
 
       // Add dependents for each dependency
       for (const dep of route.dependencies) {
         if (!dependents.has(dep)) {
-          dependents.set(dep, [])
+          dependents.set(dep, []);
         }
-        dependents.get(dep)!.push(patternStr)
+        dependents.get(dep)!.push(patternStr);
       }
     }
   }
 
-  return { dependents, dependencies }
+  return { dependents, dependencies };
 }
 
 /**
@@ -154,24 +159,24 @@ export function getCascadeInvalidation(
   changedFile: string,
   dependencyGraph: DependencyGraph,
 ): string[] {
-  const invalidated: string[] = [changedFile]
-  const visited = new Set<string>()
+  const invalidated: string[] = [changedFile];
+  const visited = new Set<string>();
 
   function traverse(file: string) {
-    if (visited.has(file)) return
-    visited.add(file)
+    if (visited.has(file)) return;
+    visited.add(file);
 
-    const dependents = dependencyGraph.dependents.get(file) || []
+    const dependents = dependencyGraph.dependents.get(file) || [];
     for (const dependent of dependents) {
       if (!invalidated.includes(dependent)) {
-        invalidated.push(dependent)
+        invalidated.push(dependent);
       }
-      traverse(dependent)
+      traverse(dependent);
     }
   }
 
-  traverse(changedFile)
-  return invalidated
+  traverse(changedFile);
+  return invalidated;
 }
 
 /**
@@ -182,49 +187,59 @@ export function shouldInvalidateCache(
   currentVersion: CacheVersion | null,
   config: AdvancedCachingConfig,
 ): InvalidationResult {
-  const { versioning, invalidation, dependencies } = config
+  const { versioning, invalidation, dependencies } = config;
 
   // Manual version - check if changed
   if (versioning?.manualVersion) {
-    if (!currentVersion || currentVersion.version !== versioning.manualVersion) {
+    if (
+      !currentVersion ||
+      currentVersion.version !== versioning.manualVersion
+    ) {
       return {
         shouldInvalidate: true,
-        reason: 'Manual version changed',
+        reason: "Manual version changed",
         newVersion: versioning.manualVersion,
-      }
+      };
     }
-    return { shouldInvalidate: false }
+    return { shouldInvalidate: false };
   }
 
   // Auto versioning
   if (versioning?.autoVersion) {
-    const trackedFiles = dependencies?.trackedFiles || ['**/*.{js,css,html}']
-    const ignorePatterns = invalidation?.ignorePatterns || ['**/*.map', '**/.DS_Store']
+    const trackedFiles = dependencies?.trackedFiles || ["**/*.{js,css,html}"];
+    const ignorePatterns = invalidation?.ignorePatterns || [
+      "**/*.map",
+      "**/.DS_Store",
+    ];
 
-    const newVersion = generateCacheVersion(projectPath, trackedFiles, ignorePatterns)
+    const newVersion = generateCacheVersion(
+      projectPath,
+      trackedFiles,
+      ignorePatterns,
+    );
 
     if (!currentVersion) {
       return {
         shouldInvalidate: true,
-        reason: 'No previous version found',
+        reason: "No previous version found",
         newVersion: newVersion.version,
-      }
+      };
     }
 
     // Check if any tracked files changed
-    const changedFiles: string[] = []
+    const changedFiles: string[] = [];
 
     for (const [file, newHash] of Object.entries(newVersion.fileHashes)) {
-      const oldHash = currentVersion.fileHashes[file]
+      const oldHash = currentVersion.fileHashes[file];
       if (oldHash !== newHash) {
-        changedFiles.push(file)
+        changedFiles.push(file);
       }
     }
 
     // Check for deleted files
     for (const file of Object.keys(currentVersion.fileHashes)) {
       if (!(file in newVersion.fileHashes) && existsSync(file)) {
-        changedFiles.push(file)
+        changedFiles.push(file);
       }
     }
 
@@ -234,20 +249,20 @@ export function shouldInvalidateCache(
         reason: `${changedFiles.length} file(s) changed`,
         changedFiles,
         newVersion: newVersion.version,
-      }
+      };
     }
 
     // Check if version changed (shouldn't happen if files unchanged, but check anyway)
     if (currentVersion.version !== newVersion.version) {
       return {
         shouldInvalidate: true,
-        reason: 'Version hash changed',
+        reason: "Version hash changed",
         newVersion: newVersion.version,
-      }
+      };
     }
   }
 
-  return { shouldInvalidate: false }
+  return { shouldInvalidate: false };
 }
 
 /**
@@ -258,7 +273,7 @@ export function getTrackedFiles(
   patterns: string[],
   ignorePatterns: string[] = [],
 ): string[] {
-  const files: string[] = []
+  const files: string[] = [];
 
   for (const pattern of patterns) {
     try {
@@ -266,58 +281,63 @@ export function getTrackedFiles(
         cwd: projectPath,
         absolute: true,
         ignore: ignorePatterns,
-      })
-      files.push(...matches)
+      });
+      files.push(...matches);
     } catch {
       // Ignore invalid patterns
     }
   }
 
-  return [...new Set(files)].sort()
+  return [...new Set(files)].sort();
 }
 
 /**
  * Check if file matches ignore patterns
  * Uses simple pattern matching for common cases
  */
-export function shouldIgnoreFile(filePath: string, ignorePatterns: string[]): boolean {
-  const fileName = filePath.split(/[/\\]/).pop() || ''
-  const fileExt = fileName.includes('.') ? fileName.substring(fileName.lastIndexOf('.')) : ''
+export function shouldIgnoreFile(
+  filePath: string,
+  ignorePatterns: string[],
+): boolean {
+  const fileName = filePath.split(/[/\\]/).pop() || "";
+  const fileExt = fileName.includes(".")
+    ? fileName.substring(fileName.lastIndexOf("."))
+    : "";
 
   for (const pattern of ignorePatterns) {
     // Simple extension matching (e.g., **/*.map)
-    if (pattern.includes('*') && pattern.endsWith(fileExt)) {
-      return true
+    if (pattern.includes("*") && pattern.endsWith(fileExt)) {
+      return true;
     }
 
     // Exact filename matching (e.g., **/.DS_Store)
     if (pattern.includes(fileName)) {
-      return true
+      return true;
     }
 
     // Simple string matching
-    if (filePath.includes(pattern.replace(/\*/g, ''))) {
-      return true
+    if (filePath.includes(pattern.replace(/\*/g, ""))) {
+      return true;
     }
 
     // Try glob matching as last resort
     try {
       // Convert simple glob to regex
       const regexPattern = pattern
-        .replace(/\*\*/g, '.*')
-        .replace(/\*/g, '[^/]*')
-        .replace(/\./g, '\\.')
-      
-      const regex = new RegExp(`^${regexPattern}$`)
+        .replace(/\*\*/g, ".*")
+        .replace(/\*/g, "[^/]*")
+        .replace(/\./g, "\\.");
+
+      const regex = new RegExp(`^${regexPattern}$`);
       if (regex.test(filePath) || regex.test(fileName)) {
-        return true
+        return true;
       }
     } catch {
       // Ignore regex errors
     }
   }
 
-  return false
+  return false;
 }
 
 /**
@@ -328,7 +348,7 @@ export function getOrGenerateCacheVersion(
   config: AdvancedCachingConfig,
   storedVersion?: CacheVersion | null,
 ): CacheVersion {
-  const { versioning, dependencies, invalidation } = config
+  const { versioning, dependencies, invalidation } = config;
 
   // Manual version
   if (versioning?.manualVersion) {
@@ -336,15 +356,18 @@ export function getOrGenerateCacheVersion(
       version: versioning.manualVersion,
       timestamp: Date.now(),
       fileHashes: storedVersion?.fileHashes || {},
-    }
+    };
   }
 
   // Auto version
   if (versioning?.autoVersion) {
-    const trackedFiles = dependencies?.trackedFiles || ['**/*.{js,css,html}']
-    const ignorePatterns = invalidation?.ignorePatterns || ['**/*.map', '**/.DS_Store']
+    const trackedFiles = dependencies?.trackedFiles || ["**/*.{js,css,html}"];
+    const ignorePatterns = invalidation?.ignorePatterns || [
+      "**/*.map",
+      "**/.DS_Store",
+    ];
 
-    return generateCacheVersion(projectPath, trackedFiles, ignorePatterns)
+    return generateCacheVersion(projectPath, trackedFiles, ignorePatterns);
   }
 
   // Default: use timestamp
@@ -352,5 +375,5 @@ export function getOrGenerateCacheVersion(
     version: `v${Date.now()}`,
     timestamp: Date.now(),
     fileHashes: {},
-  }
+  };
 }

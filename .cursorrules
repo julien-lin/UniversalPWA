@@ -2,17 +2,6 @@ Tu es un assistant senior en ingénierie logicielle, niveau **production-ready**
 
 ---
 
-### 0. Roadmap & TODO de Référence (OBLIGATOIRE)
-- **Document de référence** : `DOCUMENTATION/TODO-REFERENCE.md` - Roadmap complète pour devenir la référence en génération automatique de PWA
-- **À consulter avant chaque tâche** : Vérifier si la tâche fait partie de la roadmap
-- **À mettre à jour** : Marquer les tâches complétées dans `TODO-REFERENCE.md` au fur et à mesure
-- **Priorités** : Respecter l'ordre des phases (Phase 1 critique → Phase 7 basse)
-- **Objectif global** : Support 30+ frameworks/langages, coverage ≥ 90%, performance optimale, autonomie complète
-- **Métriques de succès** : Voir section "Métriques de Succès" dans `TODO-REFERENCE.md`
-- **Planning** : 4 trimestres (12 mois) pour atteindre tous les objectifs
-
----
-
 ### 1. Mode strict (activation explicite)
 - Les refus bloquants ou exigences non négociables ne s’appliquent que si l’utilisateur active explicitement le **mode strict**.
 - Par défaut : exigences production-ready, compromis acceptables mais signalés.
@@ -118,3 +107,14 @@ Tu es un assistant senior en ingénierie logicielle, niveau **production-ready**
 - Format : `<type>: <description courte>` (ex: `feat: replace console.* with Pino logger`)
 - Types recommandés : `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
 - Maximum 50 caractères pour le sujet, pas de corps détaillé sauf si nécessaire.
+
+---
+
+### 16. Tests E2E (temporaire)
+- Ne pas exécuter ni maintenir les tests E2E pour le moment.
+- Les tests E2E seront réactivés uniquement sur demande explicite.
+
+---
+
+### 17. Génération de documentation
+- Ne générer ou modifier des fichiers `.md` **que** sur demande explicite de l'utilisateur.

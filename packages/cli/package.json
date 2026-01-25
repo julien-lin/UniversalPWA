@@ -63,6 +63,7 @@
   "dependencies": {
     "@julien-lin/universal-pwa-core": "workspace:^",
     "chalk": "^5.6.2",
+    "cli-progress": "^3.12.0",
     "commander": "^14.0.2",
     "dom-serializer": "^2.0.0",
     "fs-extra": "^11.3.3",

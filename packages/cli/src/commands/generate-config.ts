@@ -9,13 +9,13 @@ import { existsSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import chalk from 'chalk'
 import inquirer from 'inquirer'
-import type { Framework } from '@julien-lin/universal-pwa-core'
-import type { Architecture } from '@julien-lin/universal-pwa-core'
 import type { UniversalPWAConfig } from '@julien-lin/universal-pwa-core'
+
+type ConfigFormat = 'ts' | 'js' | 'json' | 'yaml'
 
 export interface GenerateConfigOptions {
   projectPath?: string
-  format?: 'ts' | 'js' | 'json' | 'yaml'
+  format?: ConfigFormat
   interactive?: boolean
   output?: string
 }
@@ -23,7 +23,7 @@ export interface GenerateConfigOptions {
 export interface GenerateConfigResult {
   success: boolean
   filePath: string
-  format: 'ts' | 'js' | 'json' | 'yaml'
+  format: ConfigFormat
   errors: string[]
 }
 
@@ -71,11 +71,11 @@ export async function generateConfigCommand(
     console.log(chalk.green(`✓ Architecture: ${architecture}`))
 
     // Generate base config from scan
-    let config: UniversalPWAConfig = generateConfigFromScan(scanResult, resolvedPath)
+    let config: UniversalPWAConfig = generateConfigFromScan(scanResult)
 
     // Interactive mode: prompt for additional options
     if (interactive) {
-      config = await promptConfigOptions(config, framework, architecture)
+      config = await promptConfigOptions(config)
     }
 
     // Determine output file path
@@ -84,7 +84,7 @@ export async function generateConfigCommand(
 
     // Check if file already exists
     if (existsSync(filePath)) {
-      const { overwrite } = await inquirer.prompt([
+      const { overwrite } = await inquirer.prompt<{ overwrite: boolean }>([
         {
           type: 'confirm',
           name: 'overwrite',
@@ -122,7 +122,6 @@ export async function generateConfigCommand(
  */
 function generateConfigFromScan(
   scanResult: Awaited<ReturnType<typeof scanProject>>,
-  projectPath: string,
 ): UniversalPWAConfig {
   const framework = scanResult.framework.framework
   const architecture = scanResult.architecture.architecture
@@ -185,12 +184,21 @@ function generateConfigFromScan(
 /**
  * Prompt for additional configuration options
  */
+interface ConfigPromptAnswers {
+  appName: string
+  appShortName: string
+  appDescription: string
+  themeColor: string
+  backgroundColor: string
+  iconSource: string
+  generateSplashScreens: boolean
+  outputDir: string
+}
+
 async function promptConfigOptions(
   baseConfig: UniversalPWAConfig,
-  framework: Framework | null,
-  architecture: Architecture,
 ): Promise<UniversalPWAConfig> {
-  const answers = await inquirer.prompt([
+  const answers = await inquirer.prompt<ConfigPromptAnswers>([
     {
       type: 'input',
       name: 'appName',
@@ -348,6 +356,18 @@ function formatJSONConfig(config: UniversalPWAConfig): string {
 function formatYAMLConfig(config: UniversalPWAConfig): string {
   const lines: string[] = []
 
+  const shouldQuote = (value: string): boolean => /[\s:]/.test(value)
+
+  const formatScalar = (value: unknown): string => {
+    if (typeof value === 'string') {
+      return shouldQuote(value) ? `"${value}"` : value
+    }
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value)
+    }
+    return JSON.stringify(value)
+  }
+
   function formatValue(value: unknown, indent = 0, key?: string): void {
     const prefix = '  '.repeat(indent)
 
@@ -356,7 +376,7 @@ function formatYAMLConfig(config: UniversalPWAConfig): string {
     }
 
     if (typeof value === 'object' && !Array.isArray(value)) {
-      const entries = Object.entries(value)
+      const entries = Object.entries(value as Record<string, unknown>)
       if (entries.length === 0) {
         return
       }
@@ -375,11 +395,11 @@ function formatYAMLConfig(config: UniversalPWAConfig): string {
         } else if (Array.isArray(v)) {
           lines.push(`${prefix}  ${k}:`)
           for (const item of v) {
-            const itemValue = typeof item === 'string' ? `"${item}"` : item
+            const itemValue = formatScalar(item)
             lines.push(`${prefix}    - ${itemValue}`)
           }
         } else {
-          const formattedValue = typeof v === 'string' && (v.includes(':') || v.includes(' ')) ? `"${v}"` : v
+          const formattedValue = formatScalar(v)
           lines.push(`${prefix}  ${k}: ${formattedValue}`)
         }
       }
@@ -388,11 +408,11 @@ function formatYAMLConfig(config: UniversalPWAConfig): string {
         lines.push(`${prefix}${key}:`)
       }
       for (const item of value) {
-        const itemValue = typeof item === 'string' ? `"${item}"` : item
+        const itemValue = formatScalar(item)
         lines.push(`${prefix}  - ${itemValue}`)
       }
     } else {
-      const formattedValue = typeof value === 'string' && (value.includes(':') || value.includes(' ')) ? `"${value}"` : value
+      const formattedValue = formatScalar(value)
       if (key) {
         lines.push(`${prefix}${key}: ${formattedValue}`)
       } else {

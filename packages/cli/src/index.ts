@@ -15,9 +15,22 @@ interface PackageJson {
   version?: string
 }
 
+type ConfigFormat = 'ts' | 'js' | 'json' | 'yaml'
+
 const version = (packageJson as PackageJson).version || '0.0.0'
 
 const program = new Command()
+
+const normalizeConfigFormat = (value?: string): ConfigFormat => {
+  const format = (value ?? 'ts').toLowerCase()
+  if (format === 'yml') {
+    return 'yaml'
+  }
+  if (format === 'ts' || format === 'js' || format === 'json' || format === 'yaml') {
+    return format
+  }
+  throw new Error(`Invalid format: ${value ?? 'undefined'}`)
+}
 
 program
   .name('universal-pwa')
@@ -191,6 +204,35 @@ program
       console.log(chalk.gray(`  - Fonts: ${result.assets.fonts.length} files`))
 
       process.exit(0)
+    } catch (error) {
+      console.error(chalk.red(`Error: ${error instanceof Error ? error.message : String(error)}`))
+      process.exit(1)
+    }
+  })
+
+// Commande generate-config
+program
+  .command('generate-config')
+  .description('Generate universal-pwa config file from scan')
+  .option('-p, --project-path <path>', 'Project path', process.cwd())
+  .option('-f, --format <format>', 'Config format (ts|js|json|yaml)', 'ts')
+  .option('-o, --output <file>', 'Output file name')
+  .option('--non-interactive', 'Skip prompts')
+  .action(async (options: {
+    projectPath?: string
+    format?: string
+    output?: string
+    nonInteractive?: boolean
+  }) => {
+    try {
+      const format = normalizeConfigFormat(options.format)
+      const result = await generateConfigCommand({
+        projectPath: options.projectPath,
+        format,
+        interactive: !options.nonInteractive,
+        output: options.output,
+      })
+      process.exit(result.success ? 0 : 1)
     } catch (error) {
       console.error(chalk.red(`Error: ${error instanceof Error ? error.message : String(error)}`))
       process.exit(1)

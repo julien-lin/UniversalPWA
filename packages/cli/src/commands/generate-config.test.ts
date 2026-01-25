@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { mkdirSync, writeFileSync, rmdirSync, existsSync, readFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync, rmdirSync, existsSync, readFileSync, mkdtempSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { generateConfigCommand } from './generate-config.js'
@@ -15,7 +15,7 @@ describe('generate-config', () => {
   let testDir: string
 
   beforeEach(() => {
-    testDir = join(tmpdir(), `universal-pwa-test-${Date.now()}`)
+    testDir = mkdtempSync(join(tmpdir(), 'universal-pwa-test-'))
     mkdirSync(testDir, { recursive: true })
     mkdirSync(join(testDir, 'public'), { recursive: true })
 
@@ -198,6 +198,17 @@ describe('generate-config', () => {
       writeFileSync(join(testDir, 'universal-pwa.config.json'), '{}')
 
       const mockInquirer = vi.mocked(inquirer.prompt)
+      mockInquirer.mockReset()
+      mockInquirer.mockResolvedValueOnce({
+        appName: 'Test App',
+        appShortName: 'Test',
+        appDescription: 'Test description',
+        themeColor: '#000000',
+        backgroundColor: '#FFFFFF',
+        iconSource: '',
+        generateSplashScreens: false,
+        outputDir: 'public',
+      })
       mockInquirer.mockResolvedValueOnce({
         overwrite: false,
       })
