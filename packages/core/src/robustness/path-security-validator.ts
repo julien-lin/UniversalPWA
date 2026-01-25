@@ -7,9 +7,9 @@
  * - Safe directory operations
  */
 
-import { z } from 'zod';
-import { existsSync, lstatSync, realpathSync } from 'fs';
-import { resolve, normalize, isAbsolute } from 'path';
+import { z } from "zod";
+import { existsSync, lstatSync, realpathSync } from "fs";
+import { resolve, normalize, isAbsolute } from "path";
 
 export interface PathValidationConfig {
   allowSymlinks: boolean;
@@ -56,7 +56,10 @@ const PathValidationConfigSchema = z.object({
  */
 export function validatePath(
   inputPath: string,
-  config: PathValidationConfig = {}
+  config: PathValidationConfig = {
+    allowSymlinks: false,
+    maxResolutionDepth: 10,
+  },
 ): PathValidationResult {
   const validConfig = PathValidationConfigSchema.parse(config);
   const errors: string[] = [];
@@ -65,7 +68,7 @@ export function validatePath(
   // Check path length
   if (inputPath.length > validConfig.maxPathLength) {
     errors.push(
-      `Path exceeds max length: ${inputPath.length} > ${validConfig.maxPathLength}`
+      `Path exceeds max length: ${inputPath.length} > ${validConfig.maxPathLength}`,
     );
   }
 
@@ -87,37 +90,40 @@ export function validatePath(
   if (symlinkCheck.isSymlink) {
     isSymlink = true;
     if (!validConfig.allowSymlinks) {
-      errors.push('Symlinks are not allowed');
+      errors.push("Symlinks are not allowed");
     }
     if (symlinkCheck.isBroken) {
-      errors.push('Symlink target does not exist');
+      errors.push("Symlink target does not exist");
     }
     if (symlinkCheck.isCircular) {
-      errors.push('Circular symlink detected');
+      errors.push("Circular symlink detected");
     }
   }
 
   // Try to resolve the path
-  let resolved = '';
+  let resolved = "";
   try {
     resolved = resolvePathSafely(normalized, validConfig.maxResolutionDepth);
 
     // Check if resolved path is within allowed base paths
-    if (validConfig.allowedBasePaths && validConfig.allowedBasePaths.length > 0) {
+    if (
+      validConfig.allowedBasePaths &&
+      validConfig.allowedBasePaths.length > 0
+    ) {
       const isAllowed = validConfig.allowedBasePaths.some((basePath) =>
-        resolved.startsWith(resolve(basePath))
+        resolved.startsWith(resolve(basePath)),
       );
 
       if (!isAllowed) {
         errors.push(
-          `Path is outside allowed base paths: ${validConfig.allowedBasePaths.join(', ')}`
+          `Path is outside allowed base paths: ${validConfig.allowedBasePaths.join(", ")}`,
         );
       }
     }
   } catch (error) {
     resolved = normalized;
     errors.push(
-      error instanceof Error ? error.message : 'Path resolution failed'
+      error instanceof Error ? error.message : "Path resolution failed",
     );
   }
 
@@ -137,19 +143,19 @@ export function validatePath(
  */
 export function normalizePath(inputPath: string): string {
   if (!inputPath) {
-    return '';
+    return "";
   }
 
   // Handle empty strings
-  if (inputPath === '.' || inputPath === './') {
-    return '.';
+  if (inputPath === "." || inputPath === "./") {
+    return ".";
   }
 
   // Normalize using Node's path.normalize
   let normalized = normalize(inputPath);
 
   // Remove trailing slashes (except for root)
-  if (normalized !== '/' && normalized.endsWith('/')) {
+  if (normalized !== "/" && normalized.endsWith("/")) {
     normalized = normalized.slice(0, -1);
   }
 
@@ -159,9 +165,7 @@ export function normalizePath(inputPath: string): string {
 /**
  * Check for path traversal attempts
  */
-export function checkPathTraversal(
-  path: string
-): DirectoryTraversalResult {
+export function checkPathTraversal(path: string): DirectoryTraversalResult {
   const violations: string[] = [];
   const normalized = normalizePath(path);
 
@@ -172,18 +176,18 @@ export function checkPathTraversal(
   }
 
   // Check for null bytes (path injection)
-  if (normalized.includes('\0')) {
-    violations.push('Path contains null byte');
+  if (normalized.includes("\0")) {
+    violations.push("Path contains null byte");
   }
 
   // Check for unicode escapes that might decode to traversal
   if (normalized.match(/\\x[0-9a-fA-F]{2}/)) {
-    violations.push('Path contains hex-encoded sequences');
+    violations.push("Path contains hex-encoded sequences");
   }
 
   // Check for encoded traversal patterns
-  if (normalized.includes('%2e%2e') || normalized.includes('%252e%252e')) {
-    violations.push('Path contains URL-encoded traversal');
+  if (normalized.includes("%2e%2e") || normalized.includes("%252e%252e")) {
+    violations.push("Path contains URL-encoded traversal");
   }
 
   return {
@@ -242,10 +246,12 @@ export function checkSymlink(targetPath: string): SymlinkCheckResult {
       target,
       isBroken,
       isCircular,
-      errors: isBroken ? ['Broken symlink'] : [],
+      errors: isBroken ? ["Broken symlink"] : [],
     };
   } catch (error) {
-    errors.push(error instanceof Error ? error.message : 'Symlink check failed');
+    errors.push(
+      error instanceof Error ? error.message : "Symlink check failed",
+    );
     return {
       isSymlink: false,
       isBroken: false,
@@ -258,7 +264,7 @@ export function checkSymlink(targetPath: string): SymlinkCheckResult {
 /**
  * Try to read symlink target safely
  */
-function tryReadlink(symlinkPath: string): string | undefined {
+function tryReadlink(_symlinkPath: string): string | undefined {
   try {
     // Note: In real implementation, would use fs.readlinkSync
     // For this mock implementation, we return undefined
@@ -274,7 +280,7 @@ function tryReadlink(symlinkPath: string): string | undefined {
 function detectCircularSymlink(
   startPath: string,
   visited = new Set<string>(),
-  depth = 0
+  depth = 0,
 ): boolean {
   // Max recursion depth to prevent stack overflow
   if (depth > 20) {
@@ -312,7 +318,7 @@ function detectCircularSymlink(
  */
 export function resolvePathSafely(
   inputPath: string,
-  maxDepth: number = 10
+  maxDepth: number = 10,
 ): string {
   try {
     let current = normalize(inputPath);
@@ -343,7 +349,7 @@ export function resolvePathSafely(
     return current;
   } catch (error) {
     throw new Error(
-      `Failed to safely resolve path: ${error instanceof Error ? error.message : 'Unknown error'}`
+      `Failed to safely resolve path: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 }
@@ -353,16 +359,26 @@ export function resolvePathSafely(
  */
 export function isSafePathForFileOp(
   path: string,
-  config: PathValidationConfig = {}
+  config: PathValidationConfig = {
+    allowSymlinks: false,
+    maxResolutionDepth: 10,
+  },
 ): boolean {
   const result = validatePath(path, config);
-  return result.valid && !result.isTraversal && (!result.isSymlink || config.allowSymlinks);
+  return (
+    result.valid &&
+    !result.isTraversal &&
+    (!result.isSymlink || config.allowSymlinks)
+  );
 }
 
 /**
  * Join paths safely without path traversal
  */
-export function safeJoinPaths(basePath: string, ...components: string[]): string {
+export function safeJoinPaths(
+  basePath: string,
+  ...components: string[]
+): string {
   // Start with base path
   let result = normalizePath(basePath);
 
@@ -375,7 +391,7 @@ export function safeJoinPaths(basePath: string, ...components: string[]): string
     const normalized = normalizePath(component);
 
     // Reject if component tries to traverse
-    if (normalized.startsWith('..') || normalized === '..') {
+    if (normalized.startsWith("..") || normalized === "..") {
       throw new Error(`Path traversal attempted in component: ${component}`);
     }
 
@@ -385,7 +401,7 @@ export function safeJoinPaths(basePath: string, ...components: string[]): string
     }
 
     // Simple concatenation without resolve (safer)
-    result = result === '.' ? normalized : `${result}/${normalized}`;
+    result = result === "." ? normalized : `${result}/${normalized}`;
   }
 
   return normalizePath(result);
@@ -396,13 +412,16 @@ export function safeJoinPaths(basePath: string, ...components: string[]): string
  */
 export function sanitizeDirectoryPath(
   inputPath: string,
-  config: PathValidationConfig = {}
+  config: PathValidationConfig = {
+    allowSymlinks: false,
+    maxResolutionDepth: 10,
+  },
 ): { sanitized: string; errors: string[] } {
   const result = validatePath(inputPath, config);
 
   if (!result.valid) {
     return {
-      sanitized: '',
+      sanitized: "",
       errors: result.errors,
     };
   }
@@ -416,10 +435,7 @@ export function sanitizeDirectoryPath(
 /**
  * Check if file path is within a base directory (no traversal out)
  */
-export function isPathWithinBase(
-  filePath: string,
-  baseDir: string
-): boolean {
+export function isPathWithinBase(filePath: string, baseDir: string): boolean {
   try {
     const normalized = normalizePath(filePath);
     const normalizedBase = normalizePath(baseDir);
@@ -430,7 +446,7 @@ export function isPathWithinBase(
     }
 
     // If base is ".", everything relative is within it
-    if (normalizedBase === '.') {
+    if (normalizedBase === ".") {
       return true;
     }
 
@@ -439,7 +455,7 @@ export function isPathWithinBase(
       return true;
     }
 
-    if (normalized.startsWith(normalizedBase + '/')) {
+    if (normalized.startsWith(normalizedBase + "/")) {
       return true;
     }
 
@@ -465,12 +481,12 @@ export function formatValidationResult(result: PathValidationResult): string {
   }
 
   if (result.errors.length > 0) {
-    lines.push(`Errors: ${result.errors.join(', ')}`);
+    lines.push(`Errors: ${result.errors.join(", ")}`);
   }
 
   if (result.warnings.length > 0) {
-    lines.push(`Warnings: ${result.warnings.join(', ')}`);
+    lines.push(`Warnings: ${result.warnings.join(", ")}`);
   }
 
-  return lines.join('\n');
+  return lines.join("\n");
 }

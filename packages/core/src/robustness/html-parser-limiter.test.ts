@@ -7,7 +7,7 @@ import {
   formatParserResult,
   type ParserConfig,
   type ParserResult,
-} from "./html-parser-limiter";
+} from "./html-parser-limiter.js";
 
 describe("HTML Parser Limiter - P3.1", () => {
   describe("parseHTMLWithLimits", () => {
@@ -297,8 +297,16 @@ describe("HTML Parser Limiter - P3.1", () => {
 
       expect(result.valid).toBe(true);
       expect(result.tags.length).toBeGreaterThanOrEqual(2);
-      expect(result.tags.some((t) => t.name === "viewport")).toBe(true);
-      expect(result.tags.some((t) => t.name === "description")).toBe(true);
+      expect(
+        result.tags.some(
+          (t: { name: string; content: string }) => t.name === "viewport",
+        ),
+      ).toBe(true);
+      expect(
+        result.tags.some(
+          (t: { name: string; content: string }) => t.name === "description",
+        ),
+      ).toBe(true);
     });
 
     it("should extract property-based meta tags", () => {

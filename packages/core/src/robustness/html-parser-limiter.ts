@@ -55,7 +55,7 @@ const ParserConfigSchema = z.object({
  */
 export function parseHTMLWithLimits(
   html: string,
-  config: ParserConfig = {},
+  config: ParserConfig = { maxDepth: 20, timeout: 2000 },
 ): ParserResult {
   const startTime = Date.now();
   const validConfig = ParserConfigSchema.parse(config);
@@ -179,7 +179,7 @@ export function parseHTMLWithLimits(
  */
 export function validateHTMLStructure(
   html: string,
-  config: ParserConfig = {},
+  config: ParserConfig = { maxDepth: 20, timeout: 2000 },
 ): {
   valid: boolean;
   depth: number;
@@ -231,7 +231,7 @@ export function validateHTMLStructure(
  */
 export function extractMetaTags(
   html: string,
-  config: ParserConfig = {},
+  config: ParserConfig = { maxDepth: 20, timeout: 2000 },
 ): {
   tags: Array<{ name: string; content: string }>;
   valid: boolean;
