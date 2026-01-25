@@ -36,6 +36,8 @@
             "/Users/julien/Desktop/UniversalPWA/packages/cli/src/utils/error-codes.test.ts",
             "/Users/julien/Desktop/UniversalPWA/packages/cli/src/utils/environment-detector.ts",
             "/Users/julien/Desktop/UniversalPWA/packages/cli/src/utils/environment-detector.test.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/utils/config-loader.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/utils/config-loader.test.ts",
             "/Users/julien/Desktop/UniversalPWA/packages/cli/src/commands/verify.ts",
             "/Users/julien/Desktop/UniversalPWA/packages/cli/src/commands/verify.test.ts",
             "/Users/julien/Desktop/UniversalPWA/packages/cli/src/commands/remove.ts",
@@ -43,7 +45,10 @@
             "/Users/julien/Desktop/UniversalPWA/packages/cli/src/commands/preview.ts",
             "/Users/julien/Desktop/UniversalPWA/packages/cli/src/commands/preview.test.ts",
             "/Users/julien/Desktop/UniversalPWA/packages/cli/src/commands/init.ts",
-            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/commands/init.test.ts"
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/commands/init.test.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/commands/generate-config.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/commands/generate-config.test.ts",
+            "/Users/julien/Desktop/UniversalPWA/packages/cli/src/commands/errors.test.ts"
           ],
           "css": [],
           "images": [],
@@ -59,12 +64,12 @@
             "HTML: very large content with real text → SSR"
           ]
         },
-        "timestamp": "2026-01-18T10:32:47.161Z",
+        "timestamp": "2026-01-23T20:53:05.929Z",
         "projectPath": "/Users/julien/Desktop/UniversalPWA/packages/cli"
       },
-      "timestamp": "2026-01-18T10:32:47.164Z",
+      "timestamp": "2026-01-23T20:53:05.931Z",
       "fileHashes": {
-        "package.json": "5e953878c1bdaf5abd98503a0d007f14",
+        "package.json": "c289d8b2b9e7631c819081284e7cef65",
         "tsconfig.json": "662557bd5328922fd7501b2eb749fdef"
       },
       "ttl": 86400

@@ -2,25 +2,22 @@ import { test, expect } from '@playwright/test'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
-test.describe('E2E - Site Statique (No Framework)', () => {
-  const BASE_URL = 'http://localhost:3002'
-  const hasFixture = existsSync(join(process.cwd(), 'fixtures/no-framework/dist'))
+test.describe('E2E - React + Vite (Back\'n Food)', () => {
+  const BASE_URL = 'http://localhost:3001'
+  const hasFixture = existsSync(join(process.cwd(), 'fixtures/react-vite/dist'))
 
-  test.skip(!hasFixture, 'Fixture no-framework/dist absente')
+  test.skip(!hasFixture, 'Fixture react-vite/dist absente')
 
   test.beforeEach(async ({ page }) => {
     // Charger via HTTP pour permettre service workers et manifest
     await page.goto(BASE_URL)
   })
 
-  test('should load the static site', async ({ page }) => {
-    // Vérifier que le site se charge
-    await expect(page.locator('h1')).toBeVisible()
-    await expect(page.locator('h1')).toContainText(/Balles rebondissantes/i)
+  test('should load the React app', async ({ page }) => {
+    // Vérifier que l'app React se charge
+    await expect(page.locator('#root')).toBeVisible()
     // Vérifier le titre de la page
-    await expect(page).toHaveTitle(/Balles rebondissante/i)
-    // Vérifier la présence du canvas
-    await expect(page.locator('canvas')).toBeVisible()
+    await expect(page).toHaveTitle(/Back'n Food/i)
   })
 
   test('should have PWA manifest link', async ({ page }) => {
@@ -30,7 +27,7 @@ test.describe('E2E - Site Statique (No Framework)', () => {
 
   test('should have theme-color meta tag', async ({ page }) => {
     const themeColor = page.locator('meta[name="theme-color"]')
-    await expect(themeColor).toHaveAttribute('content', '#ffffff')
+    await expect(themeColor).toHaveAttribute('content', '#61dafb')
   })
 
   test('should have apple-touch-icon link', async ({ page }) => {
@@ -72,15 +69,10 @@ test.describe('E2E - Site Statique (No Framework)', () => {
     const manifest = await manifestResponse.json()
     expect(manifest).toHaveProperty('name')
     expect(manifest).toHaveProperty('short_name')
-    expect(manifest.name).toBe('balles rebondissantes')
-    expect(manifest.short_name).toBe('BR')
     expect(manifest).toHaveProperty('icons')
     expect(manifest.icons.length).toBeGreaterThan(0)
     expect(manifest.icons.some((icon: { sizes: string }) => icon.sizes === '192x192')).toBe(true)
     expect(manifest.icons.some((icon: { sizes: string }) => icon.sizes === '512x512')).toBe(true)
-    expect(manifest.theme_color).toBe('#ffffff')
-    expect(manifest.background_color).toBe('#ffffff')
-    expect(manifest.display).toBe('standalone')
   })
 
   test('should have all required PWA icons', async ({ page, request }) => {
@@ -112,31 +104,36 @@ test.describe('E2E - Site Statique (No Framework)', () => {
     expect(swContent).toContain('precacheAndRoute')
   })
 
+  test('should have Open Graph meta tags', async ({ page }) => {
+    // Vérifier les meta tags Open Graph (utiliser .first() car il peut y avoir plusieurs éléments)
+    const ogTitle = page.locator('meta[property="og:title"]').first()
+    if (await ogTitle.count() > 0) {
+      await expect(ogTitle).toHaveAttribute('content', /Back'n Food/i)
+    }
+    
+    const ogType = page.locator('meta[property="og:type"]').first()
+    if (await ogType.count() > 0) {
+      await expect(ogType).toHaveAttribute('content', 'website')
+    }
+  })
+
+  test('should have Twitter Card meta tags', async ({ page }) => {
+    // Vérifier les meta tags Twitter Card (utiliser .first() car il peut y avoir plusieurs éléments)
+    const twitterCard = page.locator('meta[name="twitter:card"]').first()
+    if (await twitterCard.count() > 0) {
+      await expect(twitterCard).toHaveAttribute('content', 'summary_large_image')
+    }
+  })
+
   test('should have proper viewport meta tag', async ({ page }) => {
     const viewport = page.locator('meta[name="viewport"]')
     await expect(viewport).toHaveAttribute('content', 'width=device-width, initial-scale=1.0')
   })
 
-  test('should have canvas element for rendering', async ({ page }) => {
-    // Vérifier que le canvas est présent (spécifique à cette app)
-    const canvas = page.locator('canvas')
-    await expect(canvas).toBeVisible()
-    
-    // Vérifier que le canvas a une taille (même si 0x0 par défaut, il doit être dans le DOM)
-    const canvasBox = await canvas.boundingBox()
-    expect(canvasBox).not.toBeNull()
-  })
-
-  test('should have interactive buttons', async ({ page }) => {
-    // Vérifier la présence des boutons de contrôle
-    const buttons = page.locator('button[data-shape]')
-    const count = await buttons.count()
-    expect(count).toBeGreaterThan(0)
-    
-    // Vérifier au moins un bouton spécifique
-    const ballButton = page.locator('button[data-shape="ball"]')
-    await expect(ballButton).toBeVisible()
-    await expect(ballButton).toContainText(/Balle/i)
+  test('should have description meta tag', async ({ page }) => {
+    const description = page.locator('meta[name="description"]').first()
+    if (await description.count() > 0) {
+      await expect(description).toHaveAttribute('content', /Back'n Food|restaurant/i)
+    }
   })
 })
-

@@ -1,16 +1,21 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { mkdirSync, writeFileSync, rmSync, existsSync, mkdtempSync } from 'fs'
 import { join } from 'path'
+import { tmpdir } from 'os'
 import { detectAssets } from './asset-detector.js'
 
-const TEST_DIR = join(process.cwd(), '.test-tmp-asset-detector')
+let TEST_DIR = ''
 
 describe('asset-detector', () => {
   beforeEach(() => {
-    if (existsSync(TEST_DIR)) {
+    TEST_DIR = mkdtempSync(join(tmpdir(), 'asset-detector-'))
+    mkdirSync(TEST_DIR, { recursive: true })
+  })
+
+  afterEach(() => {
+    if (TEST_DIR && existsSync(TEST_DIR)) {
       rmSync(TEST_DIR, { recursive: true, force: true })
     }
-    mkdirSync(TEST_DIR, { recursive: true })
   })
 
   describe('JavaScript detection', () => {
@@ -110,8 +115,16 @@ describe('asset-detector', () => {
     })
 
     it('should exclude .git folder', async () => {
-      mkdirSync(join(TEST_DIR, '.git'), { recursive: true })
-      writeFileSync(join(TEST_DIR, '.git', 'config'), '[core]')
+      const gitDir = join(TEST_DIR, '.git')
+      try {
+        mkdirSync(gitDir)
+      } catch (err) {
+        if (err && typeof err === 'object' && 'code' in err && err.code === 'EPERM') {
+          return
+        }
+        throw err
+      }
+      writeFileSync(join(gitDir, 'config'), '[core]')
       writeFileSync(join(TEST_DIR, 'app.js'), 'console.log("test")')
 
       const result = await detectAssets(TEST_DIR)

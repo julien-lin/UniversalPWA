@@ -3,24 +3,24 @@
  * Tests multi-source, adaptive icons, splash screens, and edge cases
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
-import { tmpdir } from 'node:os'
-import sharp from 'sharp'
-import { generateIconsAdvanced } from './icon-generator.js'
-import { detectIconSources, type IconGenerationConfig } from './icon-config.js'
-import type { IconSource } from './icon-config.js'
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { mkdtemp, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import sharp from "sharp";
+import { generateIconsAdvanced } from "./icon-generator.js";
+import { detectIconSources, type IconGenerationConfig } from "./icon-config.js";
+import type { IconSource } from "./icon-config.js";
 
-describe('icon-generator-advanced', () => {
-  let testDir: string
-  let sourceImagePath: string
+describe("icon-generator-advanced", () => {
+  let testDir: string;
+  let sourceImagePath: string;
 
   beforeEach(async () => {
-    testDir = await mkdtemp(join(tmpdir(), 'icon-advanced-test-'))
-    
+    testDir = await mkdtemp(join(tmpdir(), "icon-advanced-test-"));
+
     // Create a test source image (512x512 PNG)
-    sourceImagePath = join(testDir, 'icon.png')
+    sourceImagePath = join(testDir, "icon.png");
     await sharp({
       create: {
         width: 512,
@@ -30,19 +30,19 @@ describe('icon-generator-advanced', () => {
       },
     })
       .png()
-      .toFile(sourceImagePath)
-  })
+      .toFile(sourceImagePath);
+  });
 
   afterEach(async () => {
-    await rm(testDir, { recursive: true, force: true })
-  })
+    await rm(testDir, { recursive: true, force: true });
+  });
 
-  describe('generateIconsAdvanced - Multi-source', () => {
-    it('should use primary source when multiple sources available', async () => {
-      const outputDir = join(testDir, 'output')
-      
+  describe("generateIconsAdvanced - Multi-source", () => {
+    it("should use primary source when multiple sources available", async () => {
+      const outputDir = join(testDir, "output");
+
       // Create fallback source
-      const fallbackPath = join(testDir, 'logo.png')
+      const fallbackPath = join(testDir, "logo.png");
       await sharp({
         create: {
           width: 256,
@@ -52,29 +52,29 @@ describe('icon-generator-advanced', () => {
         },
       })
         .png()
-        .toFile(fallbackPath)
+        .toFile(fallbackPath);
 
       const sources: IconSource[] = [
-        { path: sourceImagePath, priority: 1, type: 'primary' },
-        { path: fallbackPath, priority: 2, type: 'fallback' },
-      ]
+        { path: sourceImagePath, priority: 1, type: "primary" },
+        { path: fallbackPath, priority: 2, type: "fallback" },
+      ];
 
       const config: IconGenerationConfig = {
         sources,
         outputDir,
-      }
+      };
 
-      const result = await generateIconsAdvanced(config)
+      const result = await generateIconsAdvanced(config);
 
-      expect(result.icons.length).toBeGreaterThan(0)
-      expect(result.generatedFiles.length).toBeGreaterThan(0)
-    })
+      expect(result.icons.length).toBeGreaterThan(0);
+      expect(result.generatedFiles.length).toBeGreaterThan(0);
+    });
 
-    it('should fallback to secondary source if primary fails', async () => {
-      const outputDir = join(testDir, 'output')
-      
+    it("should fallback to secondary source if primary fails", async () => {
+      const outputDir = join(testDir, "output");
+
       // Create fallback source
-      const fallbackPath = join(testDir, 'logo.png')
+      const fallbackPath = join(testDir, "logo.png");
       await sharp({
         create: {
           width: 256,
@@ -84,23 +84,27 @@ describe('icon-generator-advanced', () => {
         },
       })
         .png()
-        .toFile(fallbackPath)
+        .toFile(fallbackPath);
 
       const sources: IconSource[] = [
-        { path: join(testDir, 'non-existent.png'), priority: 1, type: 'primary' },
-        { path: fallbackPath, priority: 2, type: 'fallback' },
-      ]
+        {
+          path: join(testDir, "non-existent.png"),
+          priority: 1,
+          type: "primary",
+        },
+        { path: fallbackPath, priority: 2, type: "fallback" },
+      ];
 
       const config: IconGenerationConfig = {
         sources,
         outputDir,
-      }
+      };
 
       // Should throw error because primary source doesn't exist
-      await expect(generateIconsAdvanced(config)).rejects.toThrow()
-    })
+      await expect(generateIconsAdvanced(config)).rejects.toThrow();
+    });
 
-    it('should detect icon sources automatically', async () => {
+    it("should detect icon sources automatically", async () => {
       // Create multiple icon files as real images
       await sharp({
         create: {
@@ -111,7 +115,7 @@ describe('icon-generator-advanced', () => {
         },
       })
         .png()
-        .toFile(join(testDir, 'icon.png'))
+        .toFile(join(testDir, "icon.png"));
 
       await sharp({
         create: {
@@ -122,21 +126,21 @@ describe('icon-generator-advanced', () => {
         },
       })
         .png()
-        .toFile(join(testDir, 'logo.png'))
+        .toFile(join(testDir, "logo.png"));
 
-      const sources = await detectIconSources(testDir)
+      const sources = await detectIconSources(testDir);
 
-      expect(sources.length).toBeGreaterThan(0)
-      expect(sources[0].priority).toBe(1) // First detected should have highest priority
-    })
-  })
+      expect(sources.length).toBeGreaterThan(0);
+      expect(sources[0].priority).toBe(1); // First detected should have highest priority
+    });
+  });
 
-  describe('generateIconsAdvanced - Adaptive Icons', () => {
-    it('should generate adaptive icons when enabled', async () => {
-      const outputDir = join(testDir, 'output')
+  describe("generateIconsAdvanced - Adaptive Icons", () => {
+    it("should generate adaptive icons when enabled", async () => {
+      const outputDir = join(testDir, "output");
       const sources: IconSource[] = [
-        { path: sourceImagePath, priority: 1, type: 'primary' },
-      ]
+        { path: sourceImagePath, priority: 1, type: "primary" },
+      ];
 
       const config: IconGenerationConfig = {
         sources,
@@ -145,26 +149,28 @@ describe('icon-generator-advanced', () => {
           enabled: true,
           foreground: sources[0],
           background: {
-            type: 'color',
-            value: '#0000ff',
+            type: "color",
+            value: "#0000ff",
           },
         },
-      }
+      };
 
-      const result = await generateIconsAdvanced(config)
+      const result = await generateIconsAdvanced(config);
 
-      expect(result.icons.length).toBeGreaterThan(0)
+      expect(result.icons.length).toBeGreaterThan(0);
       // Should have adaptive icon in manifest
-      const adaptiveIcon = result.icons.find((icon) => icon.purpose === 'any maskable')
-      expect(adaptiveIcon).toBeDefined()
-      expect(adaptiveIcon?.sizes).toBe('1024x1024')
-    })
+      const adaptiveIcon = result.icons.find(
+        (icon) => icon.purpose === "any maskable",
+      );
+      expect(adaptiveIcon).toBeDefined();
+      expect(adaptiveIcon?.sizes).toBe("1024x1024");
+    });
 
-    it('should handle adaptive icons with image background', async () => {
-      const outputDir = join(testDir, 'output')
-      
+    it("should handle adaptive icons with image background", async () => {
+      const outputDir = join(testDir, "output");
+
       // Create background image
-      const backgroundPath = join(testDir, 'background.png')
+      const backgroundPath = join(testDir, "background.png");
       await sharp({
         create: {
           width: 512,
@@ -174,11 +180,11 @@ describe('icon-generator-advanced', () => {
         },
       })
         .png()
-        .toFile(backgroundPath)
+        .toFile(backgroundPath);
 
       const sources: IconSource[] = [
-        { path: sourceImagePath, priority: 1, type: 'primary' },
-      ]
+        { path: sourceImagePath, priority: 1, type: "primary" },
+      ];
 
       const config: IconGenerationConfig = {
         sources,
@@ -189,24 +195,24 @@ describe('icon-generator-advanced', () => {
           background: {
             path: backgroundPath,
             priority: 1,
-            type: 'adaptive-background',
+            type: "adaptive-background",
           },
         },
-      }
+      };
 
-      const result = await generateIconsAdvanced(config)
+      const result = await generateIconsAdvanced(config);
 
-      expect(result.icons.length).toBeGreaterThan(0)
-      expect(result.generatedFiles.length).toBeGreaterThan(0)
-    })
-  })
+      expect(result.icons.length).toBeGreaterThan(0);
+      expect(result.generatedFiles.length).toBeGreaterThan(0);
+    });
+  });
 
-  describe('generateIconsAdvanced - Splash Screens', () => {
-    it('should generate splash screens when enabled', async () => {
-      const outputDir = join(testDir, 'output')
+  describe("generateIconsAdvanced - Splash Screens", () => {
+    it("should generate splash screens when enabled", async () => {
+      const outputDir = join(testDir, "output");
       const sources: IconSource[] = [
-        { path: sourceImagePath, priority: 1, type: 'primary' },
-      ]
+        { path: sourceImagePath, priority: 1, type: "primary" },
+      ];
 
       const config: IconGenerationConfig = {
         sources,
@@ -214,22 +220,22 @@ describe('icon-generator-advanced', () => {
         splashScreens: {
           enabled: true,
           source: sources[0],
-          backgroundColor: '#ffffff',
-          platforms: ['ios'],
+          backgroundColor: "#ffffff",
+          platforms: ["ios"],
         },
-      }
+      };
 
-      const result = await generateIconsAdvanced(config)
+      const result = await generateIconsAdvanced(config);
 
-      expect(result.splashScreens.length).toBeGreaterThan(0)
-      expect(result.generatedFiles.length).toBeGreaterThan(0)
-    })
+      expect(result.splashScreens.length).toBeGreaterThan(0);
+      expect(result.generatedFiles.length).toBeGreaterThan(0);
+    });
 
-    it('should generate both iOS and Android splash screens', async () => {
-      const outputDir = join(testDir, 'output')
+    it("should generate both iOS and Android splash screens", async () => {
+      const outputDir = join(testDir, "output");
       const sources: IconSource[] = [
-        { path: sourceImagePath, priority: 1, type: 'primary' },
-      ]
+        { path: sourceImagePath, priority: 1, type: "primary" },
+      ];
 
       const config: IconGenerationConfig = {
         sources,
@@ -237,209 +243,219 @@ describe('icon-generator-advanced', () => {
         splashScreens: {
           enabled: true,
           source: sources[0],
-          backgroundColor: '#ff0000',
-          platforms: ['all'],
-          densities: ['mdpi', 'hdpi'],
+          backgroundColor: "#ff0000",
+          platforms: ["all"],
+          densities: ["mdpi", "hdpi"],
         },
-      }
+      };
 
-      const result = await generateIconsAdvanced(config)
+      const result = await generateIconsAdvanced(config);
 
-      expect(result.splashScreens.length).toBeGreaterThan(0)
+      expect(result.splashScreens.length).toBeGreaterThan(0);
       // Should have both iOS and Android splash screens
-      const iosSplash = result.splashScreens.find((s) => s.src.includes('ios'))
-      const androidSplash = result.splashScreens.find((s) => s.src.includes('android'))
-      expect(iosSplash || androidSplash).toBeDefined()
-    })
-  })
+      const iosSplash = result.splashScreens.find((s) => s.src.includes("ios"));
+      const androidSplash = result.splashScreens.find((s) =>
+        s.src.includes("android"),
+      );
+      expect(iosSplash || androidSplash).toBeDefined();
+    });
+  });
 
-  describe('generateIconsAdvanced - Format Support', () => {
-    it('should generate PNG format by default', async () => {
-      const outputDir = join(testDir, 'output')
+  describe("generateIconsAdvanced - Format Support", () => {
+    it("should generate PNG format by default", async () => {
+      const outputDir = join(testDir, "output");
       const sources: IconSource[] = [
-        { path: sourceImagePath, priority: 1, type: 'primary' },
-      ]
+        { path: sourceImagePath, priority: 1, type: "primary" },
+      ];
 
       const config: IconGenerationConfig = {
         sources,
         outputDir,
-        format: 'png',
-      }
+        format: "png",
+      };
 
-      const result = await generateIconsAdvanced(config)
+      const result = await generateIconsAdvanced(config);
 
-      expect(result.icons.length).toBeGreaterThan(0)
-      expect(result.icons[0].type).toBe('image/png')
-    })
+      expect(result.icons.length).toBeGreaterThan(0);
+      expect(result.icons[0].type).toBe("image/png");
+    });
 
-    it('should generate WebP format when specified', async () => {
-      const outputDir = join(testDir, 'output')
+    it("should generate WebP format when specified", async () => {
+      const outputDir = join(testDir, "output");
       const sources: IconSource[] = [
-        { path: sourceImagePath, priority: 1, type: 'primary' },
-      ]
+        { path: sourceImagePath, priority: 1, type: "primary" },
+      ];
 
       const config: IconGenerationConfig = {
         sources,
         outputDir,
-        format: 'webp',
-      }
+        format: "webp",
+      };
 
-      const result = await generateIconsAdvanced(config)
+      const result = await generateIconsAdvanced(config);
 
-      expect(result.icons.length).toBeGreaterThan(0)
-      expect(result.icons[0].type).toBe('image/webp')
-    })
+      expect(result.icons.length).toBeGreaterThan(0);
+      expect(result.icons[0].type).toBe("image/webp");
+    });
 
-    it('should use auto format detection', async () => {
-      const outputDir = join(testDir, 'output')
+    it("should use auto format detection", async () => {
+      const outputDir = join(testDir, "output");
       const sources: IconSource[] = [
-        { path: sourceImagePath, priority: 1, type: 'primary' },
-      ]
+        { path: sourceImagePath, priority: 1, type: "primary" },
+      ];
 
       const config: IconGenerationConfig = {
         sources,
         outputDir,
-        format: 'auto',
-      }
+        format: "auto",
+      };
 
-      const result = await generateIconsAdvanced(config)
+      const result = await generateIconsAdvanced(config);
 
-      expect(result.icons.length).toBeGreaterThan(0)
+      expect(result.icons.length).toBeGreaterThan(0);
       // Auto should default to webp
-      expect(result.icons[0].type).toBe('image/webp')
-    })
-  })
+      expect(result.icons[0].type).toBe("image/webp");
+    });
+  });
 
-  describe('generateIconsAdvanced - Quality Optimization', () => {
-    it('should apply quality optimization for different sizes', async () => {
-      const outputDir = join(testDir, 'output')
+  describe("generateIconsAdvanced - Quality Optimization", () => {
+    it("should apply quality optimization for different sizes", async () => {
+      const outputDir = join(testDir, "output");
       const sources: IconSource[] = [
-        { path: sourceImagePath, priority: 1, type: 'primary' },
-      ]
+        { path: sourceImagePath, priority: 1, type: "primary" },
+      ];
 
       const config: IconGenerationConfig = {
         sources,
         outputDir,
         quality: 90,
         optimize: true,
-      }
+      };
 
-      const result = await generateIconsAdvanced(config)
+      const result = await generateIconsAdvanced(config);
 
-      expect(result.icons.length).toBeGreaterThan(0)
+      expect(result.icons.length).toBeGreaterThan(0);
       // Quality should be optimized based on size
-      expect(result.generatedFiles.length).toBeGreaterThan(0)
-    })
+      expect(result.generatedFiles.length).toBeGreaterThan(0);
+    });
 
-    it('should disable quality optimization when requested', async () => {
-      const outputDir = join(testDir, 'output')
+    it("should disable quality optimization when requested", async () => {
+      const outputDir = join(testDir, "output");
       const sources: IconSource[] = [
-        { path: sourceImagePath, priority: 1, type: 'primary' },
-      ]
+        { path: sourceImagePath, priority: 1, type: "primary" },
+      ];
 
       const config: IconGenerationConfig = {
         sources,
         outputDir,
         quality: 90,
         optimize: false,
-      }
+      };
 
-      const result = await generateIconsAdvanced(config)
+      const result = await generateIconsAdvanced(config);
 
-      expect(result.icons.length).toBeGreaterThan(0)
-      expect(result.generatedFiles.length).toBeGreaterThan(0)
-    })
-  })
+      expect(result.icons.length).toBeGreaterThan(0);
+      expect(result.generatedFiles.length).toBeGreaterThan(0);
+    });
+  });
 
-  describe('generateIconsAdvanced - Parallel Processing', () => {
-    it('should generate icons in parallel by default', async () => {
-      const outputDir = join(testDir, 'output')
+  describe("generateIconsAdvanced - Parallel Processing", () => {
+    it("should generate icons in parallel by default", async () => {
+      const outputDir = join(testDir, "output");
       const sources: IconSource[] = [
-        { path: sourceImagePath, priority: 1, type: 'primary' },
-      ]
+        { path: sourceImagePath, priority: 1, type: "primary" },
+      ];
 
       const config: IconGenerationConfig = {
         sources,
         outputDir,
         parallel: true,
         concurrency: 5,
-      }
+      };
 
-      const startTime = Date.now()
-      const result = await generateIconsAdvanced(config)
-      const duration = Date.now() - startTime
+      const startTime = Date.now();
+      const result = await generateIconsAdvanced(config);
+      const duration = Date.now() - startTime;
 
-      expect(result.icons.length).toBeGreaterThan(0)
+      expect(result.icons.length).toBeGreaterThan(0);
       // Parallel should be faster (rough check)
-      expect(duration).toBeLessThan(10000) // Should complete in reasonable time
-    })
+      expect(duration).toBeLessThan(10000); // Should complete in reasonable time
+    });
 
-    it('should support sequential generation', async () => {
-      const outputDir = join(testDir, 'output')
+    it("should support sequential generation", async () => {
+      const outputDir = join(testDir, "output");
       const sources: IconSource[] = [
-        { path: sourceImagePath, priority: 1, type: 'primary' },
-      ]
+        { path: sourceImagePath, priority: 1, type: "primary" },
+      ];
 
       const config: IconGenerationConfig = {
         sources,
         outputDir,
         parallel: false,
-      }
+      };
 
-      const result = await generateIconsAdvanced(config)
+      const result = await generateIconsAdvanced(config);
 
-      expect(result.icons.length).toBeGreaterThan(0)
-      expect(result.generatedFiles.length).toBeGreaterThan(0)
-    })
-  })
+      expect(result.icons.length).toBeGreaterThan(0);
+      expect(result.generatedFiles.length).toBeGreaterThan(0);
+    });
+  });
 
-  describe('generateIconsAdvanced - Edge Cases', () => {
-    it('should handle empty sources array', async () => {
-      const outputDir = join(testDir, 'output')
+  describe("generateIconsAdvanced - Edge Cases", () => {
+    it("should handle empty sources array", async () => {
+      const outputDir = join(testDir, "output");
       const config: IconGenerationConfig = {
         sources: [],
         outputDir,
-      }
+      };
 
-      await expect(generateIconsAdvanced(config)).rejects.toThrow('No valid icon source found')
-    })
+      await expect(generateIconsAdvanced(config)).rejects.toThrow(
+        "No valid icon source found",
+      );
+    });
 
-    it('should handle invalid source path', async () => {
-      const outputDir = join(testDir, 'output')
+    it("should handle invalid source path", async () => {
+      const outputDir = join(testDir, "output");
       const sources: IconSource[] = [
-        { path: join(testDir, 'non-existent.png'), priority: 1, type: 'primary' },
-      ]
+        {
+          path: join(testDir, "non-existent.png"),
+          priority: 1,
+          type: "primary",
+        },
+      ];
 
       const config: IconGenerationConfig = {
         sources,
         outputDir,
-      }
+      };
 
-      await expect(generateIconsAdvanced(config)).rejects.toThrow('No valid icon source found')
-    })
+      await expect(generateIconsAdvanced(config)).rejects.toThrow(
+        "No valid icon source found",
+      );
+    });
 
-    it('should handle validation errors gracefully', async () => {
-      const outputDir = join(testDir, 'output')
+    it("should handle validation errors gracefully", async () => {
+      const outputDir = join(testDir, "output");
       const sources: IconSource[] = [
-        { path: sourceImagePath, priority: 1, type: 'primary' },
-      ]
+        { path: sourceImagePath, priority: 1, type: "primary" },
+      ];
 
       const config: IconGenerationConfig = {
         sources,
         outputDir,
         validate: true,
         strictValidation: false, // Should not throw on warnings
-      }
+      };
 
-      const result = await generateIconsAdvanced(config)
+      const result = await generateIconsAdvanced(config);
 
-      expect(result.icons.length).toBeGreaterThan(0)
-      expect(result.validation).toBeDefined()
-    })
+      expect(result.icons.length).toBeGreaterThan(0);
+      expect(result.validation).toBeDefined();
+    });
 
-    it('should throw on strict validation failure', async () => {
+    it("should throw on strict validation failure", async () => {
       // Create a very small image that will fail validation
-      const smallImagePath = join(testDir, 'small.png')
+      const smallImagePath = join(testDir, "small.png");
       await sharp({
         create: {
           width: 50,
@@ -449,36 +465,38 @@ describe('icon-generator-advanced', () => {
         },
       })
         .png()
-        .toFile(smallImagePath)
+        .toFile(smallImagePath);
 
-      const outputDir = join(testDir, 'output')
+      const outputDir = join(testDir, "output");
       const sources: IconSource[] = [
-        { path: smallImagePath, priority: 1, type: 'primary' },
-      ]
+        { path: smallImagePath, priority: 1, type: "primary" },
+      ];
 
       const config: IconGenerationConfig = {
         sources,
         outputDir,
         validate: true,
         strictValidation: true,
-      }
+      };
 
       // Should throw if validation fails in strict mode
-      await expect(generateIconsAdvanced(config)).rejects.toThrow('Icon validation failed')
-    })
-  })
+      await expect(generateIconsAdvanced(config)).rejects.toThrow(
+        "Icon validation failed",
+      );
+    });
+  });
 
-  describe('generateIconsAdvanced - Full Integration', () => {
-    it('should generate all icon types together', async () => {
-      const outputDir = join(testDir, 'output')
+  describe("generateIconsAdvanced - Full Integration", () => {
+    it("should generate all icon types together", async () => {
+      const outputDir = join(testDir, "output");
       const sources: IconSource[] = [
-        { path: sourceImagePath, priority: 1, type: 'primary' },
-      ]
+        { path: sourceImagePath, priority: 1, type: "primary" },
+      ];
 
       const config: IconGenerationConfig = {
         sources,
         outputDir,
-        format: 'png',
+        format: "png",
         quality: 90,
         optimize: true,
         parallel: true,
@@ -486,27 +504,29 @@ describe('icon-generator-advanced', () => {
           enabled: true,
           foreground: sources[0],
           background: {
-            type: 'color',
-            value: '#ffffff',
+            type: "color",
+            value: "#ffffff",
           },
         },
         splashScreens: {
           enabled: true,
           source: sources[0],
-          backgroundColor: '#ffffff',
-          platforms: ['ios'],
+          backgroundColor: "#ffffff",
+          platforms: ["ios"],
         },
-      }
+      };
 
-      const result = await generateIconsAdvanced(config)
+      const result = await generateIconsAdvanced(config);
 
-      expect(result.icons.length).toBeGreaterThan(0)
-      expect(result.splashScreens.length).toBeGreaterThan(0)
-      expect(result.generatedFiles.length).toBeGreaterThan(0)
+      expect(result.icons.length).toBeGreaterThan(0);
+      expect(result.splashScreens.length).toBeGreaterThan(0);
+      expect(result.generatedFiles.length).toBeGreaterThan(0);
 
       // Should have adaptive icon
-      const adaptiveIcon = result.icons.find((icon) => icon.purpose === 'any maskable')
-      expect(adaptiveIcon).toBeDefined()
-    })
-  })
-})
+      const adaptiveIcon = result.icons.find(
+        (icon) => icon.purpose === "any maskable",
+      );
+      expect(adaptiveIcon).toBeDefined();
+    });
+  });
+});

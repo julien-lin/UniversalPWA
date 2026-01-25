@@ -119,4 +119,3 @@ test.describe('E2E - Symfony (PHP)', () => {
     await expect(viewport).toHaveAttribute('content', 'width=device-width, initial-scale=1.0')
   })
 })
-
