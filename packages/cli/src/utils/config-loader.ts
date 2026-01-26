@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
+
 /**
  * Configuration Loader Utility for CLI
  *
@@ -39,10 +41,14 @@ export async function loadProjectConfig(
       strict: false, // Don't throw on validation errors, just warn
     });
 
+    const config = (result as unknown as { config?: unknown | null } | null)?.config as UniversalPWAConfig | null ?? null;
+    const filePath = (result as unknown as { filePath?: string | null } | null)?.filePath ?? null;
+    const format = (result as unknown as { format?: "ts" | "js" | "json" | "yaml" | null } | null)?.format ?? null;
+
     return {
-      config: result.config,
-      filePath: result.filePath,
-      format: result.format,
+      config,
+      filePath,
+      format,
     };
   } catch (error) {
     // If config file exists but fails to load, return null (will use defaults)
@@ -70,53 +76,63 @@ export function mergeConfigWithOptions(
   }
 
   const merged: InitOptions = { ...cliOptions };
+  const cfg = config as unknown as Record<string, unknown>;
 
   // Merge app config
-  if (config.app && !merged.name) {
-    merged.name = config.app.name;
+  const appConfig = cfg?.app as Record<string, unknown> | undefined;
+  if (appConfig && !merged.name) {
+    merged.name = appConfig.name as string | undefined;
   }
-  if (config.app && !merged.shortName) {
-    merged.shortName = config.app.shortName;
+  if (appConfig && !merged.shortName) {
+    merged.shortName = appConfig.shortName as string | undefined;
   }
-  if (config.app && !merged.themeColor) {
-    merged.themeColor = config.app.themeColor;
+  if (appConfig && !merged.themeColor) {
+    merged.themeColor = appConfig.themeColor as string | undefined;
   }
-  if (config.app && !merged.backgroundColor) {
-    merged.backgroundColor = config.app.backgroundColor;
+  if (appConfig && !merged.backgroundColor) {
+    merged.backgroundColor = appConfig.backgroundColor as string | undefined;
   }
 
   // Merge icons config
-  if (config.icons) {
+  const iconsConfig = cfg?.icons as Record<string, unknown> | undefined;
+  if (iconsConfig) {
     if (merged.skipIcons === undefined) {
-      merged.skipIcons = !config.icons.generate;
+      const generate = iconsConfig.generate as boolean | undefined;
+      merged.skipIcons = generate !== undefined ? !generate : false;
     }
-    if (!merged.iconSource && config.icons.source) {
-      merged.iconSource = config.icons.source;
+    if (!merged.iconSource && iconsConfig.source) {
+      merged.iconSource = iconsConfig.source as string | undefined;
     }
   }
 
   // Merge service worker config
-  if (config.serviceWorker && merged.skipServiceWorker === undefined) {
-    merged.skipServiceWorker = !config.serviceWorker.generate;
+  const swConfig = cfg?.serviceWorker as Record<string, unknown> | undefined;
+  if (swConfig && merged.skipServiceWorker === undefined) {
+    const generate = swConfig.generate as boolean | undefined;
+    merged.skipServiceWorker = generate !== undefined ? !generate : false;
   }
 
   // Merge injection config
-  if (config.injection && merged.skipInjection === undefined) {
-    merged.skipInjection = !config.injection.inject;
+  const injectionConfig = cfg?.injection as Record<string, unknown> | undefined;
+  if (injectionConfig && merged.skipInjection === undefined) {
+    const inject = injectionConfig.inject as boolean | undefined;
+    merged.skipInjection = inject !== undefined ? !inject : false;
   }
 
   // Merge output config
-  if (config.output && !merged.outputDir) {
-    merged.outputDir = config.output.dir;
+  const outputConfig = cfg?.output as Record<string, unknown> | undefined;
+  if (outputConfig && !merged.outputDir) {
+    merged.outputDir = outputConfig.dir as string | undefined;
   }
 
   // Merge scanner config
-  if (config.scanner) {
+  const scannerConfig = cfg?.scanner as Record<string, unknown> | undefined;
+  if (scannerConfig) {
     if (merged.forceScan === undefined) {
-      merged.forceScan = config.scanner.forceScan;
+      merged.forceScan = scannerConfig.forceScan as boolean | undefined;
     }
     if (merged.noCache === undefined) {
-      merged.noCache = config.scanner.noCache;
+      merged.noCache = scannerConfig.noCache as boolean | undefined;
     }
   }
 

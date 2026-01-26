@@ -111,6 +111,9 @@ importers:
       htmlparser2:
         specifier: ^10.0.0
         version: 10.0.0
+      minimatch:
+        specifier: ^9.0.3
+        version: 9.0.5
       pino:
         specifier: ^10.2.0
         version: 10.2.0

@@ -166,8 +166,10 @@ export async function initCommand(
       forceScan: options.forceScan === true,
     });
 
-    result.framework = scanResult.framework.framework;
-    result.architecture = scanResult.architecture.architecture;
+    if (scanResult && typeof scanResult === 'object' && 'framework' in scanResult && 'architecture' in scanResult) {
+      result.framework = scanResult.framework?.framework ?? null;
+      result.architecture = scanResult.architecture?.architecture ?? 'static';
+    }
 
     console.log(
       chalk.green(`✓ Framework detected: ${result.framework ?? "Unknown"}`),
@@ -176,11 +178,12 @@ export async function initCommand(
 
     // Check HTTPS
     const httpsCheck = checkProjectHttps({ projectPath: result.projectPath });
-    if (!httpsCheck.isSecure && !httpsCheck.isLocalhost) {
-      result.warnings.push(
-        httpsCheck.warning ?? "HTTPS required for production PWA",
-      );
-      console.log(chalk.yellow(`⚠ ${httpsCheck.warning}`));
+    if (httpsCheck && typeof httpsCheck === 'object' && 'isSecure' in httpsCheck && 'isLocalhost' in httpsCheck) {
+      if (!httpsCheck.isSecure && !httpsCheck.isLocalhost) {
+        const warning = (httpsCheck as unknown as { warning?: string }).warning ?? "HTTPS required for production PWA";
+        result.warnings.push(warning);
+        console.log(chalk.yellow(`⚠ ${warning}`));
+      }
     }
 
     // Determine output directory
@@ -190,7 +193,7 @@ export async function initCommand(
       // If outputDir is absolute, use it directly; otherwise resolve relative to projectPath
       finalOutputDir =
         outputDir.startsWith("/") ||
-        (process.platform === "win32" && /^[A-Z]:/.test(outputDir))
+          (process.platform === "win32" && /^[A-Z]:/.test(outputDir))
           ? resolve(outputDir)
           : join(result.projectPath, outputDir);
       console.log(chalk.gray(`  Using output directory: ${finalOutputDir}`));
@@ -487,41 +490,51 @@ export async function initCommand(
 
       try {
         // Try to detect backend integration (Laravel, Symfony, etc.)
+         
         const factory = getBackendFactory();
-        let backendIntegration = null;
+        let backendIntegration: unknown = null;
 
         // First, try to detect backend automatically
-        backendIntegration = factory.detectBackend(result.projectPath);
+        if (factory && typeof factory === 'object' && 'detectBackend' in factory) {
+           
+          backendIntegration = (factory as unknown as { detectBackend: (path: string) => unknown }).detectBackend(result.projectPath);
+        }
 
         // If auto-detection failed but framework is known, try to get integration directly
-        if (!backendIntegration && result.framework) {
-          backendIntegration = factory.getIntegration(
+        if (!backendIntegration && result.framework && factory && typeof factory === 'object' && 'getIntegration' in factory) {
+           
+          backendIntegration = (factory as unknown as { getIntegration: (framework: string, path: string) => unknown }).getIntegration(
             result.framework,
             result.projectPath,
           );
           // Verify the integration actually detects this project
-          if (backendIntegration) {
-            const detectionResult = backendIntegration.detect();
-            if (
-              !detectionResult.detected ||
-              detectionResult.confidence === "low"
-            ) {
-              backendIntegration = null;
+          if (backendIntegration && typeof backendIntegration === 'object' && 'detect' in backendIntegration) {
+            const detect = (backendIntegration as unknown as { detect: () => unknown }).detect;
+            const detectionResult = detect();
+            if (detectionResult && typeof detectionResult === 'object') {
+              const detected = (detectionResult as unknown as { detected?: boolean }).detected ?? false;
+              const confidence = (detectionResult as unknown as { confidence?: string }).confidence ?? 'low';
+              if (!detected || confidence === 'low') {
+                backendIntegration = null;
+              }
             }
           }
         }
 
         let swResult;
-        if (backendIntegration) {
+        if (backendIntegration && typeof backendIntegration === 'object' && 'detect' in backendIntegration && 'name' in backendIntegration) {
           // Use backend-optimized service worker generation
-          const detectionResult = backendIntegration.detect();
+          const detect = (backendIntegration as { detect: () => unknown }).detect;
+          const detectionResult = detect();
+          const name = (backendIntegration as { name?: string }).name ?? 'Backend';
+          const confidence = (detectionResult as { confidence?: string } | null)?.confidence ?? 'unknown';
           console.log(
             chalk.blue(
-              `  Using ${backendIntegration.name} optimized config (confidence: ${detectionResult.confidence})`,
+              `  Using ${name} optimized config (confidence: ${confidence})`,
             ),
           );
           swResult = await generateServiceWorkerFromBackend(
-            backendIntegration,
+            backendIntegration as unknown as Parameters<typeof generateServiceWorkerFromBackend>[0],
             result.architecture,
             {
               projectPath: result.projectPath,
@@ -533,26 +546,38 @@ export async function initCommand(
           // Fallback to generic generation with adaptive cache strategies
           const optimizationResult = (await optimizeProject(
             result.projectPath,
-            scanResult.assets,
-            scanResult.framework.configuration,
+            (scanResult && typeof scanResult === 'object' && 'assets' in scanResult)
+              ? (scanResult as { assets?: unknown }).assets
+              : [],
+            (scanResult && typeof scanResult === 'object' && 'framework' in scanResult)
+              ? ((scanResult as { framework?: { configuration?: unknown } }).framework?.configuration)
+              : undefined,
             result.framework,
             iconSource,
           )) as OptimizationResultShape;
 
           // Convert adaptive cache strategies to runtime caching format
-          const runtimeCaching = optimizationResult.cacheStrategies.map(
-            (strategy) => ({
-              urlPattern: strategy.urlPattern,
-              handler: strategy.handler,
-              options: strategy.options,
-            }),
+          const cacheStrategies = (optimizationResult && typeof optimizationResult === 'object' && 'cacheStrategies' in optimizationResult)
+            ? ((optimizationResult as { cacheStrategies?: unknown[] }).cacheStrategies ?? [])
+            : [];
+          const runtimeCaching = cacheStrategies.map(
+            (strategy) => {
+              const strategyObj = strategy as { urlPattern?: unknown; handler?: string; options?: unknown };
+              return {
+                urlPattern: strategyObj.urlPattern,
+                handler: strategyObj.handler,
+                options: strategyObj.options,
+              };
+            },
           );
 
           if (runtimeCaching.length > 0) {
             // Use generateSimpleServiceWorker when we have adaptive cache strategies
+            const apiType = (optimizationResult as unknown as { apiType?: string }).apiType ?? 'unknown';
+            const strategiesCount = (cacheStrategies?.length ?? 0);
             console.log(
               chalk.gray(
-                `  Detected ${optimizationResult.apiType} API, applying ${optimizationResult.cacheStrategies.length} adaptive cache strategy(ies)`,
+                `  Detected ${apiType} API, applying ${strategiesCount} adaptive cache strategy(ies)`,
               ),
             );
             swResult = await generateSimpleServiceWorker({
@@ -799,12 +824,12 @@ export async function initCommand(
             backgroundColor: backgroundColor ?? "#000000",
             appleTouchIcon: appleTouchIconExists
               ? normalizePathForInjection(
-                  appleTouchIconFullPath,
-                  result.projectPath,
-                  finalOutputDir,
-                  htmlFile,
-                  "/apple-touch-icon.png",
-                )
+                appleTouchIconFullPath,
+                result.projectPath,
+                finalOutputDir,
+                htmlFile,
+                "/apple-touch-icon.png",
+              )
               : "/apple-touch-icon.png",
             appleMobileWebAppCapable: true,
             serviceWorkerPath: normalizePathForInjection(
@@ -820,6 +845,7 @@ export async function initCommand(
           return Promise.resolve(injectMetaTagsInFile(htmlFile, fileOptions));
         };
 
+         
         const batchResult = await processInParallel(
           htmlFilesToProcess,
           processFileWithNormalizedPaths,
@@ -844,55 +870,75 @@ export async function initCommand(
         let injectedCount = 0;
         let skippedCount = 0;
 
-        for (const success of batchResult.successful) {
-          const injectionResult = success.result;
-          if (injectionResult.injected.length > 0) {
+        const successArray = (batchResult && typeof batchResult === 'object' && 'successful' in batchResult)
+          ? ((batchResult as unknown as { successful: unknown[] }).successful ?? [])
+          : [];
+
+        for (const success of successArray) {
+          if (!success || typeof success !== 'object') continue;
+          const successObj = success as { item?: string; result?: unknown };
+          const item = successObj.item;
+          const injectionResult = successObj.result as { injected?: unknown[]; skipped?: unknown[]; warnings?: unknown[] };
+
+          if ((injectionResult?.injected?.length ?? 0) > 0) {
             injectedCount++;
             // Log détaillé pour debug (seulement si peu de fichiers)
-            if (totalFiles <= 10) {
-              const relativePath = relative(result.projectPath, success.item);
+            if (totalFiles <= 10 && item) {
+              const relativePath = relative(result.projectPath, item);
               console.log(
                 chalk.gray(
-                  `    ✓ ${relativePath}: ${injectionResult.injected.length} tag(s) injected`,
+                  `    ✓ ${relativePath}: ${injectionResult?.injected?.length ?? 0} tag(s) injected`,
                 ),
               );
             }
           } else if (
-            injectionResult.skipped.length > 0 &&
-            injectionResult.injected.length === 0
+            ((injectionResult?.skipped?.length ?? 0) > 0) &&
+            ((injectionResult?.injected?.length ?? 0) === 0)
           ) {
             skippedCount++;
-            if (totalFiles <= 10) {
-              const relativePath = relative(result.projectPath, success.item);
+            if (totalFiles <= 10 && item) {
+              const relativePath = relative(result.projectPath, item);
               console.log(
                 chalk.gray(`    ⊘ ${relativePath}: already has PWA tags`),
               );
             }
           } else {
-            if (totalFiles <= 10) {
-              const relativePath = relative(result.projectPath, success.item);
+            if (totalFiles <= 10 && item) {
+              const relativePath = relative(result.projectPath, item);
               console.log(
                 chalk.yellow(
                   `    ⚠ ${relativePath}: no tags injected (check warnings)`,
                 ),
               );
             }
-            if (injectionResult.warnings.length > 0) {
-              injectionResult.warnings.forEach((warning) => {
-                result.warnings.push(
-                  `${relative(result.projectPath, success.item)}: ${warning}`,
-                );
+            if ((injectionResult?.warnings?.length ?? 0) > 0) {
+              injectionResult?.warnings?.forEach((warning: unknown) => {
+                if (item && warning) {
+                  // eslint-disable-next-line @typescript-eslint/no-base-to-string
+                  const warningStr: string = String(warning);
+                  result.warnings.push(
+                    `${relative(result.projectPath, item)}: ${warningStr}`,
+                  );
+                }
               });
             }
           }
         }
 
         // Handle failed files
-        for (const failed of batchResult.failed) {
-          const errorCode = detectErrorCode(new Error(failed.error));
+        const failedArray = (batchResult && typeof batchResult === 'object' && 'failed' in batchResult)
+          ? ((batchResult as unknown as { failed: unknown[] }).failed ?? [])
+          : [];
+
+        for (const failed of failedArray) {
+          if (!failed || typeof failed !== 'object') continue;
+          const failedObj = failed as unknown as { item?: string; error?: string };
+          const item = failedObj.item ?? 'unknown file';
+          const error = failedObj.error ?? 'Unknown error';
+          const errorCode = detectErrorCode(new Error(error));
           const warningMessage = formatError(
             errorCode,
-            `${failed.item}: ${failed.error}`,
+            `${item}: ${error}`,
           );
           result.warnings.push(warningMessage);
           if (totalFiles <= 10) {
@@ -901,7 +947,9 @@ export async function initCommand(
         }
 
         result.htmlFilesInjected = injectedCount;
-        const errorCount = batchResult.totalFailed;
+        const errorCount = (batchResult && typeof batchResult === 'object' && 'totalFailed' in batchResult)
+          ? ((batchResult as unknown as { totalFailed?: number }).totalFailed ?? 0)
+          : 0;
         const fileTypeLabel = htmlFilesToProcess.some(
           (f) =>
             f.endsWith(".twig") ||
