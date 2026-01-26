@@ -23,7 +23,7 @@ Democratize PWAs for SMEs/artisans/solo developers, targeting 10k installs/year 
 - 💬 **Interactive Mode** : User-friendly prompts with smart defaults and validation
 - 🎨 **Icon Generation** : Automatic generation of PWA icons in multiple sizes + Apple Touch Icon
 - 🎨 **No-Code Customization** : Web editor to customize colors, icons, cache strategies (coming soon)
-- 📊 **Analytics & Monitoring** : Free dashboard with PWA metrics (coming soon)
+- 📊 **Analytics & Monitoring** : Built-in structured logging, performance metrics, and RGPD-compliant telemetry
 - 🚀 **Deployment** : Support for Vercel/Netlify/Cloudflare + GitHub Actions
 
 ## 🚀 Installation
@@ -257,10 +257,11 @@ pnpm lint
 ## 📚 Documentation
 
 See the `DOCUMENTATION/` folder for:
-- [Technical Stack](./DOCUMENTATION/stack-technique.md)
-- [Initial Prompt](./DOCUMENTATION/prompt.md)
-- [MVP TODO](./DOCUMENTATION/TODO-MVP.md)
-- [Publishing Guide](./DOCUMENTATION/PUBLISH.md)
+- [Architecture Decisions](./DOCUMENTATION/ARCHITECTURE_DECISIONS.md)
+- [Backend Detection Patterns](./DOCUMENTATION/BACKEND_DETECTION_PATTERNS.md)
+- [SDK Architecture](./DOCUMENTATION/SDK_ARCHITECTURE.md)
+- [Phase 5 Plan - Testing & Documentation](./DOCUMENTATION/PHASE_5_PLAN.md)
+- [Performance Guide](./DOCUMENTATION/PERFORMANCE_GUIDE.md) (coming with Phase 5.3)
 
 ## 🔧 Troubleshooting
 
@@ -305,6 +306,8 @@ For Vite/React projects, files in `public/` are served at the root. The CLI auto
 - **Web UI** : React 19 + Tailwind CSS 4
 - **Package Manager** : pnpm 9.12+
 - **CLI Prompts** : Inquirer 12.0+
+- **Testing** : Vitest 4.0+ with 1900+ tests
+- **Observability** : Structured logging, performance metrics, RGPD-compliant telemetry
 
 ## 💝 Sponsoring
 
@@ -329,9 +332,14 @@ MIT
 ## 🗺️ Roadmap
 
 - **MVP** : Scan + basic generation ✅
+- **v1.0.0** : Production-ready with enterprise-grade testing
+  - Phase 1: Security (5 modules, 186 tests) ✅
+  - Phase 2: Performance (4 modules, 90 tests) ✅
+  - Phase 3: Robustness (5 modules, 194 tests) ✅
+  - Phase 4: Observability (3 modules, 110 tests) ✅
+  - Phase 5: Testing & Documentation (error coverage 90%+, E2E tests, performance guide) 🔄
 - **v1.1** : Auto plugins for Shopify/WooCommerce
-- **v1.2** : Push notifications (OneSignal/FCM) ✅
-- **v1.2.2** : Interactive mode with prompts ✅
+- **v1.2** : Push notifications (OneSignal/FCM)
 - **v2.0** : Drag-drop editor + SW hosting
 
 ## 🤝 Contributing

@@ -22,7 +22,7 @@ Démocratiser les PWA pour PME/artisans/développeurs solo, viser 10k installs/a
 - 💬 **Mode Interactif** : Prompts conviviaux avec valeurs par défaut intelligentes et validation
 - 🎨 **Génération d'Icônes** : Génération automatique d'icônes PWA en multiples tailles + Apple Touch Icon
 - 🎨 **Customisation No-Code** : Éditeur web pour personnaliser couleurs, icônes, stratégies de cache (à venir)
-- 📊 **Analytics & Monitoring** : Dashboard gratuit avec métriques PWA (à venir)
+- 📊 **Analytics & Monitoring** : Logging structuré intégré, métriques de performance, et télémétrie conforme RGPD
 - 🚀 **Déploiement** : Support Vercel/Netlify/Cloudflare + GitHub Actions
 
 ## 🚀 Installation
@@ -249,10 +249,11 @@ pnpm lint
 ## 📚 Documentation
 
 Voir le dossier `DOCUMENTATION/` pour :
-- [Stack technique](./DOCUMENTATION/stack-technique.md)
-- [Prompt initial](./DOCUMENTATION/prompt.md)
-- [TODO MVP](./DOCUMENTATION/TODO-MVP.md)
-- [Guide de publication](./DOCUMENTATION/PUBLISH.md)
+- [Décisions Architecturales](./DOCUMENTATION/ARCHITECTURE_DECISIONS.md)
+- [Patterns de Détection Backend](./DOCUMENTATION/BACKEND_DETECTION_PATTERNS.md)
+- [Architecture SDK](./DOCUMENTATION/SDK_ARCHITECTURE.md)
+- [Plan Phase 5 - Tests & Documentation](./DOCUMENTATION/PHASE_5_PLAN.md)
+- [Guide de Performance](./DOCUMENTATION/PERFORMANCE_GUIDE.md) (livré avec Phase 5.3)
 
 ## 🔧 Troubleshooting
 
@@ -297,6 +298,8 @@ Pour les projets Vite/React, les fichiers dans `public/` sont servis à la racin
 - **Web UI** : React 19 + Tailwind CSS 4
 - **Package Manager** : pnpm 9.12+
 - **Prompts CLI** : Inquirer 12.0+
+- **Tests** : Vitest 4.0+ avec 1900+ tests
+- **Observabilité** : Logging structuré, métriques de performance, télémétrie RGPD-conforme
 
 ## 💝 Sponsoring
 
@@ -321,9 +324,14 @@ MIT
 ## 🗺️ Roadmap
 
 - **MVP** : Scan + génération basique ✅
+- **v1.0.0** : Production-ready avec tests de qualité entreprise
+  - Phase 1: Sécurité (5 modules, 186 tests) ✅
+  - Phase 2: Performance (4 modules, 90 tests) ✅
+  - Phase 3: Robustesse (5 modules, 194 tests) ✅
+  - Phase 4: Observabilité (3 modules, 110 tests) ✅
+  - Phase 5: Tests & Documentation (couverture erreurs 90%+, tests E2E, guide perf) 🔄
 - **v1.1** : Plugins auto Shopify/WooCommerce
-- **v1.2** : Push notifications (OneSignal/FCM) ✅
-- **v1.2.2** : Mode interactif avec prompts ✅
+- **v1.2** : Push notifications (OneSignal/FCM)
 - **v2.0** : Éditeur drag-drop + hébergement SW
 
 ## 🤝 Contribution

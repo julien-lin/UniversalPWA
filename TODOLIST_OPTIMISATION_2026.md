@@ -491,12 +491,13 @@ Total: 3.1s (saved to dist/)
 
 ---
 
-## 🔄 Week 4: Observabilité (P4) + Test Coverage (P5) — **IN PROGRESS**
+## 🔄 Week 4: Observabilité (P4) + Testing & Documentation (P5) — **IN PROGRESS**
 
 ```
 ✅ Mon-Tue: P4.1-P4.3 (logging, metrics, telemetry) — DONE (110 tests)
-🔄 Wed-Thu: P5.1-P5.3 (E2E tests, coverage, documentation) — ACTIVE
-⬜ Fri: Release prep, final validation — PENDING
+🔄 Wed: P5.1-P5.2 (error coverage, E2E tests) — ACTIVE
+⬜ Thu: P5.3 (performance documentation) — PENDING
+⬜ Fri: Release prep, final validation, v1.0.0 — PENDING
 ```
 
 ---
@@ -553,11 +554,11 @@ Total: 3.1s (saved to dist/)
 | ⚡ Performance   | P2    | 4/4   | 90    | ✅ **DONE**    | Delta sync, bundle analysis, lazy routes       |
 | 🛡️ Robustesse    | P3    | 5/5   | 194   | ✅ **DONE**    | Error handling, XSS prevention, security       |
 | 📊 Observabilité | P4    | 3/3   | 110   | ✅ **DONE**    | Logging, metrics, telemetry (RGPD-compliant)   |
-| 🧪 Test Coverage | P5    | 0/3   | 0     | 🔄 **ACTIVE**  | E2E tests, coverage expansion, documentation   |
+| 🧪 Test Coverage | P5    | 0/3   | 0     | 🔄 **ACTIVE**  | P5.1: Error coverage, P5.2: E2E, P5.3: Docs    |
 
 **Total Time Invested:** ~50 hours (Phase 1: 14h, Phase 2: 14h, Phase 3: 14h, Phase 4: 8h)  
-**Remaining Estimate:** ~8 hours (Phase 5: E2E, coverage, docs)  
-**Payback:** Final sprint underway - on track for delivery
+**Remaining Estimate:** ~8 hours (Phase 5: 4h error coverage + 2h E2E + 2h docs)  
+**Payback:** Final sprint — Phase 5 detailed plan documented in DOCUMENTATION/PHASE_5_PLAN.md
 
 ---
 
