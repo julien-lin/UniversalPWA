@@ -1,3 +1,6 @@
+export * from './logger.js'
+export * from './performance/performance-metrics.js'
+export * from './telemetry.js'
 export * from './scanner/index.js'
 export * from './generator/manifest-generator.js'
 export * from './generator/icon-generator.js'

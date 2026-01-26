@@ -33,17 +33,16 @@ export interface GenerateConfigResult {
 export async function generateConfigCommand(
   options: GenerateConfigOptions = {},
 ): Promise<GenerateConfigResult> {
-  const {
-    projectPath = process.cwd(),
-    format = 'ts',
-    interactive = true,
-    output,
-  } = options
+  const projectPath = options.projectPath ?? process.cwd();
+  const format = (options.format ?? 'ts');
+  const configFormat: ConfigFormat = (format === 'ts' || format === 'js' || format === 'json' || format === 'yaml') ? format : 'ts';
+  const isInteractive = options.interactive !== false;
+  const outputFile = options.output;
 
   const result: GenerateConfigResult = {
     success: false,
     filePath: '',
-    format,
+    format: configFormat,
     errors: [],
   }
 
@@ -64,22 +63,29 @@ export async function generateConfigCommand(
       includeArchitecture: true,
     })
 
-    const framework = scanResult.framework.framework
-    const architecture = scanResult.architecture.architecture
+    if (!scanResult || typeof scanResult !== 'object' || !('framework' in scanResult) || !('architecture' in scanResult)) {
+      result.errors.push('Failed to scan project: invalid scan result')
+      return result
+    }
 
-    console.log(chalk.green(`✓ Framework detected: ${framework ?? 'Unknown'}`))
+    const framework = scanResult.framework?.framework ?? 'Unknown'
+    const architecture = scanResult.architecture?.architecture ?? 'static'
+
+    console.log(chalk.green(`✓ Framework detected: ${framework}`))
     console.log(chalk.green(`✓ Architecture: ${architecture}`))
 
     // Generate base config from scan
+     
     let config: UniversalPWAConfig = generateConfigFromScan(scanResult)
 
     // Interactive mode: prompt for additional options
-    if (interactive) {
+    if (isInteractive) {
+       
       config = await promptConfigOptions(config)
     }
 
     // Determine output file path
-    const fileName = output || getConfigFileName(format)
+    const fileName = outputFile || getConfigFileName(configFormat)
     const filePath = join(resolvedPath, fileName)
 
     // Check if file already exists
@@ -100,7 +106,7 @@ export async function generateConfigCommand(
     }
 
     // Write configuration file
-    const content = formatConfig(config, format)
+    const content = formatConfig(config, configFormat)
     writeFileSync(filePath, content, 'utf-8')
 
     result.success = true
@@ -119,12 +125,13 @@ export async function generateConfigCommand(
 
 /**
  * Generate base configuration from scan result
+ * eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
  */
 function generateConfigFromScan(
   scanResult: Awaited<ReturnType<typeof scanProject>>,
 ): UniversalPWAConfig {
-  const framework = scanResult.framework.framework
-  const architecture = scanResult.architecture.architecture
+  const framework = (scanResult as unknown as { framework?: { framework?: string } }).framework?.framework ?? 'Unknown'
+  const architecture = (scanResult as unknown as { architecture?: { architecture?: string } }).architecture?.architecture ?? 'static'
 
   // Determine default output directory based on framework
   let outputDir = 'public'
@@ -136,6 +143,7 @@ function generateConfigFromScan(
     outputDir = '.output'
   }
 
+   
   const config: UniversalPWAConfig = {
     projectRoot: '.',
     app: {
@@ -170,19 +178,22 @@ function generateConfigFromScan(
   }
 
   // Add framework/architecture overrides if detected
-  if (framework) {
+  if (framework && framework !== 'Unknown') {
+     
     config.backend = framework as UniversalPWAConfig['backend']
   }
 
-  if (architecture) {
+  if (architecture && architecture !== 'static') {
     config.architecture = architecture
   }
 
   return config
 }
+ 
 
 /**
  * Prompt for additional configuration options
+ * eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
  */
 interface ConfigPromptAnswers {
   appName: string
@@ -195,6 +206,7 @@ interface ConfigPromptAnswers {
   outputDir: string
 }
 
+ 
 async function promptConfigOptions(
   baseConfig: UniversalPWAConfig,
 ): Promise<UniversalPWAConfig> {
@@ -289,6 +301,7 @@ async function promptConfigOptions(
 
   return baseConfig
 }
+ 
 
 /**
  * Get config file name based on format
