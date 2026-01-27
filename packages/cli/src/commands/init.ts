@@ -22,6 +22,7 @@ import type { Framework } from "@julien-lin/universal-pwa-core";
 import type { Architecture } from "@julien-lin/universal-pwa-core";
 import { Transaction } from "../utils/transaction.js";
 import { getEffectiveConfig } from "../utils/config-loader.js";
+import { displayPWABanner } from "../utils/ui-utils.js";
 
 // @types/cli-progress not available, using any type
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -117,6 +118,9 @@ export async function initCommand(
     );
   }
 
+  // Display PWA Banner at startup
+  displayPWABanner();
+
   const {
     projectPath = process.cwd(),
     name,
@@ -166,9 +170,14 @@ export async function initCommand(
       forceScan: options.forceScan === true,
     });
 
-    if (scanResult && typeof scanResult === 'object' && 'framework' in scanResult && 'architecture' in scanResult) {
+    if (
+      scanResult &&
+      typeof scanResult === "object" &&
+      "framework" in scanResult &&
+      "architecture" in scanResult
+    ) {
       result.framework = scanResult.framework?.framework ?? null;
-      result.architecture = scanResult.architecture?.architecture ?? 'static';
+      result.architecture = scanResult.architecture?.architecture ?? "static";
     }
 
     console.log(
@@ -178,9 +187,16 @@ export async function initCommand(
 
     // Check HTTPS
     const httpsCheck = checkProjectHttps({ projectPath: result.projectPath });
-    if (httpsCheck && typeof httpsCheck === 'object' && 'isSecure' in httpsCheck && 'isLocalhost' in httpsCheck) {
+    if (
+      httpsCheck &&
+      typeof httpsCheck === "object" &&
+      "isSecure" in httpsCheck &&
+      "isLocalhost" in httpsCheck
+    ) {
       if (!httpsCheck.isSecure && !httpsCheck.isLocalhost) {
-        const warning = (httpsCheck as unknown as { warning?: string }).warning ?? "HTTPS required for production PWA";
+        const warning =
+          (httpsCheck as unknown as { warning?: string }).warning ??
+          "HTTPS required for production PWA";
         result.warnings.push(warning);
         console.log(chalk.yellow(`⚠ ${warning}`));
       }
@@ -193,7 +209,7 @@ export async function initCommand(
       // If outputDir is absolute, use it directly; otherwise resolve relative to projectPath
       finalOutputDir =
         outputDir.startsWith("/") ||
-          (process.platform === "win32" && /^[A-Z]:/.test(outputDir))
+        (process.platform === "win32" && /^[A-Z]:/.test(outputDir))
           ? resolve(outputDir)
           : join(result.projectPath, outputDir);
       console.log(chalk.gray(`  Using output directory: ${finalOutputDir}`));
@@ -490,31 +506,52 @@ export async function initCommand(
 
       try {
         // Try to detect backend integration (Laravel, Symfony, etc.)
-         
+
         const factory = getBackendFactory();
         let backendIntegration: unknown = null;
 
         // First, try to detect backend automatically
-        if (factory && typeof factory === 'object' && 'detectBackend' in factory) {
-           
-          backendIntegration = (factory as unknown as { detectBackend: (path: string) => unknown }).detectBackend(result.projectPath);
+        if (
+          factory &&
+          typeof factory === "object" &&
+          "detectBackend" in factory
+        ) {
+          backendIntegration = (
+            factory as unknown as { detectBackend: (path: string) => unknown }
+          ).detectBackend(result.projectPath);
         }
 
         // If auto-detection failed but framework is known, try to get integration directly
-        if (!backendIntegration && result.framework && factory && typeof factory === 'object' && 'getIntegration' in factory) {
-           
-          backendIntegration = (factory as unknown as { getIntegration: (framework: string, path: string) => unknown }).getIntegration(
-            result.framework,
-            result.projectPath,
-          );
+        if (
+          !backendIntegration &&
+          result.framework &&
+          factory &&
+          typeof factory === "object" &&
+          "getIntegration" in factory
+        ) {
+          backendIntegration = (
+            factory as unknown as {
+              getIntegration: (framework: string, path: string) => unknown;
+            }
+          ).getIntegration(result.framework, result.projectPath);
           // Verify the integration actually detects this project
-          if (backendIntegration && typeof backendIntegration === 'object' && 'detect' in backendIntegration) {
-            const detect = (backendIntegration as unknown as { detect: () => unknown }).detect;
+          if (
+            backendIntegration &&
+            typeof backendIntegration === "object" &&
+            "detect" in backendIntegration
+          ) {
+            const detect = (
+              backendIntegration as unknown as { detect: () => unknown }
+            ).detect;
             const detectionResult = detect();
-            if (detectionResult && typeof detectionResult === 'object') {
-              const detected = (detectionResult as unknown as { detected?: boolean }).detected ?? false;
-              const confidence = (detectionResult as unknown as { confidence?: string }).confidence ?? 'low';
-              if (!detected || confidence === 'low') {
+            if (detectionResult && typeof detectionResult === "object") {
+              const detected =
+                (detectionResult as unknown as { detected?: boolean })
+                  .detected ?? false;
+              const confidence =
+                (detectionResult as unknown as { confidence?: string })
+                  .confidence ?? "low";
+              if (!detected || confidence === "low") {
                 backendIntegration = null;
               }
             }
@@ -522,19 +559,30 @@ export async function initCommand(
         }
 
         let swResult;
-        if (backendIntegration && typeof backendIntegration === 'object' && 'detect' in backendIntegration && 'name' in backendIntegration) {
+        if (
+          backendIntegration &&
+          typeof backendIntegration === "object" &&
+          "detect" in backendIntegration &&
+          "name" in backendIntegration
+        ) {
           // Use backend-optimized service worker generation
-          const detect = (backendIntegration as { detect: () => unknown }).detect;
+          const detect = (backendIntegration as { detect: () => unknown })
+            .detect;
           const detectionResult = detect();
-          const name = (backendIntegration as { name?: string }).name ?? 'Backend';
-          const confidence = (detectionResult as { confidence?: string } | null)?.confidence ?? 'unknown';
+          const name =
+            (backendIntegration as { name?: string }).name ?? "Backend";
+          const confidence =
+            (detectionResult as { confidence?: string } | null)?.confidence ??
+            "unknown";
           console.log(
             chalk.blue(
               `  Using ${name} optimized config (confidence: ${confidence})`,
             ),
           );
           swResult = await generateServiceWorkerFromBackend(
-            backendIntegration as unknown as Parameters<typeof generateServiceWorkerFromBackend>[0],
+            backendIntegration as unknown as Parameters<
+              typeof generateServiceWorkerFromBackend
+            >[0],
             result.architecture,
             {
               projectPath: result.projectPath,
@@ -546,35 +594,48 @@ export async function initCommand(
           // Fallback to generic generation with adaptive cache strategies
           const optimizationResult = (await optimizeProject(
             result.projectPath,
-            (scanResult && typeof scanResult === 'object' && 'assets' in scanResult)
+            scanResult &&
+              typeof scanResult === "object" &&
+              "assets" in scanResult
               ? (scanResult as { assets?: unknown }).assets
               : [],
-            (scanResult && typeof scanResult === 'object' && 'framework' in scanResult)
-              ? ((scanResult as { framework?: { configuration?: unknown } }).framework?.configuration)
+            scanResult &&
+              typeof scanResult === "object" &&
+              "framework" in scanResult
+              ? (scanResult as { framework?: { configuration?: unknown } })
+                  .framework?.configuration
               : undefined,
             result.framework,
             iconSource,
           )) as OptimizationResultShape;
 
           // Convert adaptive cache strategies to runtime caching format
-          const cacheStrategies = (optimizationResult && typeof optimizationResult === 'object' && 'cacheStrategies' in optimizationResult)
-            ? ((optimizationResult as { cacheStrategies?: unknown[] }).cacheStrategies ?? [])
-            : [];
-          const runtimeCaching = cacheStrategies.map(
-            (strategy) => {
-              const strategyObj = strategy as { urlPattern?: unknown; handler?: string; options?: unknown };
-              return {
-                urlPattern: strategyObj.urlPattern,
-                handler: strategyObj.handler,
-                options: strategyObj.options,
-              };
-            },
-          );
+          const cacheStrategies =
+            optimizationResult &&
+            typeof optimizationResult === "object" &&
+            "cacheStrategies" in optimizationResult
+              ? ((optimizationResult as { cacheStrategies?: unknown[] })
+                  .cacheStrategies ?? [])
+              : [];
+          const runtimeCaching = cacheStrategies.map((strategy) => {
+            const strategyObj = strategy as {
+              urlPattern?: unknown;
+              handler?: string;
+              options?: unknown;
+            };
+            return {
+              urlPattern: strategyObj.urlPattern,
+              handler: strategyObj.handler,
+              options: strategyObj.options,
+            };
+          });
 
           if (runtimeCaching.length > 0) {
             // Use generateSimpleServiceWorker when we have adaptive cache strategies
-            const apiType = (optimizationResult as unknown as { apiType?: string }).apiType ?? 'unknown';
-            const strategiesCount = (cacheStrategies?.length ?? 0);
+            const apiType =
+              (optimizationResult as unknown as { apiType?: string }).apiType ??
+              "unknown";
+            const strategiesCount = cacheStrategies?.length ?? 0;
             console.log(
               chalk.gray(
                 `  Detected ${apiType} API, applying ${strategiesCount} adaptive cache strategy(ies)`,
@@ -824,12 +885,12 @@ export async function initCommand(
             backgroundColor: backgroundColor ?? "#000000",
             appleTouchIcon: appleTouchIconExists
               ? normalizePathForInjection(
-                appleTouchIconFullPath,
-                result.projectPath,
-                finalOutputDir,
-                htmlFile,
-                "/apple-touch-icon.png",
-              )
+                  appleTouchIconFullPath,
+                  result.projectPath,
+                  finalOutputDir,
+                  htmlFile,
+                  "/apple-touch-icon.png",
+                )
               : "/apple-touch-icon.png",
             appleMobileWebAppCapable: true,
             serviceWorkerPath: normalizePathForInjection(
@@ -845,7 +906,6 @@ export async function initCommand(
           return Promise.resolve(injectMetaTagsInFile(htmlFile, fileOptions));
         };
 
-         
         const batchResult = await processInParallel(
           htmlFilesToProcess,
           processFileWithNormalizedPaths,
@@ -870,15 +930,23 @@ export async function initCommand(
         let injectedCount = 0;
         let skippedCount = 0;
 
-        const successArray = (batchResult && typeof batchResult === 'object' && 'successful' in batchResult)
-          ? ((batchResult as unknown as { successful: unknown[] }).successful ?? [])
-          : [];
+        const successArray =
+          batchResult &&
+          typeof batchResult === "object" &&
+          "successful" in batchResult
+            ? ((batchResult as unknown as { successful: unknown[] })
+                .successful ?? [])
+            : [];
 
         for (const success of successArray) {
-          if (!success || typeof success !== 'object') continue;
+          if (!success || typeof success !== "object") continue;
           const successObj = success as { item?: string; result?: unknown };
           const item = successObj.item;
-          const injectionResult = successObj.result as { injected?: unknown[]; skipped?: unknown[]; warnings?: unknown[] };
+          const injectionResult = successObj.result as {
+            injected?: unknown[];
+            skipped?: unknown[];
+            warnings?: unknown[];
+          };
 
           if ((injectionResult?.injected?.length ?? 0) > 0) {
             injectedCount++;
@@ -892,8 +960,8 @@ export async function initCommand(
               );
             }
           } else if (
-            ((injectionResult?.skipped?.length ?? 0) > 0) &&
-            ((injectionResult?.injected?.length ?? 0) === 0)
+            (injectionResult?.skipped?.length ?? 0) > 0 &&
+            (injectionResult?.injected?.length ?? 0) === 0
           ) {
             skippedCount++;
             if (totalFiles <= 10 && item) {
@@ -926,20 +994,23 @@ export async function initCommand(
         }
 
         // Handle failed files
-        const failedArray = (batchResult && typeof batchResult === 'object' && 'failed' in batchResult)
-          ? ((batchResult as unknown as { failed: unknown[] }).failed ?? [])
-          : [];
+        const failedArray =
+          batchResult &&
+          typeof batchResult === "object" &&
+          "failed" in batchResult
+            ? ((batchResult as unknown as { failed: unknown[] }).failed ?? [])
+            : [];
 
         for (const failed of failedArray) {
-          if (!failed || typeof failed !== 'object') continue;
-          const failedObj = failed as unknown as { item?: string; error?: string };
-          const item = failedObj.item ?? 'unknown file';
-          const error = failedObj.error ?? 'Unknown error';
+          if (!failed || typeof failed !== "object") continue;
+          const failedObj = failed as unknown as {
+            item?: string;
+            error?: string;
+          };
+          const item = failedObj.item ?? "unknown file";
+          const error = failedObj.error ?? "Unknown error";
           const errorCode = detectErrorCode(new Error(error));
-          const warningMessage = formatError(
-            errorCode,
-            `${item}: ${error}`,
-          );
+          const warningMessage = formatError(errorCode, `${item}: ${error}`);
           result.warnings.push(warningMessage);
           if (totalFiles <= 10) {
             console.log(chalk.yellow(`⚠ ${warningMessage}`));
@@ -947,9 +1018,13 @@ export async function initCommand(
         }
 
         result.htmlFilesInjected = injectedCount;
-        const errorCount = (batchResult && typeof batchResult === 'object' && 'totalFailed' in batchResult)
-          ? ((batchResult as unknown as { totalFailed?: number }).totalFailed ?? 0)
-          : 0;
+        const errorCount =
+          batchResult &&
+          typeof batchResult === "object" &&
+          "totalFailed" in batchResult
+            ? ((batchResult as unknown as { totalFailed?: number })
+                .totalFailed ?? 0)
+            : 0;
         const fileTypeLabel = htmlFilesToProcess.some(
           (f) =>
             f.endsWith(".twig") ||
