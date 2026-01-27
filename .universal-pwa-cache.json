@@ -1,0 +1,45 @@
+{
+  "version": "1.0.0",
+  "entries": {
+    "83394e8676e10071b2b654c6548c6985": {
+      "result": {
+        "framework": {
+          "framework": null,
+          "confidence": "low",
+          "confidenceScore": 0,
+          "indicators": [
+            "TypeScript detected"
+          ],
+          "version": null,
+          "configuration": {
+            "language": "typescript",
+            "cssInJs": [],
+            "stateManagement": [],
+            "buildTool": null
+          }
+        },
+        "assets": {
+          "javascript": [],
+          "css": [],
+          "images": [],
+          "fonts": [],
+          "apiRoutes": []
+        },
+        "architecture": {
+          "architecture": "static",
+          "buildTool": null,
+          "confidence": "low",
+          "indicators": []
+        },
+        "timestamp": "2026-01-27T19:40:35.903Z",
+        "projectPath": "/Users/julien/Desktop/UniversalPWA"
+      },
+      "timestamp": "2026-01-27T19:40:35.908Z",
+      "fileHashes": {
+        "package.json": "4b184fbc372daea02a50e7ff86ffbf83",
+        "pnpm-lock.yaml": "287523b21f622684ad76ca97f46b5f6f"
+      },
+      "ttl": 86400
+    }
+  }
+}
