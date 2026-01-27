@@ -8,11 +8,6 @@ import {
   type Environment,
 } from "./utils/environment-detector.js";
 import { generateSuggestions } from "./utils/suggestions.js";
-import {
-  displaySection,
-  displayInstallButtonPreview,
-  displayConfigurationSummary,
-} from "./utils/ui-utils.js";
 
 export interface PromptAnswers {
   environment: Environment;
@@ -253,7 +248,10 @@ export async function promptInitOptions(
   }
 
   // Set default for installButton if not provided (for backward compatibility with tests)
-  const installButton = (configAnswers as any).installButton ?? true;
+  const installButton =
+    ((configAnswers as Record<string, unknown>).installButton as
+      | boolean
+      | undefined) ?? true;
 
   return {
     ...environmentAnswer,
