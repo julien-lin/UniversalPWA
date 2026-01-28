@@ -7,6 +7,27 @@ et ce projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+### Added
+
+- **CLI + Core**: [P1.1] Support du déploiement sous sous-chemin (`--base-path`)
+  - **Feature**: Option CLI `--base-path <path>` pour configurer le chemin de déploiement
+  - **Impact**: Manifest link et Service Worker automatiquement scoped au chemin spécifié
+  - **Examples**:
+    - `init --base-path /app/` → manifest.json at `/app/manifest.json`
+    - `init --base-path /api/pwa/` → service worker registered in `/api/pwa/` scope
+  - **Files Modified**:
+    - `packages/cli/src/commands/init.ts`: Ajout de l'option `--base-path` + validation
+    - `packages/core/src/injector/meta-injector.ts`: Propagation basePath dans manifest link et SW registration
+  - **Tests**: 42 nouveaux tests couvrant tous les scénarios basePath
+    - T1.1.1: CLI option validation (25 tests)
+    - T1.1.2-1.1.4: Integration tests (17 tests)
+  - **Use Cases**:
+    - Reverse proxy avec prefix: `/app/`, `/creativehub/`, `/api/v1/pwa/`
+    - Shared hosting: Multiple PWAs sur le même domaine
+    - Framework-based: Symfony sous-chemin, Next.js basePath, etc.
+  - **Status**: Production-ready ✅
+  - **Documentation**: Voir `packages/cli/README.md` section "Deployment Under a Subpath"
+
 ### Fixed
 
 - **Core + CLI**: [P0 CRITICAL] Correction + Sécurisation du contexte `this` sur backend integrations

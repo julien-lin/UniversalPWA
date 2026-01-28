@@ -12,6 +12,7 @@ npx @julien-lin/universal-pwa-cli init
 ```
 
 Cette commande va :
+
 - Vous guider à travers une configuration interactive
 - Générer tous les assets PWA (icônes, manifest, service worker)
 - Injecter les meta tags dans vos fichiers HTML
@@ -65,6 +66,7 @@ universal-pwa init
 ```
 
 Le CLI vous guidera à travers :
+
 - Nom de l'application (détecté automatiquement depuis `package.json`)
 - Nom court (max 12 caractères)
 - Chemin vers l'image source (détecté automatiquement dans les emplacements courants)
@@ -89,6 +91,7 @@ universal-pwa init [options]
 - `--skip-service-worker` : Ignorer la génération du service worker
 - `--skip-injection` : Ignorer l'injection des meta-tags
 - `-o, --output-dir <dir>` : Répertoire de sortie (détecte automatiquement `dist/` pour React/Vite, sinon `public/`)
+- `--base-path <path>` : Chemin de base pour le déploiement (ex: `/app/`, `/api/pwa/`)
 
 **Exemples :**
 
@@ -103,7 +106,81 @@ universal-pwa init \
   --short-name "MonApp" \
   --icon-source ./logo.png \
   --theme-color "#2c3e50"
+
+# Pour un déploiement sous un sous-chemin
+universal-pwa init \
+  --name "CreativeHub" \
+  --output-dir public \
+  --base-path "/creativehub/"
+
+# Pour une PWA basée sur une API
+universal-pwa init \
+  --name "PWA API" \
+  --output-dir dist \
+  --base-path "/api/pwa/"
 ```
+
+### Déploiement Sous un Sous-chemin
+
+Si votre PWA est déployée sous un sous-chemin (ex: derrière un reverse proxy ou sur un domaine partagé), utilisez l'option `--base-path` pour assurer que toutes les ressources sont correctement scoped.
+
+#### Quand Utiliser `--base-path`
+
+- **Reverse Proxy/Load Balancer**: App servie à `/app/` au lieu de `/`
+- **Plusieurs PWA sur le Même Domaine**: Chaque PWA a son propre chemin
+- **Hébergement Partagé**: PWA dans un sous-répertoire comme `/pwa/` ou `/myapp/`
+- **PWA Montée sur une API**: Servie depuis `/api/v1/pwa/`
+
+#### Comment Ça Fonctionne
+
+Quand vous spécifiez `--base-path /app/`:
+
+- Le lien manifest devient: `<link rel="manifest" href="/app/manifest.json">`
+- Le Service Worker est enregistré à: `/app/sw.js`
+- Toutes les ressources sont scoped au chemin `/app/`
+
+Cela garantit:
+
+- ✅ Le manifest est trouvé au bon chemin
+- ✅ Le Service Worker fonctionne dans le bon scope
+- ✅ Pas de conflits avec d'autres apps sur le même domaine
+
+#### Exemples
+
+**Projet Symfony** - Déployé sous le chemin `/creative-hub/`:
+
+```bash
+npm run build
+universal-pwa init \
+  --name "Creative Hub" \
+  --output-dir public \
+  --base-path "/creative-hub/"
+```
+
+**Next.js avec Chemin Personnalisé**:
+
+```bash
+pnpm build
+universal-pwa init \
+  --output-dir .next \
+  --base-path "/dashboard/"
+```
+
+**Site Statique sur Hébergement Partagé** - Déployé à `example.com/apps/myapp/`:
+
+```bash
+universal-pwa init \
+  --name "Mon App" \
+  --output-dir dist \
+  --base-path "/apps/myapp/"
+```
+
+**Notes Importantes:**
+
+- Le chemin de base doit commencer par `/` et idéalement finir par `/`
+- Le chemin de base est utilisé pour le manifest et l'enregistrement du service worker
+- Assurez-vous que votre serveur web est configuré pour servir les fichiers PWA depuis le chemin spécifié
+- Testez que `https://votredomaine/basePath/manifest.json` est accessible
 
 ### Bouton d'Installation PWA
 
@@ -120,58 +197,54 @@ Le CLI injecte automatiquement un gestionnaire d'installation PWA dans votre HTM
 ```javascript
 // Vérifier si installable et afficher un bouton
 if (window.isPWAInstallable && window.isPWAInstallable()) {
-  const installButton = document.createElement('button')
-  installButton.textContent = 'Installer l\'app'
+  const installButton = document.createElement("button");
+  installButton.textContent = "Installer l'app";
   installButton.onclick = () => {
-    window.installPWA().catch(console.error)
-  }
-  document.body.appendChild(installButton)
+    window.installPWA().catch(console.error);
+  };
+  document.body.appendChild(installButton);
 }
 ```
 
 #### Exemple React
 
 ```tsx
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from "react";
 
 function InstallButton() {
-  const [isInstallable, setIsInstallable] = useState(false)
-  const [isInstalled, setIsInstalled] = useState(false)
+  const [isInstallable, setIsInstallable] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
     // Vérifier l'état initial
     if (window.isPWAInstalled) {
-      setIsInstalled(window.isPWAInstalled())
+      setIsInstalled(window.isPWAInstalled());
     }
     if (window.isPWAInstallable) {
-      setIsInstallable(window.isPWAInstallable())
+      setIsInstallable(window.isPWAInstallable());
     }
 
     // Écouter les événements personnalisés
-    const handleInstallable = () => setIsInstallable(true)
+    const handleInstallable = () => setIsInstallable(true);
     const handleInstalled = () => {
-      setIsInstalled(true)
-      setIsInstallable(false)
-    }
+      setIsInstalled(true);
+      setIsInstallable(false);
+    };
 
-    window.addEventListener('pwa-installable', handleInstallable)
-    window.addEventListener('pwa-installed', handleInstalled)
+    window.addEventListener("pwa-installable", handleInstallable);
+    window.addEventListener("pwa-installed", handleInstalled);
 
     return () => {
-      window.removeEventListener('pwa-installable', handleInstallable)
-      window.removeEventListener('pwa-installed', handleInstalled)
-    }
-  }, [])
+      window.removeEventListener("pwa-installable", handleInstallable);
+      window.removeEventListener("pwa-installed", handleInstalled);
+    };
+  }, []);
 
   if (isInstalled || !isInstallable) {
-    return null
+    return null;
   }
 
-  return (
-    <button onClick={() => window.installPWA?.()}>
-      Installer l'app
-    </button>
-  )
+  return <button onClick={() => window.installPWA?.()}>Installer l'app</button>;
 }
 ```
 
@@ -202,6 +275,7 @@ universal-pwa scan
 ```
 
 Affiche :
+
 - Framework détecté (React, Vue, WordPress, etc.)
 - Architecture (SPA, SSR, statique)
 - Outil de build
@@ -245,13 +319,13 @@ Les meta tags sont automatiquement injectés dans vos fichiers HTML.
 Vous pouvez également utiliser le CLI comme module :
 
 ```typescript
-import { initCommand } from '@julien-lin/universal-pwa-cli'
+import { initCommand } from "@julien-lin/universal-pwa-cli";
 
 const result = await initCommand({
-  projectPath: './my-project',
-  name: 'My App',
-  iconSource: './icon.png',
-})
+  projectPath: "./my-project",
+  name: "My App",
+  iconSource: "./icon.png",
+});
 ```
 
 ## 💝 Sponsoring
@@ -283,4 +357,3 @@ pnpm lint
 - **Releases** : [https://github.com/julien-lin/UniversalPWA/releases](https://github.com/julien-lin/UniversalPWA/releases)
 - **Sponsor** : [https://github.com/sponsors/julien-lin](https://github.com/sponsors/julien-lin)
 - **Package npm** : [https://www.npmjs.com/package/@julien-lin/universal-pwa-cli](https://www.npmjs.com/package/@julien-lin/universal-pwa-cli)
-

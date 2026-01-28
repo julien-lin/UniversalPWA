@@ -22,6 +22,7 @@ import type { Element } from "domhandler";
 
 export interface MetaInjectorOptions {
   manifestPath?: string;
+  basePath?: string; // Base path for manifest and SW registration (e.g., /app/, /creativehub/)
   themeColor?: string;
   backgroundColor?: string;
   appleTouchIcon?: string;
@@ -84,9 +85,24 @@ export function injectMetaTags(
 
   // Inject manifest link
   if (options.manifestPath) {
-    const manifestHref = options.manifestPath.startsWith("/")
+    // Build manifest path with basePath prefix
+    let manifestHref = options.manifestPath.startsWith("/")
       ? options.manifestPath
       : `/${options.manifestPath}`;
+
+    // Prepend basePath if provided
+    if (options.basePath && options.basePath !== "/") {
+      // basePath is already normalized (e.g., "/app/")
+      // Remove trailing slash from basePath and leading slash from manifestHref if needed
+      const basePathTrimmed = options.basePath.endsWith("/")
+        ? options.basePath.slice(0, -1)
+        : options.basePath;
+      const manifestHrefTrimmed = manifestHref.startsWith("/")
+        ? manifestHref.slice(1)
+        : manifestHref;
+      manifestHref = `${basePathTrimmed}/${manifestHrefTrimmed}`;
+    }
+
     if (!elementExists(parsed, "link", { name: "rel", value: "manifest" })) {
       injectLinkTag(head, "manifest", manifestHref);
       result.injected.push(`<link rel="manifest" href="${manifestHref}">`);
@@ -285,9 +301,21 @@ export function injectMetaTags(
 
   // Inject service worker registration and PWA install handler (in body or before </body>)
   if (options.serviceWorkerPath) {
-    const swPath = options.serviceWorkerPath.startsWith("/")
+    // Build SW path with basePath prefix
+    let swPath = options.serviceWorkerPath.startsWith("/")
       ? options.serviceWorkerPath
       : `/${options.serviceWorkerPath}`;
+
+    // Prepend basePath if provided
+    if (options.basePath && options.basePath !== "/") {
+      // basePath is already normalized (e.g., "/app/")
+      const basePathTrimmed = options.basePath.endsWith("/")
+        ? options.basePath.slice(0, -1)
+        : options.basePath;
+      const swPathTrimmed = swPath.startsWith("/") ? swPath.slice(1) : swPath;
+      swPath = `${basePathTrimmed}/${swPathTrimmed}`;
+    }
+
     if (!htmlContent.includes("navigator.serviceWorker")) {
       // Escape path to prevent XSS injection
       const escapedSwPath = escapeJavaScriptString(swPath);

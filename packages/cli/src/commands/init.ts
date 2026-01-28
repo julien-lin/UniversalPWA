@@ -44,6 +44,7 @@ export interface InitOptions {
   skipServiceWorker?: boolean;
   skipInjection?: boolean;
   outputDir?: string;
+  basePath?: string; // Base path for PWA (e.g., /app/, /creativehub/). Default: /
   forceScan?: boolean;
   noCache?: boolean;
   maxHtmlFiles?: number; // Optionnel : limite le nombre de fichiers HTML traités (par défaut: illimité)
@@ -81,6 +82,49 @@ type OptimizationResultShape = {
     suggestion: string;
   }>;
 };
+
+/**
+ * Normalizes basePath to ensure consistent format:
+ * - "/" stays "/"
+ * - Any other path becomes "/xxx/" (with trailing slash)
+ * @throws Error if basePath is invalid
+ */
+function normalizeBasePath(basePath: string): string {
+  if (!basePath || basePath.trim().length === 0) {
+    throw new Error("basePath cannot be empty");
+  }
+
+  basePath = basePath.trim();
+
+  // Reject invalid patterns
+  if (basePath.includes("http://") || basePath.includes("https://")) {
+    throw new Error("basePath cannot be a full URL (http://, https://)");
+  }
+  if (basePath.includes("..")) {
+    throw new Error("basePath cannot contain parent directory references (..)");
+  }
+  if (basePath.includes("//")) {
+    throw new Error("basePath cannot contain double slashes (//)");
+  }
+
+  // If it's just "/", return as-is
+  if (basePath === "/") {
+    return "/";
+  }
+
+  // Ensure it starts with "/"
+  if (!basePath.startsWith("/")) {
+    throw new Error("basePath must start with /");
+  }
+
+  // Remove trailing slash if present, then add it back
+  let normalized = basePath.endsWith("/") ? basePath.slice(0, -1) : basePath;
+
+  // Ensure trailing slash for non-root paths
+  normalized = normalized + "/";
+
+  return normalized;
+}
 
 /**
  * Normalizes a path securely by converting it to a relative path
@@ -132,6 +176,7 @@ export async function initCommand(
     skipServiceWorker = false,
     skipInjection = false,
     outputDir,
+    basePath: rawBasePath,
     maxHtmlFiles,
   } = mergedOptions;
 
@@ -145,6 +190,20 @@ export async function initCommand(
     warnings: [],
     errors: [],
   };
+
+  // Normalize and validate basePath
+  let finalBasePath: string;
+  try {
+    finalBasePath = normalizeBasePath(rawBasePath || "/");
+    if (rawBasePath && rawBasePath !== "/") {
+      console.log(chalk.gray(`  Base path: ${finalBasePath}`));
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    result.errors.push(`Invalid basePath: ${errorMessage}`);
+    console.log(chalk.red(`✗ Invalid basePath: ${errorMessage}`));
+    return result;
+  }
 
   // Initialize transaction for rollback support
   let transaction: Transaction | null = null;
@@ -404,8 +463,8 @@ export async function initCommand(
         const manifestWithIconsOptions = {
           name: appName,
           shortName: finalShortName,
-          startUrl: "/",
-          scope: "/",
+          startUrl: finalBasePath,
+          scope: finalBasePath,
           display: "standalone" as const,
           themeColor: themeColor ?? "#ffffff",
           backgroundColor: backgroundColor ?? "#000000",
@@ -451,8 +510,8 @@ export async function initCommand(
         const manifestMinimalOptions = {
           name: appName,
           shortName: finalShortName,
-          startUrl: "/",
-          scope: "/",
+          startUrl: finalBasePath,
+          scope: finalBasePath,
           display: "standalone" as const,
           themeColor: themeColor ?? "#ffffff",
           backgroundColor: backgroundColor ?? "#000000",
@@ -880,6 +939,7 @@ export async function initCommand(
               htmlFile,
               "/manifest.json",
             ),
+            basePath: finalBasePath, // Propagate basePath to HTML injection
             themeColor: themeColor ?? "#ffffff",
             backgroundColor: backgroundColor ?? "#000000",
             appleTouchIcon: appleTouchIconExists
