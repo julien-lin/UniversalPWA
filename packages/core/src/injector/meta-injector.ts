@@ -10,12 +10,12 @@ export function escapeHtml(str: string): string {
     .replace(/'/g, "&#39;")
     .replace(/`/g, "&#96;");
 }
+import { parseHTML, parseHTMLFile } from "./html-parser.js";
 import {
-  parseHTML,
-  parseHTMLFile,
-  findElement,
-  elementExists,
-} from "./html-parser.js";
+  findElementByMarker,
+  injectLinkTagWithMarker,
+  injectMetaTagWithMarker,
+} from "./meta-injector-marker.js";
 import { writeFileSync } from "fs";
 import { render } from "dom-serializer";
 import type { Element } from "domhandler";
@@ -83,7 +83,7 @@ export function injectMetaTags(
     }
   }
 
-  // Inject manifest link
+  // Inject manifest link (with marker to prevent duplication)
   if (options.manifestPath) {
     // Build manifest path with basePath prefix
     let manifestHref = options.manifestPath.startsWith("/")
@@ -103,21 +103,30 @@ export function injectMetaTags(
       manifestHref = `${basePathTrimmed}/${manifestHrefTrimmed}`;
     }
 
-    if (!elementExists(parsed, "link", { name: "rel", value: "manifest" })) {
-      injectLinkTag(head, "manifest", manifestHref);
-      result.injected.push(`<link rel="manifest" href="${manifestHref}">`);
+    // Check for existing manifest marker (more reliable than checking link rel="manifest")
+    const existingManifestMarker = findElementByMarker(
+      parsed,
+      "link",
+      "manifest",
+    );
+    if (!existingManifestMarker) {
+      injectLinkTagWithMarker(head, "manifest", manifestHref, "manifest");
+      result.injected.push(
+        `<link rel="manifest" href="${manifestHref}" data-universal-pwa="manifest">`,
+      );
     } else {
       result.skipped.push("manifest link (already exists)");
     }
   }
 
-  // Inject theme-color
+  // Inject theme-color (with marker to prevent duplication)
   if (options.themeColor) {
-    // Find existing theme-color meta tag by name attribute
-    const existingThemeColor = findElement(parsed, "meta", {
-      name: "name",
-      value: "theme-color",
-    });
+    // Find existing theme-color meta tag by marker attribute
+    const existingThemeColor = findElementByMarker(
+      parsed,
+      "meta",
+      "theme-color",
+    );
     if (existingThemeColor) {
       // Update existing value
       updateMetaContent(existingThemeColor, options.themeColor);
@@ -126,36 +135,53 @@ export function injectMetaTags(
       );
     } else {
       // No existing theme-color meta tag, inject new one
-      injectMetaTag(head, "theme-color", options.themeColor);
+      injectMetaTagWithMarker(
+        head,
+        "theme-color",
+        options.themeColor,
+        "theme-color",
+      );
       result.injected.push(
-        `<meta name="theme-color" content="${options.themeColor}">`,
+        `<meta name="theme-color" content="${options.themeColor}" data-universal-pwa="theme-color">`,
       );
     }
   }
 
-  // Injecter apple-touch-icon
+  // Injecter apple-touch-icon (with marker to prevent duplication)
   if (options.appleTouchIcon) {
     const iconHref = options.appleTouchIcon.startsWith("/")
       ? options.appleTouchIcon
       : `/${options.appleTouchIcon}`;
-    if (
-      !elementExists(parsed, "link", { name: "rel", value: "apple-touch-icon" })
-    ) {
-      injectLinkTag(head, "apple-touch-icon", iconHref);
-      result.injected.push(`<link rel="apple-touch-icon" href="${iconHref}">`);
+    // Check for existing apple-touch-icon marker
+    const existingIconMarker = findElementByMarker(
+      parsed,
+      "link",
+      "apple-touch-icon",
+    );
+    if (!existingIconMarker) {
+      injectLinkTagWithMarker(
+        head,
+        "apple-touch-icon",
+        iconHref,
+        "apple-touch-icon",
+      );
+      result.injected.push(
+        `<link rel="apple-touch-icon" href="${iconHref}" data-universal-pwa="apple-touch-icon">`,
+      );
     } else {
       result.skipped.push("apple-touch-icon (already exists)");
     }
   }
 
-  // Inject apple-mobile-web-app-capable (iOS PWA support)
+  // Inject apple-mobile-web-app-capable (iOS PWA support) (with marker to prevent duplication)
   // IMPORTANT: Never remove this tag - iOS needs it for standalone mode
   {
-    // First, check if apple-mobile-web-app-capable already exists
-    const existingAppleMeta = findElement(parsed, "meta", {
-      name: "name",
-      value: "apple-mobile-web-app-capable",
-    });
+    // First, check if apple-mobile-web-app-capable already exists (by marker)
+    const existingAppleMeta = findElementByMarker(
+      parsed,
+      "meta",
+      "apple-mobile-web-app-capable",
+    );
 
     if (existingAppleMeta) {
       // Tag exists - preserve it
@@ -165,22 +191,28 @@ export function injectMetaTags(
       );
     } else {
       // Tag doesn't exist - inject it
-      injectMetaTag(head, "apple-mobile-web-app-capable", "yes");
+      injectMetaTagWithMarker(
+        head,
+        "apple-mobile-web-app-capable",
+        "yes",
+        "apple-mobile-web-app-capable",
+      );
       result.injected.push(
-        '<meta name="apple-mobile-web-app-capable" content="yes">',
+        '<meta name="apple-mobile-web-app-capable" content="yes" data-universal-pwa="apple-mobile-web-app-capable">',
       );
     }
   }
 
-  // Optionally inject mobile-web-app-capable for Android (complementary, doesn't remove apple tag)
+  // Optionally inject mobile-web-app-capable for Android (complementary, doesn't remove apple tag) (with marker to prevent duplication)
   if (options.appleMobileWebAppCapable !== undefined) {
     const content = options.appleMobileWebAppCapable ? "yes" : "no";
 
-    // Find existing mobile-web-app-capable meta tag
-    const existingMeta = findElement(parsed, "meta", {
-      name: "name",
-      value: "mobile-web-app-capable",
-    });
+    // Find existing mobile-web-app-capable meta tag by marker
+    const existingMeta = findElementByMarker(
+      parsed,
+      "meta",
+      "mobile-web-app-capable",
+    );
     if (existingMeta) {
       // Check if content matches
       const existingContent = existingMeta.attribs?.content;
@@ -195,20 +227,26 @@ export function injectMetaTags(
       }
     } else {
       // No existing meta tag, inject new one
-      injectMetaTag(head, "mobile-web-app-capable", content);
+      injectMetaTagWithMarker(
+        head,
+        "mobile-web-app-capable",
+        content,
+        "mobile-web-app-capable",
+      );
       result.injected.push(
-        `<meta name="mobile-web-app-capable" content="${content}">`,
+        `<meta name="mobile-web-app-capable" content="${content}" data-universal-pwa="mobile-web-app-capable">`,
       );
     }
   }
 
-  // Injecter apple-mobile-web-app-status-bar-style
+  // Injecter apple-mobile-web-app-status-bar-style (with marker to prevent duplication)
   if (options.appleMobileWebAppStatusBarStyle) {
-    // Find existing meta tag by name attribute
-    const existingMeta = findElement(parsed, "meta", {
-      name: "name",
-      value: "apple-mobile-web-app-status-bar-style",
-    });
+    // Find existing meta tag by marker attribute
+    const existingMeta = findElementByMarker(
+      parsed,
+      "meta",
+      "apple-mobile-web-app-status-bar-style",
+    );
     if (existingMeta) {
       // Check if content matches
       const existingContent = existingMeta.attribs?.content;
@@ -228,24 +266,26 @@ export function injectMetaTags(
       }
     } else {
       // No existing meta tag, inject new one
-      injectMetaTag(
+      injectMetaTagWithMarker(
         head,
         "apple-mobile-web-app-status-bar-style",
         options.appleMobileWebAppStatusBarStyle,
+        "apple-mobile-web-app-status-bar-style",
       );
       result.injected.push(
-        `<meta name="apple-mobile-web-app-status-bar-style" content="${options.appleMobileWebAppStatusBarStyle}">`,
+        `<meta name="apple-mobile-web-app-status-bar-style" content="${options.appleMobileWebAppStatusBarStyle}" data-universal-pwa="apple-mobile-web-app-status-bar-style">`,
       );
     }
   }
 
-  // Injecter apple-mobile-web-app-title
+  // Injecter apple-mobile-web-app-title (with marker to prevent duplication)
   if (options.appleMobileWebAppTitle) {
-    // Find existing meta tag by name attribute
-    const existingMeta = findElement(parsed, "meta", {
-      name: "name",
-      value: "apple-mobile-web-app-title",
-    });
+    // Find existing meta tag by marker attribute
+    const existingMeta = findElementByMarker(
+      parsed,
+      "meta",
+      "apple-mobile-web-app-title",
+    );
     if (existingMeta) {
       // Check if content matches
       const existingContent = existingMeta.attribs?.content;
@@ -260,13 +300,14 @@ export function injectMetaTags(
       }
     } else {
       // No existing meta tag, inject new one
-      injectMetaTag(
+      injectMetaTagWithMarker(
         head,
         "apple-mobile-web-app-title",
         options.appleMobileWebAppTitle,
+        "apple-mobile-web-app-title",
       );
       result.injected.push(
-        `<meta name="apple-mobile-web-app-title" content="${options.appleMobileWebAppTitle}">`,
+        `<meta name="apple-mobile-web-app-title" content="${options.appleMobileWebAppTitle}" data-universal-pwa="apple-mobile-web-app-title">`,
       );
     }
   }
@@ -304,7 +345,7 @@ export function injectMetaTags(
   // Reconstruct HTML with dom-serializer AFTER all injections
   let modifiedHtml = render(parsed.document, { decodeEntities: false });
 
-  // Inject service worker registration and PWA install handler (in body or before </body>)
+  // Inject service worker registration and PWA install handler (in body or before </body>) (with marker to prevent duplication)
   if (options.serviceWorkerPath) {
     // Build SW path with basePath prefix
     let swPath = options.serviceWorkerPath.startsWith("/")
@@ -321,12 +362,16 @@ export function injectMetaTags(
       swPath = `${basePathTrimmed}/${swPathTrimmed}`;
     }
 
-    if (!htmlContent.includes("navigator.serviceWorker")) {
+    // Check for existing SW marker (more robust than includes())
+    const swMarkerPresent = modifiedHtml.includes(
+      'data-universal-pwa="service-worker"',
+    );
+    if (!swMarkerPresent) {
       // Escape path to prevent XSS injection
       const escapedSwPath = escapeJavaScriptString(swPath);
 
       // Inject service worker registration and PWA install handler script
-      const swScript = `\n<script>
+      const swScript = `\n<script data-universal-pwa="service-worker">
 // Service Worker Registration
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -436,12 +481,12 @@ window.isPWAInstallable = function() {
       result.injected.push("Service Worker registration script");
       result.injected.push("PWA install handler script");
     } else {
-      // Service worker exists, but check if install handler exists
-      if (
-        !htmlContent.includes("beforeinstallprompt") &&
-        !htmlContent.includes("window.installPWA")
-      ) {
-        const installScript = `\n<script>
+      // Service worker exists, check if install handler marker exists
+      const installMarkerPresent = modifiedHtml.includes(
+        'data-universal-pwa="pwa-install"',
+      );
+      if (!installMarkerPresent) {
+        const installScript = `\n<script data-universal-pwa="pwa-install">
 // PWA Install Handler
 let deferredPrompt = null;
 let isInstalled = false;
@@ -531,58 +576,9 @@ window.isPWAInstallable = function() {
   return { html: modifiedHtml, result };
 }
 
-/**
- * Injects a link tag into the head
- */
-function injectLinkTag(head: Element, rel: string, href: string): void {
-  const linkElement = {
-    type: "tag",
-    name: "link",
-    tagName: "link",
-    attribs: {
-      rel,
-      href,
-    },
-    children: [],
-    parent: head,
-    next: null,
-    prev: null,
-  } as unknown as Element;
-
-  if (!head.children) {
-    head.children = [];
-  }
-  head.children.push(linkElement);
-}
-
-/**
- * Injects a meta tag into the head
- */
-function injectMetaTag(head: Element, name: string, content: string): void {
-  const metaElement = {
-    type: "tag",
-    name: "meta",
-    tagName: "meta",
-    attribs: {
-      name,
-      content,
-    },
-    children: [],
-    parent: head,
-    next: null,
-    prev: null,
-  } as unknown as Element;
-
-  if (!head.children) {
-    head.children = [];
-  }
-  head.children.push(metaElement);
-  if (head.children.length > 4096) {
-    throw new Error(
-      "La taille totale des meta-tags injectés dépasse la limite de 4KB.",
-    );
-  }
-}
+// Note: injectLinkTag and injectMetaTag functions have been replaced with
+// injectLinkTagWithMarker and injectMetaTagWithMarker in meta-injector-marker.ts
+// to support marker-based anti-duplication (P2.2)
 
 /**
  * Updates the content of an existing meta tag
