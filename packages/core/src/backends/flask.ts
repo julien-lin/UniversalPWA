@@ -225,9 +225,11 @@ export class FlaskIntegration extends BaseBackendIntegration {
   }
 
   /**
-   * Detect if project is a Flask application
+   * Arrow function to ensure `this` context is always bound.
+   * This prevents issues when the method is extracted or passed as a callback.
+   * @see https://github.com/julien-lin/UniversalPWA/issues (P0: context binding)
    */
-  detect(): BackendDetectionResult {
+  detect = (): BackendDetectionResult => {
     const projectRoot = this.config.projectRoot;
     const indicators: string[] = [];
     let confidence: "high" | "medium" | "low" = "low";
@@ -270,7 +272,7 @@ export class FlaskIntegration extends BaseBackendIntegration {
       indicators,
       versions: version ? [version] : undefined,
     };
-  }
+  };
 
   /**
    * Generate Flask-optimized Service Worker configuration
