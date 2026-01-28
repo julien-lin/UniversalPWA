@@ -1249,7 +1249,7 @@ Base path: /
 ### V4: Manifest `id` Field Scoping
 
 - **Status:** ✅ IMPLEMENTED & VERIFIED: manifest.id now includes basePath hash
-- **Implementation:** 
+- **Implementation:**
   - New `generateManifestId(appName, basePath)` function in manifest-id-generator.ts
   - Auto-generates unique IDs: "app-name" for root, "app-name-hash" for sub-paths
   - Integrated in init.ts to auto-generate ID for all manifests
@@ -1259,9 +1259,22 @@ Base path: /
 
 ### V5: Auto-Detection False Positive Tests
 
-- **Status:** 🟡 MISSING: No tests for basePath in comments/strings
-- **Action:** Add 3+ test cases (basePath in comment, multi-line string, etc.)
-- **Blocker:** Stability - regex parsing can have false positives
+- **Status:** ✅ IMPLEMENTED & VERIFIED: 7 comprehensive false positive test cases added
+- **Implementation:**
+  - Tests document known limitations of regex-based detection
+  - Demonstrate first-match behavior (finds first `base:` pattern)
+  - Show impact of comments and string literals on detection
+  - Provide best-practice recommendations (avoid commented config, place real config first)
+  - 7 new test cases covering:
+    1. Comments-only basePath (correctly not detected)
+    2. String literals in documentation
+    3. Example code in template strings
+    4. Commented-out configuration blocks
+    5. Multiple config variables in same file
+    6. Best practice: real config at top of file
+    7. Recommendation: avoid commented config blocks
+- **Tests:** 7 new tests added to base-path-detector.test.ts
+- **Quality:** Documents limitations transparently to users
 
 ---
 
@@ -1272,17 +1285,16 @@ Base path: /
 ✅ V2: /offline.html FIXED in ServiceWorkerConfigBuilder.createDefault()
 ✅ V3: Confidence threshold UX fixed (0.85 enforced correctly)
 ✅ V4: Manifest id IMPLEMENTED with basePath scoping (41 tests passing)
-⏳ V5: False positive tests NOT YET ADDED (need 3+ test cases)
+✅ V5: False positive tests IMPLEMENTED (7 tests documenting limitations)
 ```
 
-**Progress: 3/5 completed (60%)**
+**Progress: 4/5 completed (80%)**
 
-**Estimated time for remaining 2: ~1-1.5 hours**
+**Estimated time for remaining 1: ~30 minutes**
 
 **Next steps in order:**
 
-1. V1: GitHub branch protection (30m, manual, not started)
-2. V5: Add false positive test cases for base-path-detector (30m, not started)
+1. V1: GitHub branch protection (30m, manual, final step)
 
 **Once all 5 validated:** Status = 🟢 **PRODUCTION-READY UNIVERSAL CERTIFIED**
 
