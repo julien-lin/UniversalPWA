@@ -540,10 +540,9 @@ export async function initCommand(
             typeof backendIntegration === "object" &&
             "detect" in backendIntegration
           ) {
-            const detect = (
+            const detectionResult = (
               backendIntegration as unknown as { detect: () => unknown }
-            ).detect;
-            const detectionResult = detect();
+            ).detect();
             if (detectionResult && typeof detectionResult === "object") {
               const detected =
                 (detectionResult as unknown as { detected?: boolean })
@@ -566,9 +565,9 @@ export async function initCommand(
           "name" in backendIntegration
         ) {
           // Use backend-optimized service worker generation
-          const detect = (backendIntegration as { detect: () => unknown })
-            .detect;
-          const detectionResult = detect();
+          const detectionResult = (
+            backendIntegration as { detect: () => unknown }
+          ).detect();
           const name =
             (backendIntegration as { name?: string }).name ?? "Backend";
           const confidence =

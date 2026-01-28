@@ -1,14 +1,12 @@
 name: CI - Engineering Rules Validation
 
-# Désactivé temporairement - sera réactivé plus tard
-# on:
-#   push:
-#     branches: [main, develop]
-#   pull_request:
-#     branches: [main, develop]
-
-# Workflow désactivé - ne s'exécute que manuellement via workflow_dispatch
+# ✅ ACTIVÉ: Exécute sur push et PR
+# 📅 Date: 28 janvier 2026 - P0.2 fix
 on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
   workflow_dispatch:
 
 jobs:
