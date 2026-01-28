@@ -56,9 +56,9 @@ describe("meta-injector iOS support", () => {
       expect(result).toContain(
         'name="apple-mobile-web-app-capable" content="yes"',
       );
-      // Verify it wasn't removed/replaced
+      // Verify it wasn't removed/replaced - count only the meta tag, not the marker
       const appleTagCount = (
-        result.match(/apple-mobile-web-app-capable/g) || []
+        result.match(/name="apple-mobile-web-app-capable"/g) || []
       ).length;
       expect(appleTagCount).toBe(1);
     });
@@ -98,11 +98,13 @@ describe("meta-injector iOS support", () => {
         manifestPath: "/manifest.json",
       });
 
-      // Count occurrences - should still be exactly 1
-      const count1 = (result1.match(/apple-mobile-web-app-capable/g) || [])
-        .length;
-      const count2 = (result2.match(/apple-mobile-web-app-capable/g) || [])
-        .length;
+      // Count occurrences of the meta tag only (not the marker)
+      const count1 = (
+        result1.match(/name="apple-mobile-web-app-capable"/g) || []
+      ).length;
+      const count2 = (
+        result2.match(/name="apple-mobile-web-app-capable"/g) || []
+      ).length;
 
       expect(count1).toBe(1);
       expect(count2).toBe(1);

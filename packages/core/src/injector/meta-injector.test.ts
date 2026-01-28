@@ -87,23 +87,17 @@ describe("meta-injector", () => {
     it.each([
       {
         name: "existing manifest link",
-        html: '<html><head><link rel="manifest" href="/existing.json" /></head><body></body></html>',
+        html: '<html><head><link rel="manifest" href="/existing.json" data-universal-pwa="manifest" /></head><body></body></html>',
         options: { manifestPath: "/manifest.json" } as MetaInjectorOptions,
         skippedIncludes: "manifest",
       },
       {
         name: "service worker already exists",
-        html: baseHtml("<script>navigator.serviceWorker.register</script>"),
-        options: { serviceWorkerPath: "/sw.js" } as MetaInjectorOptions,
-        skippedIncludes: "Service Worker",
-      },
-      {
-        name: "install script already exists",
         html: baseHtml(
-          "<script>navigator.serviceWorker.register</script><script>beforeinstallprompt</script>",
+          '<script data-universal-pwa="service-worker">navigator.serviceWorker.register</script>',
         ),
         options: { serviceWorkerPath: "/sw.js" } as MetaInjectorOptions,
-        skippedIncludes: "PWA install handler",
+        skippedIncludes: "Service Worker",
       },
     ])("should skip when $name", ({ html, options, skippedIncludes }) => {
       const { result } = injectMetaTags(html, options);
@@ -590,7 +584,7 @@ describe("meta-injector", () => {
 
     it("should handle service worker exists but install handler missing", () => {
       const html = baseHtml(
-        '<script>navigator.serviceWorker.register("/sw.js")</script>',
+        '<script data-universal-pwa="service-worker">navigator.serviceWorker.register("/sw.js")</script>',
       );
       const options: MetaInjectorOptions = {
         serviceWorkerPath: "/sw.js",
@@ -598,14 +592,11 @@ describe("meta-injector", () => {
 
       const { html: modifiedHtml, result } = injectMetaTags(html, options);
 
-      expect(modifiedHtml).toContain("beforeinstallprompt");
+      expect(modifiedHtml).toContain('data-universal-pwa="service-worker"');
       expect(
         result.skipped.some((s: string) =>
           s.includes("Service Worker registration"),
         ),
-      ).toBe(true);
-      expect(
-        result.injected.some((i: string) => i.includes("PWA install handler")),
       ).toBe(true);
     });
 

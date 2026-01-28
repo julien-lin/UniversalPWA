@@ -21,7 +21,7 @@ describe("Meta Injector - BasePath Support (T1.1.3)", () => {
 
       expect(result.html).toContain('href="/manifest.json"');
       expect(result.result.injected).toContain(
-        '<link rel="manifest" href="/manifest.json">',
+        '<link rel="manifest" href="/manifest.json" data-universal-pwa="manifest">',
       );
     });
 
@@ -33,7 +33,7 @@ describe("Meta Injector - BasePath Support (T1.1.3)", () => {
 
       expect(result.html).toContain('href="/app/manifest.json"');
       expect(result.result.injected).toContain(
-        '<link rel="manifest" href="/app/manifest.json">',
+        '<link rel="manifest" href="/app/manifest.json" data-universal-pwa="manifest">',
       );
     });
 
@@ -45,7 +45,7 @@ describe("Meta Injector - BasePath Support (T1.1.3)", () => {
 
       expect(result.html).toContain('href="/app/manifest.json"');
       expect(result.result.injected).toContain(
-        '<link rel="manifest" href="/app/manifest.json">',
+        '<link rel="manifest" href="/app/manifest.json" data-universal-pwa="manifest">',
       );
     });
 
@@ -57,7 +57,7 @@ describe("Meta Injector - BasePath Support (T1.1.3)", () => {
 
       expect(result.html).toContain('href="/api/v1/pwa/manifest.json"');
       expect(result.result.injected).toContain(
-        '<link rel="manifest" href="/api/v1/pwa/manifest.json">',
+        '<link rel="manifest" href="/api/v1/pwa/manifest.json" data-universal-pwa="manifest">',
       );
     });
 

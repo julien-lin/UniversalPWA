@@ -12,6 +12,11 @@ import {
 } from "@julien-lin/universal-pwa-core";
 import { checkProjectHttps } from "@julien-lin/universal-pwa-core";
 import { getBackendFactory } from "@julien-lin/universal-pwa-core";
+import {
+  detectBasePath,
+  getSuggestionMessage,
+  filterByConfidence,
+} from "@julien-lin/universal-pwa-core";
 import chalk from "chalk";
 import { existsSync, mkdirSync } from "fs";
 import { glob } from "glob";
@@ -194,8 +199,38 @@ export async function initCommand(
   // Normalize and validate basePath
   let finalBasePath: string;
   try {
-    finalBasePath = normalizeBasePath(rawBasePath || "/");
-    if (rawBasePath && rawBasePath !== "/") {
+    // If no basePath provided, try auto-detection (best effort)
+    const effectiveBasePath = rawBasePath;
+    if (!effectiveBasePath || effectiveBasePath === "/") {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+      const detected = detectBasePath(result.projectPath);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+      const validDetection = filterByConfidence(detected, 0.85); // High confidence threshold
+
+      if (
+        validDetection &&
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        validDetection.basePath
+      ) {
+        console.log(
+          chalk.cyan(
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            `💡 Suggested basePath: "${validDetection.basePath}" (detected from ${validDetection.method})`,
+          ),
+        );
+        // Note: We don't auto-use it, just suggest
+      } else {
+        // Low confidence or no detection
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+        const suggestion = getSuggestionMessage(detected);
+        if (suggestion) {
+          console.log(chalk.gray(`  ℹ️  ${suggestion}`));
+        }
+      }
+    }
+
+    finalBasePath = normalizeBasePath(effectiveBasePath || "/");
+    if (effectiveBasePath && effectiveBasePath !== "/") {
       console.log(chalk.gray(`  Base path: ${finalBasePath}`));
     }
   } catch (error) {
