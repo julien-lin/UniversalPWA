@@ -398,10 +398,22 @@ describe('ServiceWorkerConfigBuilder', () => {
             expect(config.imageRoutes.length).toBeGreaterThan(0)
         })
 
-        it('should include offline fallback', () => {
+        it('should include offline fallback with default basePath', () => {
             const config = ServiceWorkerConfigBuilder.createDefault('sw.js')
 
             expect(config.offline?.fallbackPage).toBe('/offline.html')
+        })
+
+        it('should include offline fallback with custom basePath', () => {
+            const config = ServiceWorkerConfigBuilder.createDefault('sw.js', '/app/')
+
+            expect(config.offline?.fallbackPage).toBe('/app/offline.html')
+        })
+
+        it('should normalize basePath without trailing slash', () => {
+            const config = ServiceWorkerConfigBuilder.createDefault('sw.js', '/api/v1/pwa')
+
+            expect(config.offline?.fallbackPage).toBe('/api/v1/pwa/offline.html')
         })
 
         it('should have proper priorities', () => {

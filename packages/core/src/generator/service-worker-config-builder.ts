@@ -237,7 +237,10 @@ export class ServiceWorkerConfigBuilder {
     /**
      * Create default config with preset strategies
      */
-    static createDefault(destination: string): ServiceWorkerConfig {
+    static createDefault(destination: string, basePath: string = '/'): ServiceWorkerConfig {
+        // Normalize basePath for offline page URL
+        const normalizedBasePath = basePath.endsWith('/') ? basePath : `${basePath}/`;
+        
         return {
             destination,
             staticRoutes: [
@@ -265,7 +268,7 @@ export class ServiceWorkerConfigBuilder {
                 },
             ],
             offline: {
-                fallbackPage: '/offline.html',
+                fallbackPage: `${normalizedBasePath}offline.html`,
             },
         }
     }
