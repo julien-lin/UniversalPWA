@@ -594,4 +594,4 @@ export default { base: '/new/' }
       // This test documents the issue and recommendation
     });
   });
-})
+});
