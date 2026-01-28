@@ -1,5 +1,8 @@
 import { scanProject, optimizeProject } from "@julien-lin/universal-pwa-core";
-import { generateAndWriteManifest } from "@julien-lin/universal-pwa-core";
+import {
+  generateAndWriteManifest,
+  generateManifestId,
+} from "@julien-lin/universal-pwa-core";
 import { generateIcons } from "@julien-lin/universal-pwa-core";
 import {
   generateServiceWorker,
@@ -12,11 +15,6 @@ import {
 } from "@julien-lin/universal-pwa-core";
 import { checkProjectHttps } from "@julien-lin/universal-pwa-core";
 import { getBackendFactory } from "@julien-lin/universal-pwa-core";
-import {
-  detectBasePath,
-  getSuggestionMessage,
-  filterByConfidence,
-} from "@julien-lin/universal-pwa-core";
 import chalk from "chalk";
 import { existsSync, mkdirSync } from "fs";
 import { glob } from "glob";
@@ -464,6 +462,20 @@ export async function initCommand(
     // Double check: ensure it's a string
     finalShortName = String(finalShortName).trim().substring(0, 12) || "PWA";
 
+    // Generate a unique manifest ID to prevent PWA collisions when
+    // multiple PWAs are deployed on the same domain with different basePaths
+    let manifestId: string;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+      manifestId = generateManifestId(appName, finalBasePath);
+    } catch {
+      // Fallback if ID generation fails (shouldn't happen with valid inputs)
+      manifestId = appName
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, "-")
+        .substring(0, 20);
+    }
+
     let manifestPath: string | undefined;
     try {
       if (iconPaths.length > 0) {
@@ -471,6 +483,7 @@ export async function initCommand(
         const manifestWithIconsOptions = {
           name: appName,
           shortName: finalShortName,
+          id: manifestId,
           startUrl: finalBasePath,
           scope: finalBasePath,
           display: "standalone" as const,
@@ -518,6 +531,7 @@ export async function initCommand(
         const manifestMinimalOptions = {
           name: appName,
           shortName: finalShortName,
+          id: manifestId,
           startUrl: finalBasePath,
           scope: finalBasePath,
           display: "standalone" as const,
