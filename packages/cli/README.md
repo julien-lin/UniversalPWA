@@ -14,6 +14,7 @@ npx @julien-lin/universal-pwa-cli init
 ```
 
 This command will:
+
 - Guide you through an interactive setup
 - Generate all PWA assets (icons, manifest, service worker)
 - Inject meta tags into your HTML files
@@ -91,6 +92,7 @@ universal-pwa init --output-dir dist
 **Why?** The service worker needs to precache all your built assets (JS/CSS with hashes). If you initialize before building, the service worker won't know about the hashed filenames.
 
 **Environment Detection:**
+
 - The CLI automatically detects your environment:
   - **Production**: If `dist/` or `build/` exists with recent files (< 24h)
   - **Local**: Otherwise, defaults to `public/`
@@ -108,11 +110,13 @@ universal-pwa init
 The CLI will guide you through a 2-phase workflow:
 
 **Phase 1: Environment Selection**
+
 - Choose between **Local** (development) or **Production** (build)
 - The CLI automatically detects your environment based on the presence of `dist/` or `build/` directories
 - Displays detection indicators (e.g., "dist/ directory exists with 15 built files")
 
 **Phase 2: Application Configuration**
+
 - App name (auto-detected from `package.json`)
 - Short name (max 12 characters, auto-generated from app name)
 - Icon source path (auto-detected from common locations)
@@ -139,6 +143,7 @@ universal-pwa init [options]
 - `--skip-service-worker` : Skip service worker generation
 - `--skip-injection` : Skip meta-tags injection
 - `-o, --output-dir <dir>` : Output directory (auto-detects `dist/` for React/Vite, otherwise `public/`)
+- `--base-path <path>` : Base path for deployment (e.g., `/app/`, `/api/pwa/`)
 
 **Examples:**
 
@@ -153,7 +158,81 @@ universal-pwa init \
   --short-name "MyApp" \
   --icon-source ./logo.png \
   --theme-color "#2c3e50"
+
+# For deployment under a subpath
+universal-pwa init \
+  --name "CreativeHub" \
+  --output-dir public \
+  --base-path "/creativehub/"
+
+# For API-based PWA
+universal-pwa init \
+  --name "PWA API" \
+  --output-dir dist \
+  --base-path "/api/pwa/"
 ```
+
+### Deployment Under a Subpath
+
+If your PWA is deployed under a subpath (e.g., behind a reverse proxy or on a shared domain), use the `--base-path` option to ensure all resources are properly scoped.
+
+#### When to Use `--base-path`
+
+- **Reverse Proxy/Load Balancer**: App served at `/app/` instead of `/`
+- **Multiple PWAs on Same Domain**: Each PWA has its own path
+- **Shared Hosting**: PWA is in a subdirectory like `/pwa/` or `/myapp/`
+- **API-Mounted PWA**: Served from `/api/v1/pwa/`
+
+#### How It Works
+
+When you specify `--base-path /app/`:
+
+- Manifest link becomes: `<link rel="manifest" href="/app/manifest.json">`
+- Service Worker registered at: `/app/sw.js`
+- All resources are scoped to the `/app/` path
+
+This ensures:
+
+- ✅ Manifest is found at the correct path
+- ✅ Service Worker operates in the correct scope
+- ✅ No conflicts with other apps on the same domain
+
+#### Examples
+
+**Symfony Project** - Deployed under `/creative-hub/` path:
+
+```bash
+npm run build
+universal-pwa init \
+  --name "Creative Hub" \
+  --output-dir public \
+  --base-path "/creative-hub/"
+```
+
+**Next.js with Custom Base Path**:
+
+```bash
+pnpm build
+universal-pwa init \
+  --output-dir .next \
+  --base-path "/dashboard/"
+```
+
+**Static Site on Shared Hosting** - Deployed at `example.com/apps/myapp/`:
+
+```bash
+universal-pwa init \
+  --name "My App" \
+  --output-dir dist \
+  --base-path "/apps/myapp/"
+```
+
+**Important Notes:**
+
+- Base path must start with `/` and ideally end with `/`
+- The base path is used for both manifest and service worker registration
+- Ensure your web server is configured to serve the PWA files from the specified base path
+- Test that `https://yourdomain/basePath/manifest.json` is accessible
 
 ### PWA Install Button
 
@@ -170,58 +249,54 @@ The CLI automatically injects a PWA install handler into your HTML. To display a
 ```javascript
 // Check if installable and show a button
 if (window.isPWAInstallable && window.isPWAInstallable()) {
-  const installButton = document.createElement('button')
-  installButton.textContent = 'Install App'
+  const installButton = document.createElement("button");
+  installButton.textContent = "Install App";
   installButton.onclick = () => {
-    window.installPWA().catch(console.error)
-  }
-  document.body.appendChild(installButton)
+    window.installPWA().catch(console.error);
+  };
+  document.body.appendChild(installButton);
 }
 ```
 
 #### React Example
 
 ```tsx
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from "react";
 
 function InstallButton() {
-  const [isInstallable, setIsInstallable] = useState(false)
-  const [isInstalled, setIsInstalled] = useState(false)
+  const [isInstallable, setIsInstallable] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
     // Check initial state
     if (window.isPWAInstalled) {
-      setIsInstalled(window.isPWAInstalled())
+      setIsInstalled(window.isPWAInstalled());
     }
     if (window.isPWAInstallable) {
-      setIsInstallable(window.isPWAInstallable())
+      setIsInstallable(window.isPWAInstallable());
     }
 
     // Listen to custom events
-    const handleInstallable = () => setIsInstallable(true)
+    const handleInstallable = () => setIsInstallable(true);
     const handleInstalled = () => {
-      setIsInstalled(true)
-      setIsInstallable(false)
-    }
+      setIsInstalled(true);
+      setIsInstallable(false);
+    };
 
-    window.addEventListener('pwa-installable', handleInstallable)
-    window.addEventListener('pwa-installed', handleInstalled)
+    window.addEventListener("pwa-installable", handleInstallable);
+    window.addEventListener("pwa-installed", handleInstalled);
 
     return () => {
-      window.removeEventListener('pwa-installable', handleInstallable)
-      window.removeEventListener('pwa-installed', handleInstalled)
-    }
-  }, [])
+      window.removeEventListener("pwa-installable", handleInstallable);
+      window.removeEventListener("pwa-installed", handleInstalled);
+    };
+  }, []);
 
   if (isInstalled || !isInstallable) {
-    return null
+    return null;
   }
 
-  return (
-    <button onClick={() => window.installPWA?.()}>
-      Install App
-    </button>
-  )
+  return <button onClick={() => window.installPWA?.()}>Install App</button>;
 }
 ```
 
@@ -252,6 +327,7 @@ universal-pwa scan
 ```
 
 Output:
+
 - Detected framework (React, Vue, WordPress, etc.)
 - Architecture (SPA, SSR, static)
 - Build tool
@@ -295,13 +371,13 @@ Meta tags are automatically injected into your HTML files.
 You can also use the CLI as a module:
 
 ```typescript
-import { initCommand } from '@julien-lin/universal-pwa-cli'
+import { initCommand } from "@julien-lin/universal-pwa-cli";
 
 const result = await initCommand({
-  projectPath: './my-project',
-  name: 'My App',
-  iconSource: './icon.png',
-})
+  projectPath: "./my-project",
+  name: "My App",
+  iconSource: "./icon.png",
+});
 ```
 
 ## 💝 Sponsoring
