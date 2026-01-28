@@ -148,30 +148,35 @@ export function injectMetaTags(
     }
   }
 
-  // Inject mobile-web-app-capable (replaces deprecated apple-mobile-web-app-capable)
-  if (options.appleMobileWebAppCapable !== undefined) {
-    const content = options.appleMobileWebAppCapable ? "yes" : "no";
-
-    // First, remove deprecated apple-mobile-web-app-capable if it exists
-    // Search for meta tag with name="apple-mobile-web-app-capable"
-    const deprecatedMeta = findElement(parsed, "meta", {
+  // Inject apple-mobile-web-app-capable (iOS PWA support)
+  // IMPORTANT: Never remove this tag - iOS needs it for standalone mode
+  {
+    // First, check if apple-mobile-web-app-capable already exists
+    const existingAppleMeta = findElement(parsed, "meta", {
       name: "name",
       value: "apple-mobile-web-app-capable",
     });
-    if (deprecatedMeta && deprecatedMeta.parent) {
-      const parent = deprecatedMeta.parent;
-      if (parent.children) {
-        parent.children = parent.children.filter(
-          (child) => child !== deprecatedMeta,
-        );
-        result.warnings.push(
-          'Removed deprecated <meta name="apple-mobile-web-app-capable">',
-        );
-      }
-    }
 
-    // Use the new standard meta tag
-    // Find existing mobile-web-app-capable meta tag by name attribute
+    if (existingAppleMeta) {
+      // Tag exists - preserve it
+      const existingContent = existingAppleMeta.attribs?.content;
+      result.skipped.push(
+        `apple-mobile-web-app-capable (preserved, content="${existingContent}")`,
+      );
+    } else {
+      // Tag doesn't exist - inject it
+      injectMetaTag(head, "apple-mobile-web-app-capable", "yes");
+      result.injected.push(
+        '<meta name="apple-mobile-web-app-capable" content="yes">',
+      );
+    }
+  }
+
+  // Optionally inject mobile-web-app-capable for Android (complementary, doesn't remove apple tag)
+  if (options.appleMobileWebAppCapable !== undefined) {
+    const content = options.appleMobileWebAppCapable ? "yes" : "no";
+
+    // Find existing mobile-web-app-capable meta tag
     const existingMeta = findElement(parsed, "meta", {
       name: "name",
       value: "mobile-web-app-capable",
