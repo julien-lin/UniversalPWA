@@ -66,6 +66,7 @@ describe("initCommand - BasePath Support", () => {
       const result = await initCommand({
         projectPath: TEST_DIR,
         ...baseInitCommand,
+        basePath: "/",
         outputDir: ".",
       });
 

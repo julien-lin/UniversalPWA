@@ -1216,15 +1216,67 @@ Base path: /
 
 ---
 
-# ✅ DEFINITION OF DONE: "PRODUCTION-READY UNIVERSAL"
+# 🔴 CRITICAL VALIDATIONS BEFORE "PRODUCTION-READY UNIVERSAL" — 5 CHECKS REQUIRED
 
-Tu peux te déclarer **prod-ready universal** quand:
+**Status:** 🟡 **85% DONE** — Features complete, but 5 critical validations MUST pass
+
+**Core Features (✅ IMPLEMENTATION DONE):**
 
 - ✅ **BasePath** configuré + propagé (manifest + injection + tests) — T1.1.1-1.1.5 ✅ COMPLÉTÉE
 - ✅ **apple-mobile-web-app-capable** garanti (jamais supprimé) — T1.2.1-1.2.2 ✅ COMPLÉTÉE
-- ✅ **CI PR/push** + branch protection active — T0.1 (ℹ️ TODO)
 - ✅ **Non-duplication d'injection** robuste (marker) — T2.2.1 ✅ COMPLÉTÉE
-- ⏳ (recommandé) **E2E WebKit** minimal — T3.1.1 (ℹ️ TODO)
+
+**5 CRITICAL VALIDATIONS (🔴 BLOCKERS IF FAILED):**
+
+### V1: Branch Protection GitHub (T0.1)
+
+- **Status:** ⏳ NOT STARTED (needs manual GitHub UI)
+- **Action:** Settings → Branches → Rule on `main`: require status checks (ci/validate + ci/build)
+- **Blocker:** Without this, CI doesn't truly protect code quality
+
+### V2: No Hardcoded Absolute Paths
+
+- **Status:** 🔴 ISSUE FOUND: `/offline.html` hardcoded in service-worker-config-builder.ts:268
+- **Action:** Change to `${basePath}offline.html` + add basePath test
+- **Blocker:** Hardcoded paths break multi-basePath deployments
+
+### V3: Auto-Detection Confidence Coherence
+
+- **Status:** 🔴 INCOHERENT: Threshold=0.85 but example shows "75% confidence" (which shouldn't pass filter)
+- **Action:** Fix confidence scoring in detector OR update threshold OR fix example logs
+- **Blocker:** UX confusion + potential unreliable detection
+
+### V4: Manifest `id` Field Scoping
+
+- **Status:** 🟡 UNDOCUMENTED: Is manifest.id set? If yes, must include basePath
+- **Action:** Document or implement id = basePath (avoid same-domain collisions)
+- **Blocker:** PWA collision on same domain with different basePath
+
+### V5: Auto-Detection False Positive Tests
+
+- **Status:** 🟡 MISSING: No tests for basePath in comments/strings
+- **Action:** Add 3+ test cases (basePath in comment, multi-line string, etc.)
+- **Blocker:** Stability - regex parsing can have false positives
+
+---
+
+**ACCEPTANCE CRITERIA — ALL 5 MUST BE GREEN:**
+
+```
+✅ V1: T0.1 branch protection ACTIVATED on GitHub
+✅ V2: /offline.html fixed + no other hardcodes found
+✅ V3: Confidence threshold 0.85 enforced + logs match real behavior
+✅ V4: Manifest id documented/scoped by basePath
+✅ V5: 3+ false positive test cases passing
+```
+
+**Once all 5 validated:** Status = 🟢 **PRODUCTION-READY UNIVERSAL CERTIFIED**
+
+---
+
+**Optional (P1 recommandé):**
+
+- ⏳ **E2E WebKit** minimal — T3.1.1 (ℹ️ TODO)
 
 ---
 
