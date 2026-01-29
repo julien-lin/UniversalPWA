@@ -466,7 +466,6 @@ export async function initCommand(
     // multiple PWAs are deployed on the same domain with different basePaths
     let manifestId: string;
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
       manifestId = generateManifestId(appName, finalBasePath);
     } catch {
       // Fallback if ID generation fails (shouldn't happen with valid inputs)
