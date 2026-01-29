@@ -25,6 +25,16 @@ import {
 } from "../security/precache-limits.js";
 // Use string to avoid type lint issues in this unit
 // import type { Framework } from '../scanner/framework-detector'
+/**
+ * Helper function to safely extract error message
+ */
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
+
 
 type StrategyName =
   | "CacheFirst"
@@ -189,7 +199,7 @@ export async function generateServiceWorker(
       filePaths: finalFilePaths,
     };
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = getErrorMessage(err);
     throw new Error(`Failed to generate service worker: ${message}`);
   }
 }
@@ -280,7 +290,7 @@ export async function generateSimpleServiceWorker(
       ).map((entry) => (typeof entry === "string" ? entry : entry.url)),
     };
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = getErrorMessage(err);
     throw new Error(`Failed to generate service worker: ${message}`);
   }
 }
@@ -414,7 +424,7 @@ export async function generateServiceWorkerFromConfig(
       filePaths: resultFilePaths,
     };
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = getErrorMessage(err);
     throw new Error(
       `Failed to generate service worker from config: ${message}`,
     );
