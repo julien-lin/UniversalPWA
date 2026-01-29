@@ -35,13 +35,17 @@ function getErrorMessage(error: unknown): string {
   return String(error);
 }
 
-
 type StrategyName =
   | "CacheFirst"
   | "NetworkFirst"
   | "NetworkOnly"
   | "StaleWhileRevalidate"
   | "CacheOnly";
+
+interface ServiceWorkerTemplate {
+  type: string;
+  content: string;
+}
 
 export interface ServiceWorkerGeneratorOptions {
   projectPath: string;
@@ -140,7 +144,7 @@ export async function generateServiceWorker(
   // Determine template type
   const finalTemplateType: ServiceWorkerTemplateType =
     templateType ?? determineTemplateType(architecture, framework ?? null);
-  const template = getServiceWorkerTemplate(finalTemplateType);
+  const template = getServiceWorkerTemplate(finalTemplateType) as ServiceWorkerTemplate;
 
   // Create temporary source file with template
   const swSrcPath = join(outputDir, "sw-src.js");
@@ -335,7 +339,7 @@ export async function generateServiceWorkerFromConfig(
   // Determine template type
   const finalTemplateType: ServiceWorkerTemplateType =
     templateType ?? determineTemplateType(architecture, framework ?? null);
-  const template = getServiceWorkerTemplate(finalTemplateType);
+  const template = getServiceWorkerTemplate(finalTemplateType) as ServiceWorkerTemplate;
 
   // Create temporary source file with template
   const swSrcPath = join(outputDir, "sw-src.js");
