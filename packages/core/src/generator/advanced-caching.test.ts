@@ -231,6 +231,7 @@ describe("advanced-caching-integration", () => {
     });
 
     it("should respect ignore patterns in invalidation", () => {
+      if (!existsSync(join(testDir, "public"))) mkdirSync(join(testDir, "public"), { recursive: true });
       writeFileSync(join(testDir, "public", "app.js"), 'console.log("app")');
       writeFileSync(join(testDir, "public", "app.js.map"), "source map");
 
