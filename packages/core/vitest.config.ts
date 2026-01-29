@@ -1,6 +1,12 @@
 import { defineConfig } from 'vitest/config'
+import path from 'path'
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@julien-lin/universal-pwa-templates': path.resolve(__dirname, '../templates/src/index.ts'),
+    },
+  },
   test: {
     globals: true,
     environment: 'node',
@@ -29,4 +35,3 @@ export default defineConfig({
     },
   },
 })
-

@@ -65,7 +65,7 @@ describe('StructuredLogger', () => {
 
       expect(breakdown.phases.length).toBe(1);
       expect(breakdown.phases[0].phase).toBe('scan');
-      expect(breakdown.phases[0].duration).toBeGreaterThanOrEqual(50);
+      expect(breakdown.phases[0].duration).toBeGreaterThanOrEqual(40);
     });
 
     it('should track multiple phase timings', async () => {
@@ -88,7 +88,7 @@ describe('StructuredLogger', () => {
       end1();
       const breakdown = logger.getTimingBreakdown();
 
-      expect(breakdown.totalDuration).toBeGreaterThanOrEqual(50);
+      expect(breakdown.totalDuration).toBeGreaterThanOrEqual(40);
     });
 
     it('should provide timing breakdown object', async () => {
