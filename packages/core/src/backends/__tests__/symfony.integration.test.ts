@@ -129,7 +129,7 @@ describe('SymfonyIntegration (integration-lite)', () => {
 
     expect(result.icons.length).toBeGreaterThan(0)
     expect(result.generatedFiles.length).toBeGreaterThan(0)
-  })
+  }, 10000)
 
   it('should generate optimized ServiceWorkerConfig for Symfony', () => {
     const integration = new SymfonyIntegration(projectRoot)

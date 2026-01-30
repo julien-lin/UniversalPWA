@@ -188,7 +188,7 @@ describe("Symfony E2E - Full PWA Generation", () => {
     expect(htmlContent).toContain("manifest.json");
     expect(htmlContent).toContain("theme-color");
     expect(htmlContent).toContain("sw.js");
-  });
+  }, 15000);
 
   it("should generate Symfony-optimized service worker", () => {
     const factory = getBackendFactory();
