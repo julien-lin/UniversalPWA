@@ -1,6 +1,6 @@
 {
   "name": "@julien-lin/universal-pwa-core",
-  "version": "1.3.12",
+  "version": "1.3.13",
   "description": "Core engine for scanning, generation, and injection for UniversalPWA",
   "keywords": [
     "pwa",
@@ -32,12 +32,12 @@
   },
   "type": "module",
   "main": "dist/index.js",
-  "module": "dist/index.mjs",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
+      "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     }
   },
