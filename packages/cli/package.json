@@ -1,6 +1,6 @@
 {
   "name": "@julien-lin/universal-pwa-cli",
-  "version": "1.3.13",
+  "version": "1.3.14",
   "description": "CLI to transform any web project into a PWA",
   "keywords": [
     "pwa",
@@ -70,6 +70,8 @@
     "glob": "^13.0.0",
     "inquirer": "^13.2.0",
     "pino": "^10.2.0",
+    "string-width": "^8.1.1",
+    "strip-ansi": "^7.1.2",
     "zod": "^4.3.5"
   },
   "devDependencies": {

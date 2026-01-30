@@ -1,4 +1,3 @@
-import inquirer from "inquirer";
 import { existsSync } from "fs";
 import { join, extname } from "path";
 import chalk from "chalk";
@@ -8,6 +7,7 @@ import {
   type Environment,
 } from "./utils/environment-detector.js";
 import { generateSuggestions } from "./utils/suggestions.js";
+import inquirer from "inquirer";
 
 export interface PromptAnswers {
   environment: Environment;
@@ -16,7 +16,16 @@ export interface PromptAnswers {
   iconSource?: string;
   themeColor?: string;
   backgroundColor?: string;
+
+  /**
+   * true = ne pas générer les icônes
+   * false = générer les icônes
+   */
   skipIcons?: boolean;
+
+  /**
+   * Optionnel : si tu l’utilises réellement ailleurs
+   */
   installButton?: boolean;
 }
 
@@ -52,6 +61,7 @@ export function validateIconSource(
   if (!input || input.trim().length === 0) {
     return true; // Optionnel
   }
+
   const fullPath = existsSync(input) ? input : join(projectPath, input);
   if (!existsSync(fullPath)) {
     const suggestions = [
@@ -62,12 +72,13 @@ export function validateIconSource(
     ].join(", ");
     return `Le fichier n'existe pas: ${input}\nSuggestions: ${suggestions}`;
   }
-  // Valider le format
+
   const ext = extname(fullPath).toLowerCase();
   const supportedFormats = [".png", ".jpg", ".jpeg", ".svg", ".webp"];
   if (!supportedFormats.includes(ext)) {
     return `Format non supporté: ${ext}. Utilisez PNG, JPG, SVG ou WebP`;
   }
+
   return true;
 }
 
@@ -80,13 +91,14 @@ export function validateHexColor(
   }
   const trimmed = input.trim();
   if (!/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(trimmed)) {
-    return `Format hex invalide (ex: ${fieldName === "themeColor" ? "#ffffff ou #fff" : "#000000 ou #000"})`;
+    return `Format hex invalide (ex: ${
+      fieldName === "themeColor" ? "#ffffff ou #fff" : "#000000 ou #000"
+    })`;
   }
   return true;
 }
 
 export function filterHexColor(input: string): string {
-  // Normaliser vers format 6 caractères si format 3
   const trimmed = input.trim();
   if (/^#[A-Fa-f0-9]{3}$/.test(trimmed)) {
     return `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`;
@@ -102,7 +114,6 @@ export async function promptInitOptions(
   framework: Framework | null,
   architecture: "spa" | "ssr" | "static" | null = null,
 ): Promise<PromptAnswers> {
-  // Générer toutes les suggestions intelligentes
   const suggestions = generateSuggestions(projectPath, framework, architecture);
 
   const defaultName = suggestions.name.name;
@@ -110,12 +121,10 @@ export async function promptInitOptions(
   const defaultIconSource =
     suggestions.icons.length > 0 ? suggestions.icons[0].path : undefined;
 
-  // Détecter l'environnement automatiquement
   const envDetection = detectEnvironment(projectPath, framework);
 
   console.log(chalk.blue("\n📋 Configuration PWA\n"));
 
-  // Afficher les suggestions si disponibles
   if (suggestions.name.confidence === "high") {
     console.log(
       chalk.gray(
@@ -163,10 +172,21 @@ export async function promptInitOptions(
   }
 
   // Phase 2 : Configuration de l'application
-  // @ts-expect-error - inquirer type definition is too strict for array syntax
-  const configAnswers = await inquirer.prompt<
-    Omit<PromptAnswers, "environment" | "installButton">
-  >([
+  type ConfigAnswers = {
+    name: string;
+    shortName: string;
+    iconSource?: string;
+    themeColor?: string;
+    backgroundColor?: string;
+    /**
+     * true = générer les icônes
+     * false = ne pas générer
+     */
+    generateIcons?: boolean;
+    installButton?: boolean;
+  };
+
+  const questions = [
     {
       type: "input",
       name: "name",
@@ -181,9 +201,8 @@ export async function promptInitOptions(
       message: chalk.bold(
         "📌 Nom court (max 12 caractères, pour l'écran d'accueil):",
       ),
-      default: (answers: { name?: string }) => {
-        return answers.name ? answers.name.substring(0, 12) : defaultShortName;
-      },
+      default: (answers: Partial<ConfigAnswers>) =>
+        answers.name ? answers.name.substring(0, 12) : defaultShortName,
       validate: validateShortName,
       filter: filterShortName,
       prefix: chalk.cyan("?"),
@@ -198,14 +217,13 @@ export async function promptInitOptions(
     },
     {
       type: "confirm",
-      name: "skipIcons",
+      name: "generateIcons",
       message: chalk.bold(
         "🖼️  Générer les icônes PWA à partir de cette image?",
       ),
       default: true,
-      when: (answers: { iconSource?: string }) => {
-        return answers.iconSource && answers.iconSource.trim().length > 0;
-      },
+      when: (answers: Partial<ConfigAnswers>) =>
+        Boolean(answers.iconSource && answers.iconSource.trim().length > 0),
       prefix: chalk.cyan("?"),
     },
     {
@@ -226,36 +244,41 @@ export async function promptInitOptions(
       filter: filterHexColor,
       prefix: chalk.cyan("?"),
     },
-  ]);
+    // Si tu veux garder installButton en prompt (sinon supprime)
+    // {
+    //   type: "confirm",
+    //   name: "installButton",
+    //   message: chalk.bold("➕ Ajouter un bouton d'installation (Chrome/Edge)?"),
+    //   default: true,
+    //   prefix: chalk.cyan("?"),
+    // },
+  ] as const;
 
-  // If skipIcons is true, invert the logic (skipIcons = false means generate)
-  configAnswers.skipIcons = !configAnswers.skipIcons;
+  const configAnswers = await inquirer.prompt<ConfigAnswers>(questions);
 
-  // Si aucune source d'icône, skipIcons = true
-  if (
-    !configAnswers.iconSource ||
-    configAnswers.iconSource.trim().length === 0
-  ) {
-    configAnswers.skipIcons = true;
-  }
+  // Normalisation finale
+  const name = configAnswers.name?.trim() || defaultName;
+  const shortName = configAnswers.shortName?.trim() || defaultShortName;
 
-  // Final validation to ensure required values are defined
-  if (!configAnswers.name || configAnswers.name.trim().length === 0) {
-    configAnswers.name = defaultName;
-  }
-  if (!configAnswers.shortName || configAnswers.shortName.trim().length === 0) {
-    configAnswers.shortName = defaultShortName;
-  }
+  const iconSource = configAnswers.iconSource?.trim() || "";
+  const hasIconSource = iconSource.length > 0;
 
-  // Set default for installButton if not provided (for backward compatibility with tests)
-  const installButton =
-    ((configAnswers as Record<string, unknown>).installButton as
-      | boolean
-      | undefined) ?? true;
+  // generateIcons is undefined if iconSource is empty (question not asked)
+  // If iconSource exists and generateIcons is true → skipIcons should be false (generate them)
+  // If iconSource is empty or generateIcons is false → skipIcons should be true (skip them)
+  const generateIcons = Boolean(configAnswers.generateIcons);
+  const skipIcons = !hasIconSource || !generateIcons;
+
+  const installButton = configAnswers.installButton ?? true;
 
   return {
     ...environmentAnswer,
-    ...configAnswers,
+    name,
+    shortName,
+    iconSource: hasIconSource ? iconSource : "",
+    themeColor: configAnswers.themeColor,
+    backgroundColor: configAnswers.backgroundColor,
+    skipIcons,
     installButton,
   };
 }

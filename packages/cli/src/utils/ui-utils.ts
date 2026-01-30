@@ -4,24 +4,74 @@
  */
 
 import chalk from "chalk";
+import stripAnsi from "strip-ansi";
+import stringWidth from "string-width";
 
 /**
- * PWA ASCII Art Banner
+ * Get visible width of a string (excluding ANSI color codes)
+ */
+function visibleWidth(s: string): number {
+  return stringWidth(stripAnsi(s));
+}
+
+/**
+ * Right-pad a string to a given visible width
+ */
+function padRightVisible(s: string, width: number): string {
+  const w = visibleWidth(s);
+  return s + " ".repeat(Math.max(0, width - w));
+}
+
+/**
+ * Center a string within a given visible width
+ */
+function centerVisible(s: string, width: number): string {
+  const w = visibleWidth(s);
+  const left = Math.max(0, Math.floor((width - w) / 2));
+  const right = Math.max(0, width - w - left);
+  return " ".repeat(left) + s + " ".repeat(right);
+}
+
+/**
+ * PWA ASCII Art Banner (stable, correct alignment despite Chalk colors)
  */
 export function displayPWABanner(): void {
-  const banner = `
-${chalk.bold.cyan("╔════════════════════════════════════════════════════════════╗")}
-${chalk.bold.cyan("║")}                                                            ${chalk.bold.cyan("║")}
-${chalk.bold.cyan("║")}  ${chalk.bold.magenta("╔══════╗  ╦ ╦  ╔═╗  ╔═╗")}                             ${chalk.bold.cyan("║")}
-${chalk.bold.cyan("║")}  ${chalk.bold.magenta("╠═╗ ╔═╝  ║║║  ╠═╣  ║ ║")}                             ${chalk.bold.cyan("║")}
-${chalk.bold.cyan("║")}  ${chalk.bold.magenta("║ ║ ╚═╗  ╚╩╝  ║ ║  ╚═╝")}                             ${chalk.bold.cyan("║")}
-${chalk.bold.cyan("║")}                                                            ${chalk.bold.cyan("║")}
-${chalk.bold.cyan("║")}  ${chalk.bold.yellow("Progressive Web App Generator")}                        ${chalk.bold.cyan("║")}
-${chalk.bold.cyan("║")}  ${chalk.dim("Transformez vos apps en PWA en quelques clics")}              ${chalk.bold.cyan("║")}
-${chalk.bold.cyan("║")}                                                            ${chalk.bold.cyan("║")}
-${chalk.bold.cyan("╚════════════════════════════════════════════════════════════╝")}
-  `;
-  console.log(banner);
+  // Inner width of the frame (excluding borders)
+  const innerWidth = 60;
+
+  const logoLines = [
+    "██████╗ ██╗    ██╗ █████╗",
+    "██╔══██╗██║    ██║██╔══██╗",
+    "██████╔╝██║ █╗ ██║███████║",
+    "██╔═══╝ ██║███╗██║██╔══██║",
+    "██║     ╚███╔███╔╝██║  ██║",
+    "╚═╝      ╚══╝╚══╝ ╚═╝  ╚═╝",
+  ].map((l) => chalk.bold.magenta(l));
+
+  const title = chalk.bold.yellow("Progressive Web App Generator");
+  const subtitle = chalk.dim("Transformez vos apps en PWA en quelques clics");
+
+  const content = [
+    "", // empty line
+    ...logoLines.map((l) => centerVisible(l, innerWidth)),
+    "",
+    centerVisible(title, innerWidth),
+    centerVisible(subtitle, innerWidth),
+    "",
+  ].map((l) => padRightVisible(l, innerWidth));
+
+  const top = chalk.bold.cyan("╔" + "═".repeat(innerWidth + 2) + "╗");
+  const bottom = chalk.bold.cyan("╚" + "═".repeat(innerWidth + 2) + "╝");
+
+  const framed = [
+    top,
+    ...content.map(
+      (line) => chalk.bold.cyan("║") + " " + line + " " + chalk.bold.cyan("║"),
+    ),
+    bottom,
+  ].join("\n");
+
+  console.log(framed);
 }
 
 /**
