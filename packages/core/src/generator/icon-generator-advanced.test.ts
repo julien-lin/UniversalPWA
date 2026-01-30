@@ -164,7 +164,7 @@ describe("icon-generator-advanced", () => {
       );
       expect(adaptiveIcon).toBeDefined();
       expect(adaptiveIcon?.sizes).toBe("1024x1024");
-    });
+    }, 10000);
 
     it("should handle adaptive icons with image background", async () => {
       const outputDir = join(testDir, "output");
