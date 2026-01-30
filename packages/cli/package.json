@@ -1,6 +1,6 @@
 {
   "name": "@julien-lin/universal-pwa-cli",
-  "version": "1.3.12",
+  "version": "1.3.13",
   "description": "CLI to transform any web project into a PWA",
   "keywords": [
     "pwa",
@@ -40,13 +40,13 @@
     "universal-pwa": "dist/index.js"
   },
   "main": "dist/index.js",
-  "module": "dist/index.mjs",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "files": [
