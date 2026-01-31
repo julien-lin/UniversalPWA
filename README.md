@@ -60,6 +60,7 @@ universal-pwa init
 ```
 
 The CLI will:
+
 1. 🔍 Scan your project to detect the framework and architecture
 2. 📋 Prompt you with a 2-phase workflow:
 
@@ -98,6 +99,7 @@ universal-pwa scan
 ```
 
 This will display:
+
 - Detected framework
 - Architecture (SPA, SSR, static)
 - Build tool
@@ -110,6 +112,7 @@ universal-pwa preview
 ```
 
 This checks:
+
 - Presence of `manifest.json`
 - Service Worker availability
 - HTTPS compliance
@@ -160,20 +163,99 @@ universal-pwa init --icon-source ./public/logo.png --output-dir ./public
 
 ### `init` Command Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `-p, --project-path <path>` | Project path | `.` (current directory) |
-| `-n, --name <name>` | Application name | Detected from `package.json` |
-| `-s, --short-name <shortName>` | Short name (max 12 chars) | Derived from name |
-| `-i, --icon-source <path>` | Source image for icons | Auto-detected if available |
-| `-t, --theme-color <color>` | Theme color (hex) | `#ffffff` |
-| `-b, --background-color <color>` | Background color (hex) | `#000000` |
-| `--skip-icons` | Skip icon generation | `false` |
-| `--skip-service-worker` | Skip service worker generation | `false` |
-| `--skip-injection` | Skip meta-tags injection | `false` |
-| `-o, --output-dir <dir>` | Output directory | `public` |
+| Option                           | Description                                           | Default                      |
+| -------------------------------- | ----------------------------------------------------- | ---------------------------- |
+| `-p, --project-path <path>`      | Project path                                          | `.` (current directory)      |
+| `-n, --name <name>`              | Application name                                      | Detected from `package.json` |
+| `-s, --short-name <shortName>`   | Short name (max 12 chars)                             | Derived from name            |
+| `-i, --icon-source <path>`       | Source image for icons                                | Auto-detected if available   |
+| `-t, --theme-color <color>`      | Theme color (hex)                                     | `#ffffff`                    |
+| `-b, --background-color <color>` | Background color (hex)                                | `#000000`                    |
+| `--skip-icons`                   | Skip icon generation                                  | `false`                      |
+| `--skip-service-worker`          | Skip service worker generation                        | `false`                      |
+| `--skip-injection`               | Skip meta-tags injection                              | `false`                      |
+| `-o, --output-dir <dir>`         | Output directory                                      | `public`                     |
+| `--base-path <path>`             | Base path for deployment (e.g., `/app/`, `/api/pwa/`) | `/`                          |
 
-### Interactive Mode Features
+### Sub-path & Reverse Proxy Deployments (basePath)
+
+UniversalPWA fully supports deployments under a sub-path, which is essential for:
+
+- ✅ Multi-tenant SaaS applications (`/tenant1/`, `/tenant2/`)
+- ✅ Reverse proxy setups (Nginx, Apache, AWS ALB)
+- ✅ Embedded PWAs within larger applications (`/analytics/app/`, `/dashboard/pwa/`)
+
+#### Example: Django with Reverse Proxy
+
+**Setup:** Your app runs at `https://example.com/app/` (not root)
+
+```bash
+# Tell UniversalPWA about the base path
+universal-pwa init \
+  --project-path ./myapp \
+  --base-path "/app/" \
+  --icon-source ./logo.png
+```
+
+**Result:**
+
+- `manifest.json` path: `/app/manifest.json`
+- Service Worker scope: `/app/`
+- All asset paths: `/app/sw.js`, `/app/icon-192x192.png`, etc.
+
+**With Django environment variable:**
+
+```bash
+# Django uses FORCE_SCRIPT_NAME for reverse proxy
+export FORCE_SCRIPT_NAME="/app"
+universal-pwa init --base-path "${FORCE_SCRIPT_NAME}/"
+```
+
+#### Example: Laravel under Nginx subdirectory
+
+**Setup:** Your app runs at `https://example.com/public-app/`
+
+```bash
+# Nginx configuration
+location /public-app/ {
+  proxy_pass http://laravel-app:8000/;
+  proxy_set_header X-Script-Name /public-app;
+}
+
+# Then run:
+universal-pwa init --base-path "/public-app/" --output-dir "./public"
+```
+
+**Verification:**
+
+```bash
+# Check that manifest is accessible at the correct path
+curl https://example.com/public-app/manifest.json
+```
+
+#### Example: Multi-tenant SaaS
+
+**Setup:** Each tenant gets their own sub-path: `https://example.com/tenants/{id}/`
+
+```bash
+#!/bin/bash
+# Deploy script for each tenant
+
+TENANT_ID="$1"
+BASE_PATH="/tenants/${TENANT_ID}/"
+
+universal-pwa init \
+  --project-path "./tenant-app" \
+  --base-path "${BASE_PATH}" \
+  --name "Tenant ${TENANT_ID} App" \
+  --output-dir "./public"
+```
+
+**Result per tenant:**
+
+- Tenant A: `/tenants/a/manifest.json`, `/tenants/a/sw.js`
+- Tenant B: `/tenants/b/manifest.json`, `/tenants/b/sw.js`
+- All fully isolated with correct Service Worker scopes
 
 When using interactive mode (`universal-pwa init` without arguments):
 
@@ -257,6 +339,7 @@ pnpm lint
 ## 📚 Documentation
 
 See the `DOCUMENTATION/` folder for:
+
 - [Architecture Decisions](./DOCUMENTATION/ARCHITECTURE_DECISIONS.md)
 - [Backend Detection Patterns](./DOCUMENTATION/BACKEND_DETECTION_PATTERNS.md)
 - [SDK Architecture](./DOCUMENTATION/SDK_ARCHITECTURE.md)
@@ -284,6 +367,7 @@ The PWA manifest requires at least one icon. Provide a source image with `--icon
 ### Service Worker not registering
 
 Check that:
+
 1. The service worker was generated (`sw.js` in the output directory)
 2. The registration script was injected in your HTML
 3. You're serving the site via HTTPS (or localhost for development)
@@ -316,6 +400,7 @@ If UniversalPWA is useful to you, please consider sponsoring the project to help
 **[⭐ Sponsor on GitHub](https://github.com/sponsors/julien-lin)**
 
 Your support helps:
+
 - 🚀 Maintain and improve the core features
 - 🐛 Fix bugs faster
 - ✨ Add new features and integrations
@@ -347,6 +432,7 @@ MIT
 Contributions are welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
 **How to contribute:**
+
 1. 🍴 Fork the repository
 2. 🌿 Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. 💾 Commit your changes (`git commit -m 'Add some amazing feature'`)
