@@ -21,7 +21,10 @@ import { glob } from "glob";
 import { join, resolve, relative, normalize } from "path";
 // @ts-expect-error - @types/cli-progress not available
 import cliProgress from "cli-progress";
-import type { Framework } from "@julien-lin/universal-pwa-core";
+import type {
+  Framework,
+  BackendIntegration,
+} from "@julien-lin/universal-pwa-core";
 import type { Architecture } from "@julien-lin/universal-pwa-core";
 import { Transaction } from "../utils/transaction.js";
 import { getEffectiveConfig } from "../utils/config-loader.js";
@@ -596,9 +599,8 @@ export async function initCommand(
           typeof factory === "object" &&
           "detectBackend" in factory
         ) {
-          backendIntegration = (
-            factory as unknown as { detectBackend: (path: string) => unknown }
-          ).detectBackend(result.projectPath);
+          backendIntegration =
+            factory.detectBackend(result.projectPath) ?? null;
         }
 
         // If auto-detection failed but framework is known, try to get integration directly
@@ -609,11 +611,10 @@ export async function initCommand(
           typeof factory === "object" &&
           "getIntegration" in factory
         ) {
-          backendIntegration = (
-            factory as unknown as {
-              getIntegration: (framework: string, path: string) => unknown;
-            }
-          ).getIntegration(result.framework, result.projectPath);
+          backendIntegration = factory.getIntegration(
+            result.framework,
+            result.projectPath,
+          );
           // Verify the integration actually detects this project
           if (
             backendIntegration &&
@@ -621,7 +622,7 @@ export async function initCommand(
             "detect" in backendIntegration
           ) {
             const detectionResult = (
-              backendIntegration as unknown as { detect: () => unknown }
+              backendIntegration as BackendIntegration
             ).detect();
             if (detectionResult && typeof detectionResult === "object") {
               const detected =
