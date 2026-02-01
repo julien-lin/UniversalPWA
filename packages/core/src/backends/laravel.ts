@@ -20,6 +20,7 @@ export interface LaravelConfig {
   version?: string;
   isSPA?: boolean;
   isLivewire?: boolean;
+  isAlpine?: boolean;
   csrfProtection?: boolean;
 }
 
@@ -163,6 +164,49 @@ function detectLivewire(projectRoot: string): boolean {
 }
 
 /**
+ * Checks if Laravel project uses Alpine.js
+ */
+function detectAlpine(projectRoot: string): boolean {
+  try {
+    // Check package.json for Alpine.js
+    const packageJsonPath = join(projectRoot, "package.json");
+    if (existsSync(packageJsonPath)) {
+      const content = readFileSync(packageJsonPath, "utf-8");
+      const pkg = JSON.parse(content) as Record<string, unknown>;
+
+      const devDeps = pkg.devDependencies as
+        | Record<string, unknown>
+        | undefined;
+      const deps = pkg.dependencies as Record<string, unknown> | undefined;
+
+      if (devDeps?.["alpinejs"] || deps?.["alpinejs"]) {
+        return true;
+      }
+    }
+
+    // Check for Alpine.js in JavaScript/blade files (common patterns)
+    const resourcesPath = join(projectRoot, "resources");
+    if (existsSync(resourcesPath)) {
+      try {
+        const layoutFile = join(resourcesPath, "views", "app.blade.php");
+        if (existsSync(layoutFile)) {
+          const content = readFileSync(layoutFile, "utf-8");
+          if (/alpine|x-data|@click|x-show/i.test(content)) {
+            return true;
+          }
+        }
+      } catch {
+        // Continue if file read fails
+      }
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Laravel Framework Integration
  */
 export class LaravelIntegration extends BaseBackendIntegration {
@@ -178,6 +222,8 @@ export class LaravelIntegration extends BaseBackendIntegration {
     this.config = {
       projectRoot,
       csrfProtection: true,
+      isLivewire: detectLivewire(projectRoot),
+      isAlpine: detectAlpine(projectRoot),
       ...config,
     };
   }
@@ -239,6 +285,7 @@ export class LaravelIntegration extends BaseBackendIntegration {
       hasEnvExample && ".env.example",
       isSPA && "SPA mode (Vue/React/Inertia)",
       isLivewire && "Livewire",
+      this.config.isAlpine && "Alpine.js",
     ].filter(Boolean) as string[];
 
     const indicatorCount = indicators.length;
@@ -261,6 +308,7 @@ export class LaravelIntegration extends BaseBackendIntegration {
   generateServiceWorkerConfig(): ServiceWorkerConfig {
     const isSPA = this.config.isSPA ?? false;
     const isLivewire = this.config.isLivewire ?? false;
+    const isAlpine = this.config.isAlpine ?? false;
 
     const staticRoutes = [
       {
@@ -313,30 +361,85 @@ export class LaravelIntegration extends BaseBackendIntegration {
       },
     ];
 
-    const customRoutes = isLivewire
-      ? [
-          {
-            pattern: "/livewire/**",
-            strategy: {
-              ...PRESET_STRATEGIES.ApiEndpoints,
-              networkTimeoutSeconds: 5,
-            },
-            priority: 15,
-            description: "Livewire AJAX endpoints",
+    const customRoutes = [];
+
+    // Add Livewire routes with NetworkFirst strategy (for AJAX)
+    if (isLivewire) {
+      customRoutes.push({
+        pattern: "/livewire/**",
+        strategy: {
+          name: "NetworkFirst" as const,
+          cacheName: "laravel-livewire-cache",
+          networkTimeoutSeconds: 5,
+          expiration: {
+            maxEntries: 50,
+            maxAgeSeconds: 600, // 10 minutes
           },
-        ]
-      : undefined;
+        },
+        priority: 15,
+        description: "Livewire AJAX endpoints",
+      });
+    }
+
+    // Add Alpine.js component routes with NetworkFirst strategy
+    // Alpine.js uses lightweight AJAX calls that benefit from NetworkFirst
+    if (isAlpine) {
+      customRoutes.push({
+        pattern: "/alpine/**",
+        strategy: {
+          name: "NetworkFirst" as const,
+          cacheName: "laravel-alpine-cache",
+          networkTimeoutSeconds: 3,
+          expiration: {
+            maxEntries: 30,
+            maxAgeSeconds: 300, // 5 minutes
+          },
+        },
+        priority: 14,
+        description: "Alpine.js component requests",
+      });
+
+      // Alpine directive XHR routes
+      customRoutes.push({
+        pattern: "/api/alpine/**",
+        strategy: {
+          name: "NetworkFirst" as const,
+          cacheName: "laravel-alpine-api-cache",
+          networkTimeoutSeconds: 2,
+          expiration: {
+            maxEntries: 40,
+            maxAgeSeconds: 300, // 5 minutes
+          },
+        },
+        priority: 14,
+        description: "Alpine.js API endpoints",
+      });
+    }
+
+    // Combination: Livewire + Alpine
+    if (isLivewire && isAlpine) {
+      customRoutes.push({
+        pattern: "/*.x-**",
+        strategy: {
+          name: "NetworkFirst" as const,
+          cacheName: "laravel-interactive-cache",
+          networkTimeoutSeconds: 4,
+          expiration: {
+            maxEntries: 50,
+            maxAgeSeconds: 600,
+          },
+        },
+        priority: 16,
+        description: "Interactive component requests (Livewire + Alpine)",
+      });
+    }
 
     return {
       destination: "public/sw.js",
       staticRoutes,
       apiRoutes,
       imageRoutes,
-      customRoutes,
-      offline: {
-        fallbackPage: "/offline",
-        fallbackImage: isSPA ? "/images/placeholder.png" : undefined,
-      },
+      customRoutes: customRoutes.length > 0 ? customRoutes : undefined,
       features: isSPA ? { hydration: true } : undefined,
     };
   }
@@ -440,7 +543,27 @@ class PWAMiddleware
    * Get API pattern routes for intelligent caching
    */
   getApiPatterns(): string[] {
-    return ["/api/**", "/graphql", "/livewire/**"];
+    const patterns = ["/api/**", "/graphql"];
+
+    if (this.config.isLivewire) {
+      patterns.push("/livewire/**");
+    }
+
+    if (this.config.isAlpine) {
+      patterns.push("/alpine/**", "/api/alpine/**");
+    }
+
+    return patterns;
+  }
+
+  /**
+   * Get interactive framework configuration (Livewire + Alpine)
+   */
+  getInteractiveFrameworks(): { livewire: boolean; alpine: boolean } {
+    return {
+      livewire: this.config.isLivewire ?? false,
+      alpine: this.config.isAlpine ?? false,
+    };
   }
 
   /**

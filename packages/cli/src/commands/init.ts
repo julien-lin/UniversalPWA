@@ -89,6 +89,28 @@ type OptimizationResultShape = {
   }>;
 };
 
+interface HttpsCheckResult {
+  isSecure: boolean;
+  isLocalhost: boolean;
+  warning?: string;
+}
+
+interface DetectionResult {
+  detected?: boolean;
+  confidence?: string;
+}
+
+interface BatchResultShape {
+  successful?: unknown[];
+  failed?: unknown[];
+  totalFailed?: number;
+}
+
+interface FailedItemShape {
+  item?: string;
+  error?: string;
+}
+
 /**
  * Normalizes basePath to ensure consistent format:
  * - "/" stays "/"
@@ -263,7 +285,7 @@ export async function initCommand(
     ) {
       if (!httpsCheck.isSecure && !httpsCheck.isLocalhost) {
         const warning =
-          (httpsCheck as unknown as { warning?: string }).warning ??
+          (httpsCheck as HttpsCheckResult).warning ??
           "HTTPS required for production PWA";
         result.warnings.push(warning);
         console.log(chalk.yellow(`⚠ ${warning}`));
@@ -626,11 +648,9 @@ export async function initCommand(
             ).detect();
             if (detectionResult && typeof detectionResult === "object") {
               const detected =
-                (detectionResult as unknown as { detected?: boolean })
-                  .detected ?? false;
+                (detectionResult as DetectionResult).detected ?? false;
               const confidence =
-                (detectionResult as unknown as { confidence?: string })
-                  .confidence ?? "low";
+                (detectionResult as DetectionResult).confidence ?? "low";
               if (!detected || confidence === "low") {
                 backendIntegration = null;
               }
@@ -712,9 +732,7 @@ export async function initCommand(
 
           if (runtimeCaching.length > 0) {
             // Use generateSimpleServiceWorker when we have adaptive cache strategies
-            const apiType =
-              (optimizationResult as unknown as { apiType?: string }).apiType ??
-              "unknown";
+            const apiType = optimizationResult.apiType ?? "unknown";
             const strategiesCount = cacheStrategies?.length ?? 0;
             console.log(
               chalk.gray(
@@ -1015,8 +1033,7 @@ export async function initCommand(
           batchResult &&
           typeof batchResult === "object" &&
           "successful" in batchResult
-            ? ((batchResult as unknown as { successful: unknown[] })
-                .successful ?? [])
+            ? ((batchResult as BatchResultShape).successful ?? [])
             : [];
 
         for (const success of successArray) {
@@ -1079,15 +1096,12 @@ export async function initCommand(
           batchResult &&
           typeof batchResult === "object" &&
           "failed" in batchResult
-            ? ((batchResult as unknown as { failed: unknown[] }).failed ?? [])
+            ? ((batchResult as BatchResultShape).failed ?? [])
             : [];
 
         for (const failed of failedArray) {
           if (!failed || typeof failed !== "object") continue;
-          const failedObj = failed as unknown as {
-            item?: string;
-            error?: string;
-          };
+          const failedObj = failed as FailedItemShape;
           const item = failedObj.item ?? "unknown file";
           const error = failedObj.error ?? "Unknown error";
           const errorCode = detectErrorCode(new Error(error));
@@ -1103,8 +1117,7 @@ export async function initCommand(
           batchResult &&
           typeof batchResult === "object" &&
           "totalFailed" in batchResult
-            ? ((batchResult as unknown as { totalFailed?: number })
-                .totalFailed ?? 0)
+            ? ((batchResult as BatchResultShape).totalFailed ?? 0)
             : 0;
         const fileTypeLabel = htmlFilesToProcess.some(
           (f) =>

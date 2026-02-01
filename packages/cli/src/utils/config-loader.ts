@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
-
 /**
  * Configuration Loader Utility for CLI
  *
@@ -10,6 +8,16 @@ import { findConfigFile, loadConfig } from "@julien-lin/universal-pwa-core";
 import { resolve } from "node:path";
 import type { UniversalPWAConfig } from "@julien-lin/universal-pwa-core";
 import type { InitOptions } from "../commands/init.js";
+
+/**
+ * Typed result from loadConfig function
+ * Ensures safe extraction of config, filePath, and format
+ */
+interface LoadConfigResult {
+  config: UniversalPWAConfig | null;
+  filePath: string | null;
+  format: "ts" | "js" | "json" | "yaml" | null;
+}
 
 export interface MergedConfig {
   config: UniversalPWAConfig | null;
@@ -36,14 +44,14 @@ export async function loadProjectConfig(
       };
     }
 
-    const result = await loadConfig(configFilePath, {
+    const result = (await loadConfig(configFilePath, {
       validate: true,
       strict: false, // Don't throw on validation errors, just warn
-    });
+    })) as LoadConfigResult;
 
-    const config = (result as unknown as { config?: unknown | null } | null)?.config as UniversalPWAConfig | null ?? null;
-    const filePath = (result as unknown as { filePath?: string | null } | null)?.filePath ?? null;
-    const format = (result as unknown as { format?: "ts" | "js" | "json" | "yaml" | null } | null)?.format ?? null;
+    const config = result.config ?? null;
+    const filePath = result.filePath ?? null;
+    const format = result.format ?? null;
 
     return {
       config,
@@ -76,7 +84,7 @@ export function mergeConfigWithOptions(
   }
 
   const merged: InitOptions = { ...cliOptions };
-  const cfg = config as unknown as Record<string, unknown>;
+  const cfg = config as Record<string, unknown>;
 
   // Merge app config
   const appConfig = cfg?.app as Record<string, unknown> | undefined;
