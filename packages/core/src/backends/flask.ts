@@ -9,7 +9,7 @@
  * - CSRF token handling (Flask-WTF)
  */
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { BackendDetectionResult, BackendLanguage } from "./types.js";
 import type { ServiceWorkerConfig } from "../generator/caching-strategy.js";
@@ -23,6 +23,17 @@ export interface FlaskConfig {
   staticFolder?: string;
   hasFlaskWTF?: boolean;
   hasFlaskRESTful?: boolean;
+  blueprints?: FlaskBlueprint[];
+}
+
+/**
+ * Detected Flask Blueprint
+ */
+export interface FlaskBlueprint {
+  name: string;
+  prefix?: string;
+  folder: string;
+  routes: string[];
 }
 
 /**
@@ -161,6 +172,86 @@ function detectFlaskRESTful(projectRoot: string): boolean {
 }
 
 /**
+ * Detects Flask Blueprints in the project
+ */
+function detectBlueprints(projectRoot: string): FlaskBlueprint[] {
+  const blueprints: FlaskBlueprint[] = [];
+
+  try {
+    // Look for blueprint folders (common patterns)
+    const potentialBlueprintDirs = [
+      "blueprints",
+      "routes",
+      "apps",
+      "modules",
+      "features",
+    ];
+
+    for (const dir of potentialBlueprintDirs) {
+      const blueprintPath = join(projectRoot, dir);
+      if (existsSync(blueprintPath)) {
+        try {
+          const entries = readdirSync(blueprintPath, {
+            withFileTypes: true,
+          });
+
+          for (const entry of entries) {
+            if (
+              entry.isDirectory() &&
+              !entry.name.startsWith("_") &&
+              !entry.name.startsWith(".")
+            ) {
+              const blueprintFile = join(
+                blueprintPath,
+                entry.name,
+                "__init__.py",
+              );
+              if (existsSync(blueprintFile)) {
+                const content = readFileSync(blueprintFile, "utf-8");
+
+                // Extract blueprint name
+                const blueprintNameMatch = content.match(
+                  /Blueprint\s*\(\s*['"]([^'"]+)['"]/,
+                );
+                const blueprintName = blueprintNameMatch?.[1] || entry.name;
+
+                // Extract blueprint URL prefix
+                const urlPrefixMatch = content.match(
+                  /url_prefix\s*=\s*['"]([^'"]+)['"]/,
+                );
+                const prefix = urlPrefixMatch?.[1];
+
+                // Extract routes from the blueprint
+                const routeMatches = content.match(
+                  /@bp\.route\s*\(\s*['"]([^'"]+)['"]/g,
+                );
+                const routes =
+                  routeMatches?.map(
+                    (route) => route.match(/['"]([^'"]+)['"]/)?.[1] || "",
+                  ) || [];
+
+                blueprints.push({
+                  name: blueprintName,
+                  prefix,
+                  folder: join(dir, entry.name),
+                  routes,
+                });
+              }
+            }
+          }
+        } catch {
+          // Continue if directory read fails
+        }
+      }
+    }
+  } catch {
+    // Return empty array on error
+  }
+
+  return blueprints;
+}
+
+/**
  * Extracts static folder configuration from Flask app
  */
 function extractStaticFilesConfig(projectRoot: string): {
@@ -214,12 +305,14 @@ export class FlaskIntegration extends BaseBackendIntegration {
   constructor(projectRoot: string, config?: Partial<FlaskConfig>) {
     super();
     const staticConfig = extractStaticFilesConfig(projectRoot);
+    const blueprints = detectBlueprints(projectRoot);
     this.config = {
       projectRoot,
       hasFlaskWTF: detectFlaskWTF(projectRoot),
       hasFlaskRESTful: detectFlaskRESTful(projectRoot),
       staticUrl: staticConfig.staticUrl,
       staticFolder: staticConfig.staticFolder,
+      blueprints,
       ...config,
     };
   }
@@ -258,6 +351,16 @@ export class FlaskIntegration extends BaseBackendIntegration {
     ) {
       indicators.push("Flask structure (templates/ or static/)");
       if (confidence === "medium") {
+        confidence = "high";
+      }
+    }
+
+    // Check for blueprints
+    if (this.config.blueprints && this.config.blueprints.length > 0) {
+      indicators.push(
+        `Flask blueprints (${this.config.blueprints.length} detected)`,
+      );
+      if (confidence < "high") {
         confidence = "high";
       }
     }
@@ -310,6 +413,29 @@ export class FlaskIntegration extends BaseBackendIntegration {
         description: "Flask API endpoints",
       },
     ];
+
+    // Add blueprint routes with optimized caching
+    if (this.config.blueprints && this.config.blueprints.length > 0) {
+      for (const blueprint of this.config.blueprints) {
+        const prefix = blueprint.prefix || `/${blueprint.name.toLowerCase()}`;
+
+        // Blueprint routes pattern
+        apiRoutes.push({
+          pattern: `${prefix}/**`,
+          strategy: {
+            name: "NetworkFirst" as const,
+            cacheName: `flask-blueprint-${blueprint.name}`,
+            networkTimeoutSeconds: 2,
+            expiration: {
+              maxEntries: 30,
+              maxAgeSeconds: 600, // 10 minutes
+            },
+          },
+          priority: 15,
+          description: `Flask blueprint: ${blueprint.name}`,
+        });
+      }
+    }
 
     const imageRoutes = [
       {
@@ -378,7 +504,26 @@ export class FlaskIntegration extends BaseBackendIntegration {
     if (this.config.hasFlaskWTF) {
       routes.push("/csrf-token/**");
     }
+    // Add blueprint routes that might need protection
+    if (this.config.blueprints && this.config.blueprints.length > 0) {
+      for (const blueprint of this.config.blueprints) {
+        if (
+          blueprint.name.toLowerCase().includes("admin") ||
+          blueprint.name.toLowerCase().includes("auth")
+        ) {
+          const prefix = blueprint.prefix || `/${blueprint.name.toLowerCase()}`;
+          routes.push(`${prefix}/**`);
+        }
+      }
+    }
     return routes;
+  }
+
+  /**
+   * Get detected blueprints
+   */
+  getBlueprints(): FlaskBlueprint[] {
+    return this.config.blueprints || [];
   }
 
   /**
@@ -386,6 +531,15 @@ export class FlaskIntegration extends BaseBackendIntegration {
    */
   getApiPatterns(): string[] {
     const patterns = ["/api/**"];
+
+    // Add blueprint patterns
+    if (this.config.blueprints && this.config.blueprints.length > 0) {
+      for (const blueprint of this.config.blueprints) {
+        const prefix = blueprint.prefix || `/${blueprint.name.toLowerCase()}`;
+        patterns.push(`${prefix}/**`);
+      }
+    }
+
     if (this.config.hasFlaskRESTful) {
       patterns.push("/api/v1/**", "/api/v2/**");
     }
@@ -466,8 +620,7 @@ export class FlaskIntegration extends BaseBackendIntegration {
     language: BackendLanguage;
     instructions: string[];
   } {
-    return {
-      code: `# Add PWA support to Flask app
+    let code = `# Add PWA support to Flask app
 from flask import Flask, send_from_directory
 
 app = Flask(__name__)
@@ -479,19 +632,46 @@ def manifest():
 
 @app.route('/sw.js')
 def service_worker():
-    return send_from_directory('static', 'sw.js', mimetype='application/javascript')
+    return send_from_directory('static', 'sw.js', mimetype='application/javascript')`;
+
+    // Add blueprint imports if blueprints detected
+    if (this.config.blueprints && this.config.blueprints.length > 0) {
+      code += "\n\n# Register Flask blueprints\n";
+      for (const blueprint of this.config.blueprints) {
+        const blueprintModule = blueprint.folder.replace(/\//g, ".");
+        code += `from ${blueprintModule} import bp as ${blueprint.name}_bp\n`;
+      }
+      code += "\n";
+      for (const blueprint of this.config.blueprints) {
+        const prefix = blueprint.prefix || `/${blueprint.name.toLowerCase()}`;
+        code += `app.register_blueprint(${blueprint.name}_bp, url_prefix='${prefix}')\n`;
+      }
+    }
+
+    code += `
 
 # Ensure HTTPS in production
 if __name__ == '__main__':
-    app.run(ssl_context='adhoc' if app.debug else None)`,
+    app.run(ssl_context='adhoc' if app.debug else None)`;
+
+    const instructions: string[] = [
+      "Add PWA routes to your Flask app",
+      "Place manifest.json and sw.js in the static/ folder",
+      "Ensure HTTPS is enabled in production",
+      "Consider using Flask-WTF for CSRF protection",
+    ];
+
+    if (this.config.blueprints && this.config.blueprints.length > 0) {
+      instructions.push(
+        `Register ${this.config.blueprints.length} Blueprint(s) to enable optimized caching`,
+      );
+    }
+
+    return {
+      code,
       path: "app.py",
       language: "python" as BackendLanguage,
-      instructions: [
-        "Add PWA routes to your Flask app",
-        "Place manifest.json and sw.js in the static/ folder",
-        "Ensure HTTPS is enabled in production",
-        "Consider using Flask-WTF for CSRF protection",
-      ],
+      instructions,
     };
   }
 }

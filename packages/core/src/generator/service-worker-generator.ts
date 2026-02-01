@@ -47,6 +47,17 @@ interface ServiceWorkerTemplate {
   content: string;
 }
 
+/**
+ * Typed wrapper for Workbox build results
+ * Ensures safe access to filePaths, count, size, and warnings
+ */
+interface WorkboxBuildResult {
+  filePaths: string[];
+  count: number;
+  size: number;
+  warnings: string[];
+}
+
 export interface ServiceWorkerGeneratorOptions {
   projectPath: string;
   outputDir: string;
@@ -144,7 +155,9 @@ export async function generateServiceWorker(
   // Determine template type
   const finalTemplateType: ServiceWorkerTemplateType =
     templateType ?? determineTemplateType(architecture, framework ?? null);
-  const template = getServiceWorkerTemplate(finalTemplateType) as ServiceWorkerTemplate;
+  const template = getServiceWorkerTemplate(
+    finalTemplateType,
+  ) as ServiceWorkerTemplate;
 
   // Create temporary source file with template
   const swSrcPath = join(outputDir, "sw-src.js");
@@ -172,7 +185,7 @@ export async function generateServiceWorker(
 
   try {
     // Use injectManifest to inject precache manifest into template
-    const result = await injectManifest(workboxConfig);
+    const result = (await injectManifest(workboxConfig)) as WorkboxBuildResult;
 
     // Clean up temporary source file
     try {
@@ -281,17 +294,14 @@ export async function generateSimpleServiceWorker(
   }
 
   try {
-    const result = await generateSW(workboxConfig);
+    const result = (await generateSW(workboxConfig)) as WorkboxBuildResult;
 
     return {
       swPath: swDestPath,
       count: result.count,
       size: result.size,
       warnings: [...(result.warnings ?? []), ...patternWarnings],
-      filePaths: (
-        (result as { manifestEntries?: Array<string | { url: string }> })
-          .manifestEntries ?? []
-      ).map((entry) => (typeof entry === "string" ? entry : entry.url)),
+      filePaths: result.filePaths ?? [],
     };
   } catch (err: unknown) {
     const message = getErrorMessage(err);
@@ -339,7 +349,9 @@ export async function generateServiceWorkerFromConfig(
   // Determine template type
   const finalTemplateType: ServiceWorkerTemplateType =
     templateType ?? determineTemplateType(architecture, framework ?? null);
-  const template = getServiceWorkerTemplate(finalTemplateType) as ServiceWorkerTemplate;
+  const template = getServiceWorkerTemplate(
+    finalTemplateType,
+  ) as ServiceWorkerTemplate;
 
   // Create temporary source file with template
   const swSrcPath = join(outputDir, "sw-src.js");
@@ -416,7 +428,7 @@ export async function generateServiceWorkerFromConfig(
   }
 
   try {
-    const result = await injectManifest(workboxConfig);
+    const result = (await injectManifest(workboxConfig)) as WorkboxBuildResult;
 
     const resultFilePaths = result.filePaths ?? [];
 
