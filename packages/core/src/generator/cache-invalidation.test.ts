@@ -732,4 +732,265 @@ describe("cache-invalidation", () => {
       });
     });
   });
+
+  describe("Real-world Cache Invalidation Scenarios", () => {
+    it("Scenario 1: Asset updated, pages depending on it should invalidate", () => {
+      // Setup: Create a project with pages depending on shared assets
+      mkdirSync(join(testDir, "dist", "pages"), { recursive: true });
+      mkdirSync(join(testDir, "dist", "css"), { recursive: true });
+      mkdirSync(join(testDir, "dist", "js"), { recursive: true });
+
+      // Shared CSS that multiple pages depend on
+      writeFileSync(join(testDir, "dist", "css", "theme.css"), "/* theme */");
+      writeFileSync(join(testDir, "dist", "css", "layout.css"), "/* layout */");
+
+      // Pages that import CSS
+      writeFileSync(
+        join(testDir, "dist", "pages", "index.html"),
+        '<link rel="stylesheet" href="/css/theme.css"><link rel="stylesheet" href="/css/layout.css">',
+      );
+      writeFileSync(
+        join(testDir, "dist", "pages", "about.html"),
+        '<link rel="stylesheet" href="/css/theme.css">',
+      );
+
+      // Initial version
+      const version1 = generateCacheVersion(
+        testDir,
+        ["dist/**/*.css", "dist/**/*.html"],
+        [],
+      );
+
+      // Update shared CSS
+      writeFileSync(join(testDir, "dist", "css", "theme.css"), "/* new theme */");
+
+      // Check version changed
+      const version2 = generateCacheVersion(
+        testDir,
+        ["dist/**/*.css", "dist/**/*.html"],
+        [],
+      );
+
+      expect(version1.version).not.toBe(version2.version);
+    });
+
+    it("Scenario 2: Multi-tier invalidation (CSS → HTML → pages)", () => {
+      // Setup: Create hierarchy CSS -> HTML templates -> pages
+      mkdirSync(join(testDir, "dist", "assets", "css"), { recursive: true });
+      mkdirSync(join(testDir, "dist", "templates"), { recursive: true });
+      mkdirSync(join(testDir, "dist", "pages"), { recursive: true });
+
+      // Tier 1: Base CSS
+      writeFileSync(join(testDir, "dist", "assets", "css", "base.css"), "/* v1 */");
+
+      // Tier 2: HTML template using CSS
+      writeFileSync(
+        join(testDir, "dist", "templates", "layout.html"),
+        '<link href="/assets/css/base.css"><div id="content"></div>',
+      );
+
+      // Tier 3: Pages using template
+      writeFileSync(
+        join(testDir, "dist", "pages", "home.html"),
+        '<!--@include layout.html--><h1>Home</h1>',
+      );
+      writeFileSync(
+        join(testDir, "dist", "pages", "products.html"),
+        '<!--@include layout.html--><h1>Products</h1>',
+      );
+
+      const version1 = generateCacheVersion(
+        testDir,
+        ["dist/**/*.css", "dist/**/*.html"],
+        [],
+      );
+
+      // Modify base CSS - should trigger cascade
+      writeFileSync(
+        join(testDir, "dist", "assets", "css", "base.css"),
+        "/* v2 - new styles */",
+      );
+
+      const version2 = generateCacheVersion(
+        testDir,
+        ["dist/**/*.css", "dist/**/*.html"],
+        [],
+      );
+
+      // Version should be different
+      expect(version1.version).not.toBe(version2.version);
+
+      // Now modify template - should cascade further
+      writeFileSync(
+        join(testDir, "dist", "templates", "layout.html"),
+        '<link href="/assets/css/base.css"><div id="main"></div>',
+      );
+
+      const version3 = generateCacheVersion(
+        testDir,
+        ["dist/**/*.css", "dist/**/*.html"],
+        [],
+      );
+
+      expect(version2.version).not.toBe(version3.version);
+    });
+
+    it("Scenario 3: Version bump + date change + hash change", () => {
+      // Setup: Complex project with multiple asset types
+      mkdirSync(join(testDir, "dist", "js"), { recursive: true });
+      mkdirSync(join(testDir, "dist", "css"), { recursive: true });
+      mkdirSync(join(testDir, "dist", "img"), { recursive: true });
+
+      // Create initial assets with metadata
+      writeFileSync(join(testDir, "dist", "js", "app.1234.js"), "/* app v1 */");
+      writeFileSync(join(testDir, "dist", "css", "style.5678.css"), "/* css v1 */");
+      writeFileSync(
+        join(testDir, "dist", "img", "logo.abcd.png"),
+        Buffer.from("PNG"),
+      );
+      writeFileSync(join(testDir, "package.json"), '{"version": "1.0.0"}');
+
+      const version1 = generateCacheVersion(
+        testDir,
+        ["dist/**/*.{js,css,png}", "package.json"],
+        [],
+      );
+
+      // Simulate version bump in package.json
+      writeFileSync(join(testDir, "package.json"), '{"version": "1.1.0"}');
+
+      const version2 = generateCacheVersion(
+        testDir,
+        ["dist/**/*.{js,css,png}", "package.json"],
+        [],
+      );
+
+      expect(version1.version).not.toBe(version2.version);
+
+      // Update JS bundle with new hash
+      writeFileSync(join(testDir, "dist", "js", "app.1234.js"), "/* app v2 */");
+
+      const version3 = generateCacheVersion(
+        testDir,
+        ["dist/**/*.{js,css,png}", "package.json"],
+        [],
+      );
+
+      expect(version2.version).not.toBe(version3.version);
+
+      // Update CSS
+      writeFileSync(join(testDir, "dist", "css", "style.5678.css"), "/* css v2 */");
+
+      const version4 = generateCacheVersion(
+        testDir,
+        ["dist/**/*.{js,css,png}", "package.json"],
+        [],
+      );
+
+      expect(version3.version).not.toBe(version4.version);
+    });
+
+    it("Scenario 4: Concurrent invalidations with dependency resolution", () => {
+      // Setup: Create complex dependency graph
+      mkdirSync(join(testDir, "dist", "components"), { recursive: true });
+      mkdirSync(join(testDir, "dist", "styles"), { recursive: true });
+      mkdirSync(join(testDir, "dist", "pages"), { recursive: true });
+
+      // Component files
+      writeFileSync(
+        join(testDir, "dist", "components", "header.js"),
+        "export const Header = () => {}",
+      );
+      writeFileSync(
+        join(testDir, "dist", "components", "footer.js"),
+        "export const Footer = () => {}",
+      );
+
+      // Shared styles
+      writeFileSync(
+        join(testDir, "dist", "styles", "components.css"),
+        ".header { } .footer { }",
+      );
+      writeFileSync(
+        join(testDir, "dist", "styles", "variables.css"),
+        ":root { --primary: blue; }",
+      );
+
+      // Pages using components and styles
+      writeFileSync(
+        join(testDir, "dist", "pages", "index.html"),
+        '<link href="/styles/variables.css"><link href="/styles/components.css"><script src="/components/header.js"></script>',
+      );
+
+      const version1 = generateCacheVersion(
+        testDir,
+        [
+          "dist/**/*.js",
+          "dist/**/*.css",
+          "dist/**/*.html",
+        ],
+        [],
+      );
+
+      // Concurrent changes: update multiple files simultaneously
+      writeFileSync(
+        join(testDir, "dist", "components", "header.js"),
+        "export const Header = ({ title }) => <h1>{title}</h1>",
+      );
+      writeFileSync(
+        join(testDir, "dist", "styles", "variables.css"),
+        ":root { --primary: red; --secondary: blue; }",
+      );
+      writeFileSync(
+        join(testDir, "dist", "styles", "components.css"),
+        ".header { color: var(--primary); } .footer { }",
+      );
+
+      const version2 = generateCacheVersion(
+        testDir,
+        [
+          "dist/**/*.js",
+          "dist/**/*.css",
+          "dist/**/*.html",
+        ],
+        [],
+      );
+
+      // All concurrent changes should trigger invalidation
+      expect(version1.version).not.toBe(version2.version);
+
+      // Add new component - should also invalidate
+      writeFileSync(
+        join(testDir, "dist", "components", "sidebar.js"),
+        "export const Sidebar = () => {}",
+      );
+
+      const version3 = generateCacheVersion(
+        testDir,
+        [
+          "dist/**/*.js",
+          "dist/**/*.css",
+          "dist/**/*.html",
+        ],
+        [],
+      );
+
+      expect(version2.version).not.toBe(version3.version);
+
+      // Remove a file - should also invalidate
+      rmSync(join(testDir, "dist", "components", "footer.js"));
+
+      const version4 = generateCacheVersion(
+        testDir,
+        [
+          "dist/**/*.js",
+          "dist/**/*.css",
+          "dist/**/*.html",
+        ],
+        [],
+      );
+
+      expect(version3.version).not.toBe(version4.version);
+    });
+  });
 });
