@@ -762,7 +762,10 @@ describe("cache-invalidation", () => {
       );
 
       // Update shared CSS
-      writeFileSync(join(testDir, "dist", "css", "theme.css"), "/* new theme */");
+      writeFileSync(
+        join(testDir, "dist", "css", "theme.css"),
+        "/* new theme */",
+      );
 
       // Check version changed
       const version2 = generateCacheVersion(
@@ -781,7 +784,10 @@ describe("cache-invalidation", () => {
       mkdirSync(join(testDir, "dist", "pages"), { recursive: true });
 
       // Tier 1: Base CSS
-      writeFileSync(join(testDir, "dist", "assets", "css", "base.css"), "/* v1 */");
+      writeFileSync(
+        join(testDir, "dist", "assets", "css", "base.css"),
+        "/* v1 */",
+      );
 
       // Tier 2: HTML template using CSS
       writeFileSync(
@@ -792,11 +798,11 @@ describe("cache-invalidation", () => {
       // Tier 3: Pages using template
       writeFileSync(
         join(testDir, "dist", "pages", "home.html"),
-        '<!--@include layout.html--><h1>Home</h1>',
+        "<!--@include layout.html--><h1>Home</h1>",
       );
       writeFileSync(
         join(testDir, "dist", "pages", "products.html"),
-        '<!--@include layout.html--><h1>Products</h1>',
+        "<!--@include layout.html--><h1>Products</h1>",
       );
 
       const version1 = generateCacheVersion(
@@ -843,7 +849,10 @@ describe("cache-invalidation", () => {
 
       // Create initial assets with metadata
       writeFileSync(join(testDir, "dist", "js", "app.1234.js"), "/* app v1 */");
-      writeFileSync(join(testDir, "dist", "css", "style.5678.css"), "/* css v1 */");
+      writeFileSync(
+        join(testDir, "dist", "css", "style.5678.css"),
+        "/* css v1 */",
+      );
       writeFileSync(
         join(testDir, "dist", "img", "logo.abcd.png"),
         Buffer.from("PNG"),
@@ -879,7 +888,10 @@ describe("cache-invalidation", () => {
       expect(version2.version).not.toBe(version3.version);
 
       // Update CSS
-      writeFileSync(join(testDir, "dist", "css", "style.5678.css"), "/* css v2 */");
+      writeFileSync(
+        join(testDir, "dist", "css", "style.5678.css"),
+        "/* css v2 */",
+      );
 
       const version4 = generateCacheVersion(
         testDir,
@@ -924,11 +936,7 @@ describe("cache-invalidation", () => {
 
       const version1 = generateCacheVersion(
         testDir,
-        [
-          "dist/**/*.js",
-          "dist/**/*.css",
-          "dist/**/*.html",
-        ],
+        ["dist/**/*.js", "dist/**/*.css", "dist/**/*.html"],
         [],
       );
 
@@ -948,11 +956,7 @@ describe("cache-invalidation", () => {
 
       const version2 = generateCacheVersion(
         testDir,
-        [
-          "dist/**/*.js",
-          "dist/**/*.css",
-          "dist/**/*.html",
-        ],
+        ["dist/**/*.js", "dist/**/*.css", "dist/**/*.html"],
         [],
       );
 
@@ -967,11 +971,7 @@ describe("cache-invalidation", () => {
 
       const version3 = generateCacheVersion(
         testDir,
-        [
-          "dist/**/*.js",
-          "dist/**/*.css",
-          "dist/**/*.html",
-        ],
+        ["dist/**/*.js", "dist/**/*.css", "dist/**/*.html"],
         [],
       );
 
@@ -982,11 +982,7 @@ describe("cache-invalidation", () => {
 
       const version4 = generateCacheVersion(
         testDir,
-        [
-          "dist/**/*.js",
-          "dist/**/*.css",
-          "dist/**/*.html",
-        ],
+        ["dist/**/*.js", "dist/**/*.css", "dist/**/*.html"],
         [],
       );
 
