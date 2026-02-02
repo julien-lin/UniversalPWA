@@ -1,45 +1,28 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from "fs";
-import { join } from "path";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   generateServiceWorker,
   generateSimpleServiceWorker,
   generateAndWriteServiceWorker,
   type ServiceWorkerGeneratorOptions,
 } from "./service-worker-generator.js";
+import { createTestDir, cleanupTestDir } from "../__tests__/test-helpers.js";
 
 vi.mock("workbox-build", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("workbox-build")>();
-  return {
-    ...actual,
-    generateSW: (config: { swDest: string }) => {
-      writeFileSync(
-        config.swDest,
-        "/* workbox */\nself.__WB_MANIFEST = [];",
-        "utf-8",
-      );
-      return Promise.resolve({
-        count: 1,
-        size: 34,
-        warnings: [],
-        manifestEntries: [{ url: "index.html" }],
-      });
-    },
-  };
+  const { createWorkboxBuildMock } = await import(
+    "../__tests__/mocks/workbox-build.js"
+  );
+  return await createWorkboxBuildMock(
+    importOriginal as () => Promise<typeof import("workbox-build")>,
+  );
 });
 
-const TEST_DIR = join(process.cwd(), ".test-tmp-sw-generator");
-
 describe("service-worker-generator", () => {
+  let TEST_DIR: string;
+
   beforeEach(() => {
-    try {
-      if (existsSync(TEST_DIR)) {
-        rmSync(TEST_DIR, { recursive: true, force: true });
-      }
-    } catch {
-      // Ignore errors during cleanup
-    }
-    mkdirSync(TEST_DIR, { recursive: true });
+    TEST_DIR = createTestDir("sw-generator");
 
     // Create test files
     mkdirSync(join(TEST_DIR, "public"), { recursive: true });
@@ -49,6 +32,10 @@ describe("service-worker-generator", () => {
     );
     writeFileSync(join(TEST_DIR, "public", "app.js"), 'console.log("test")');
     writeFileSync(join(TEST_DIR, "public", "style.css"), "body { margin: 0; }");
+  });
+
+  afterEach(() => {
+    cleanupTestDir(TEST_DIR);
   });
 
   describe("generateServiceWorker", () => {

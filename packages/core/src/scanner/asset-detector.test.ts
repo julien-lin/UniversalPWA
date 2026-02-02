@@ -1,21 +1,18 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdirSync, writeFileSync, rmSync, existsSync, mkdtempSync } from 'fs'
-import { join } from 'path'
-import { tmpdir } from 'os'
+import { mkdirSync, writeFileSync, existsSync } from 'node:fs'
+import { join } from 'node:path'
 import { detectAssets } from './asset-detector.js'
-
-let TEST_DIR = ''
+import { createTestDir, cleanupTestDir } from '../__tests__/test-helpers.js'
 
 describe('asset-detector', () => {
+  let TEST_DIR: string
+
   beforeEach(() => {
-    TEST_DIR = mkdtempSync(join(tmpdir(), 'asset-detector-'))
-    mkdirSync(TEST_DIR, { recursive: true })
+    TEST_DIR = createTestDir('asset-detector')
   })
 
   afterEach(() => {
-    if (TEST_DIR && existsSync(TEST_DIR)) {
-      rmSync(TEST_DIR, { recursive: true, force: true })
-    }
+    cleanupTestDir(TEST_DIR)
   })
 
   describe('JavaScript detection', () => {

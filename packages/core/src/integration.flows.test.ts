@@ -11,22 +11,19 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from "fs";
-import { join } from "path";
-import { tmpdir } from "os";
+import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { createTestDir, cleanupTestDir } from "./__tests__/test-helpers.js";
 
 describe("Integration Flows", () => {
   let testDir: string;
 
   beforeEach(() => {
-    testDir = join(tmpdir(), `integration-test-${Date.now()}`);
-    mkdirSync(testDir, { recursive: true });
+    testDir = createTestDir("integration-flows");
   });
 
   afterEach(() => {
-    if (existsSync(testDir)) {
-      rmSync(testDir, { recursive: true, force: true });
-    }
+    cleanupTestDir(testDir);
   });
 
   describe("Full PWA Initialization Workflow", () => {

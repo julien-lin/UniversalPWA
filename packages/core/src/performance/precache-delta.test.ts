@@ -4,9 +4,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { writeFileSync, mkdirSync, rmSync, existsSync } from "node:fs";
+import { writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
 import {
   calculateFileRevision,
   generateCurrentManifest,
@@ -19,19 +18,17 @@ import {
   type PrecacheEntry,
   DeltaCacheError,
 } from "./precache-delta.js";
+import { createTestDir, cleanupTestDir } from "../__tests__/test-helpers.js";
 
 describe("precache-delta", () => {
   let testDir: string;
 
   beforeEach(() => {
-    testDir = join(tmpdir(), `precache-delta-test-${Date.now()}`);
-    mkdirSync(testDir, { recursive: true });
+    testDir = createTestDir("precache-delta");
   });
 
   afterEach(() => {
-    if (existsSync(testDir)) {
-      rmSync(testDir, { recursive: true });
-    }
+    cleanupTestDir(testDir);
   });
 
   describe("calculateFileRevision", () => {

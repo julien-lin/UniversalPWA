@@ -3,32 +3,25 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
 import {
   loadConfig,
   findConfigFile,
   ConfigLoadError,
   ConfigValidationError,
 } from "./loader.js";
+import { createTestDir, cleanupTestDir } from "../__tests__/test-helpers.js";
 
 describe("config-loader", () => {
   let testDir: string;
 
   beforeEach(() => {
-    testDir = join(tmpdir(), `universal-pwa-test-${Date.now()}`);
-    mkdirSync(testDir, { recursive: true });
+    testDir = createTestDir("config-loader");
   });
 
   afterEach(() => {
-    if (existsSync(testDir)) {
-      try {
-        rmSync(testDir, { recursive: true });
-      } catch {
-        // Ignore cleanup errors
-      }
-    }
+    cleanupTestDir(testDir);
   });
 
   describe("findConfigFile", () => {

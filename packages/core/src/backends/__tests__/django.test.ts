@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { DjangoIntegration } from '../django.js'
 import { existsSync, readFileSync } from 'node:fs'
+import { createFsMockForBackend } from './helpers/fs-mock.js'
+import { expectBackendContract } from './helpers/expect-backend-contract.js'
 
 // Mock fs module
 vi.mock('node:fs')
@@ -16,23 +18,9 @@ describe('DjangoIntegration', () => {
 
     describe('detect()', () => {
         it('should detect Django 4.2 project', () => {
-            const requirementsTxt = 'Django==4.2.0\nrequests==2.28.0'
-
-            vi.mocked(existsSync).mockImplementation((path) => {
-                const pathStr = typeof path === 'string' ? path : String(path)
-                return (
-                    pathStr.includes('manage.py') ||
-                    pathStr.includes('settings.py') ||
-                    pathStr.includes('urls.py') ||
-                    pathStr.includes('requirements.txt')
-                )
-            })
-
-            vi.mocked(readFileSync).mockImplementation((path) => {
-                if (String(path).includes('requirements.txt')) {
-                    return requirementsTxt
-                }
-                return ''
+            createFsMockForBackend({
+                existsPaths: ['manage.py', 'settings.py', 'urls.py', 'requirements.txt'],
+                readFileMap: { 'requirements.txt': 'Django==4.2.0\nrequests==2.28.0' },
             })
 
             const result = integration.detect()
@@ -43,22 +31,9 @@ describe('DjangoIntegration', () => {
         })
 
         it('should detect Django 5.0 project', () => {
-            const requirementsTxt = 'Django>=5.0.0'
-
-            vi.mocked(existsSync).mockImplementation((path) => {
-                const pathStr = typeof path === 'string' ? path : String(path)
-                return (
-                    pathStr.includes('manage.py') ||
-                    pathStr.includes('settings.py') ||
-                    pathStr.includes('requirements.txt')
-                )
-            })
-
-            vi.mocked(readFileSync).mockImplementation((path) => {
-                if (String(path).includes('requirements.txt')) {
-                    return requirementsTxt
-                }
-                return ''
+            createFsMockForBackend({
+                existsPaths: ['manage.py', 'settings.py', 'requirements.txt'],
+                readFileMap: { 'requirements.txt': 'Django>=5.0.0' },
             })
 
             const result = integration.detect()
@@ -69,22 +44,9 @@ describe('DjangoIntegration', () => {
         })
 
         it('should detect Django with pyproject.toml', () => {
-            const pyprojectToml = '[project]\ndependencies = ["django>=4.2"]'
-
-            vi.mocked(existsSync).mockImplementation((path) => {
-                const pathStr = typeof path === 'string' ? path : String(path)
-                return (
-                    pathStr.includes('manage.py') ||
-                    pathStr.includes('settings.py') ||
-                    pathStr.includes('pyproject.toml')
-                )
-            })
-
-            vi.mocked(readFileSync).mockImplementation((path) => {
-                if (String(path).includes('pyproject.toml')) {
-                    return pyprojectToml
-                }
-                return ''
+            createFsMockForBackend({
+                existsPaths: ['manage.py', 'settings.py', 'pyproject.toml'],
+                readFileMap: { 'pyproject.toml': '[project]\ndependencies = ["django>=4.2"]' },
             })
 
             const result = integration.detect()
@@ -94,7 +56,7 @@ describe('DjangoIntegration', () => {
         })
 
         it('should not detect non-Django project', () => {
-            vi.mocked(existsSync).mockReturnValue(false)
+            createFsMockForBackend({ existsReturn: false })
 
             const result = integration.detect()
 
@@ -102,10 +64,7 @@ describe('DjangoIntegration', () => {
         })
 
         it('should have medium confidence with only manage.py', () => {
-            vi.mocked(existsSync).mockImplementation((path) => {
-                const pathStr = typeof path === 'string' ? path : String(path)
-                return pathStr.includes('manage.py')
-            })
+            createFsMockForBackend({ existsPaths: ['manage.py'] })
 
             const result = integration.detect()
 
@@ -156,9 +115,9 @@ describe('DjangoIntegration', () => {
         })
     })
 
-    describe('getStartUrl()', () => {
-        it('should return root path', () => {
-            expect(integration.getStartUrl()).toBe('/')
+    describe('Backend contract', () => {
+        it('should satisfy common backend contract', () => {
+            expectBackendContract(integration)
         })
     })
 
@@ -172,12 +131,6 @@ describe('DjangoIntegration', () => {
     })
 
     describe('getApiPatterns()', () => {
-        it('should return API patterns', () => {
-            const patterns = integration.getApiPatterns()
-
-            expect(patterns).toContain('/api/**')
-        })
-
         it('should include REST framework patterns if detected', () => {
             // Mock detection of Django REST Framework
             vi.mocked(existsSync).mockImplementation((path) => {
@@ -206,7 +159,7 @@ describe('DjangoIntegration', () => {
     })
 
     describe('getStaticAssetPatterns()', () => {
-        it('should return static asset patterns', () => {
+        it('should include media patterns', () => {
             const patterns = integration.getStaticAssetPatterns()
 
             expect(patterns).toContain('/static/**')

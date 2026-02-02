@@ -1,75 +1,35 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { join } from "node:path";
-import { mkdirSync, rmSync, writeFileSync, existsSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync } from "node:fs";
 import { LaravelIntegration } from "../laravel.js";
 import { ServiceWorkerConfigBuilder } from "../../generator/service-worker-config-builder.js";
 import { generateSimpleServiceWorker } from "../../generator/service-worker-generator.js";
 import { injectMetaTagsInFile } from "../../injector/meta-injector.js";
 import { generateIcons } from "../../generator/icon-generator.js";
-
+import {
+  createTestDir,
+  cleanupTestDir,
+  createLaravelFixture,
+} from "../../__tests__/test-helpers.js";
 vi.mock("workbox-build", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("workbox-build")>();
-  return {
-    ...actual,
-    generateSW: (config: { swDest: string }) => {
-      writeFileSync(
-        config.swDest,
-        "/* workbox */\nself.__WB_MANIFEST = [];",
-        "utf-8",
-      );
-      return Promise.resolve({
-        count: 1,
-        size: 34,
-        warnings: [],
-        manifestEntries: [{ url: "index.html" }],
-      });
-    },
-  };
+  const { createWorkboxBuildMock } = await import(
+    "../../__tests__/mocks/workbox-build.js"
+  );
+  return await createWorkboxBuildMock(
+    importOriginal as () => Promise<typeof import("workbox-build")>,
+  );
 });
-
-const createLaravelFixture = (): string => {
-  const root = join(
-    tmpdir(),
-    `laravel-fixture-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-  );
-  mkdirSync(root, { recursive: true });
-  mkdirSync(join(root, "app"), { recursive: true });
-  mkdirSync(join(root, "config"), { recursive: true });
-  mkdirSync(join(root, "routes"), { recursive: true });
-  mkdirSync(join(root, "public"), { recursive: true });
-
-  writeFileSync(join(root, "artisan"), "#!/usr/bin/env php");
-  writeFileSync(
-    join(root, "composer.json"),
-    JSON.stringify({ require: { "laravel/framework": "^11.0" } }),
-  );
-
-  writeFileSync(
-    join(root, "public", "index.html"),
-    '<!doctype html><html><head><title>Laravel</title></head><body><div id="app"></div></body></html>',
-  );
-
-  return root;
-};
-
-const cleanup = (path: string) => {
-  try {
-    rmSync(path, { recursive: true, force: true });
-  } catch {
-    // ignore
-  }
-};
 
 describe("LaravelIntegration (integration-lite)", () => {
   let projectRoot = "";
 
   beforeEach(() => {
-    projectRoot = createLaravelFixture();
+    projectRoot = createTestDir("laravel-integration");
+    createLaravelFixture(projectRoot);
   });
 
   afterEach(() => {
-    cleanup(projectRoot);
+    cleanupTestDir(projectRoot);
   });
 
   it("should detect and validate ServiceWorkerConfig", () => {

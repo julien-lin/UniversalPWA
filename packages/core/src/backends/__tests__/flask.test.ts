@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { FlaskIntegration } from '../flask.js'
 import { existsSync, readFileSync } from 'node:fs'
+import { createFsMockForBackend } from './helpers/fs-mock.js'
+import { expectBackendContract } from './helpers/expect-backend-contract.js'
 
 // Mock fs module
 vi.mock('node:fs')
@@ -16,23 +18,9 @@ describe('FlaskIntegration', () => {
 
     describe('detect()', () => {
         it('should detect Flask 3.0 project', () => {
-            const requirementsTxt = 'Flask==3.0.0\nrequests==2.28.0'
-
-            vi.mocked(existsSync).mockImplementation((path) => {
-                const pathStr = typeof path === 'string' ? path : String(path)
-                return (
-                    pathStr.includes('app.py') ||
-                    pathStr.includes('requirements.txt') ||
-                    pathStr.includes('static') ||
-                    pathStr.includes('templates')
-                )
-            })
-
-            vi.mocked(readFileSync).mockImplementation((path) => {
-                if (String(path).includes('requirements.txt')) {
-                    return requirementsTxt
-                }
-                return ''
+            createFsMockForBackend({
+                existsPaths: ['app.py', 'requirements.txt', 'static', 'templates'],
+                readFileMap: { 'requirements.txt': 'Flask==3.0.0\nrequests==2.28.0' },
             })
 
             const result = integration.detect()
@@ -43,16 +31,9 @@ describe('FlaskIntegration', () => {
         })
 
         it('should detect Flask with application.py', () => {
-            vi.mocked(existsSync).mockImplementation((path) => {
-                const pathStr = typeof path === 'string' ? path : String(path)
-                return pathStr.includes('application.py') || pathStr.includes('requirements.txt')
-            })
-
-            vi.mocked(readFileSync).mockImplementation((path) => {
-                if (String(path).includes('requirements.txt')) {
-                    return 'Flask>=2.0.0'
-                }
-                return ''
+            createFsMockForBackend({
+                existsPaths: ['application.py', 'requirements.txt'],
+                readFileMap: { 'requirements.txt': 'Flask>=2.0.0' },
             })
 
             const result = integration.detect()
@@ -62,13 +43,8 @@ describe('FlaskIntegration', () => {
         })
 
         it('should detect Flask with Flask structure', () => {
-            vi.mocked(existsSync).mockImplementation((path) => {
-                const pathStr = typeof path === 'string' ? path : String(path)
-                return (
-                    pathStr.includes('app.py') ||
-                    pathStr.includes('static') ||
-                    pathStr.includes('templates')
-                )
+            createFsMockForBackend({
+                existsPaths: ['app.py', 'static', 'templates'],
             })
 
             const result = integration.detect()
@@ -78,17 +54,14 @@ describe('FlaskIntegration', () => {
         })
 
         it('should not detect non-Flask project', () => {
-            vi.mocked(existsSync).mockReturnValue(false)
+            createFsMockForBackend({ existsReturn: false })
 
             const result = integration.detect()
             expect(result.detected).toBe(false)
         })
 
         it('should have medium confidence with only app.py', () => {
-            vi.mocked(existsSync).mockImplementation((path) => {
-                const pathStr = typeof path === 'string' ? path : String(path)
-                return pathStr.includes('app.py')
-            })
+            createFsMockForBackend({ existsPaths: ['app.py'] })
 
             const result = integration.detect()
 
@@ -151,9 +124,9 @@ describe('FlaskIntegration', () => {
         })
     })
 
-    describe('getStartUrl()', () => {
-        it('should return root path', () => {
-            expect(integration.getStartUrl()).toBe('/')
+    describe('Backend contract', () => {
+        it('should satisfy common backend contract', () => {
+            expectBackendContract(integration)
         })
     })
 
@@ -167,12 +140,6 @@ describe('FlaskIntegration', () => {
     })
 
     describe('getApiPatterns()', () => {
-        it('should return API patterns', () => {
-            const patterns = integration.getApiPatterns()
-
-            expect(patterns).toContain('/api/**')
-        })
-
         it('should include RESTful patterns if Flask-RESTful is detected', () => {
             vi.mocked(existsSync).mockImplementation((path) => {
                 const pathStr = typeof path === 'string' ? path : String(path)
@@ -197,7 +164,7 @@ describe('FlaskIntegration', () => {
     })
 
     describe('getStaticAssetPatterns()', () => {
-        it('should return static asset patterns', () => {
+        it('should include static path', () => {
             const patterns = integration.getStaticAssetPatterns()
 
             expect(patterns).toContain('/static/**')

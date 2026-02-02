@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { LaravelIntegration } from '../laravel.js'
 import { existsSync, readFileSync } from 'node:fs'
+import { createFsMockForBackend } from './helpers/fs-mock.js'
+import { expectBackendContract } from './helpers/expect-backend-contract.js'
 
 // Mock fs module
 vi.mock('node:fs')
@@ -16,27 +18,9 @@ describe('LaravelIntegration', () => {
 
     describe('detect()', () => {
         it('should detect Laravel 11 project', () => {
-            const composerJson = {
-                require: {
-                    'laravel/framework': '^11.0',
-                },
-            }
-
-            vi.mocked(existsSync).mockImplementation((path) => {
-                const pathStr = typeof path === 'string' ? path : String(path)
-                return (
-                    pathStr.includes('composer.json') ||
-                    pathStr.includes('artisan') ||
-                    pathStr.includes('config') ||
-                    pathStr.includes('app')
-                )
-            })
-
-            vi.mocked(readFileSync).mockImplementation((path) => {
-                if (String(path).includes('composer.json')) {
-                    return JSON.stringify(composerJson)
-                }
-                return ''
+            createFsMockForBackend({
+                existsPaths: ['composer.json', 'artisan', 'config', 'app'],
+                readFileMap: { 'composer.json': JSON.stringify({ require: { 'laravel/framework': '^11.0' } }) },
             })
 
             const result = integration.detect()
@@ -48,27 +32,9 @@ describe('LaravelIntegration', () => {
         })
 
         it('should detect Laravel 12 project', () => {
-            const composerJson = {
-                require: {
-                    'laravel/framework': '^12.0',
-                },
-            }
-
-            vi.mocked(existsSync).mockImplementation((path) => {
-                const pathStr = typeof path === 'string' ? path : String(path)
-                return (
-                    pathStr.includes('composer.json') ||
-                    pathStr.includes('artisan') ||
-                    pathStr.includes('config') ||
-                    pathStr.includes('app')
-                )
-            })
-
-            vi.mocked(readFileSync).mockImplementation((path) => {
-                if (String(path).includes('composer.json')) {
-                    return JSON.stringify(composerJson)
-                }
-                return ''
+            createFsMockForBackend({
+                existsPaths: ['composer.json', 'artisan', 'config', 'app'],
+                readFileMap: { 'composer.json': JSON.stringify({ require: { 'laravel/framework': '^12.0' } }) },
             })
 
             const result = integration.detect()
@@ -81,27 +47,9 @@ describe('LaravelIntegration', () => {
         })
 
         it('should detect Laravel 10 project', () => {
-            const composerJson = {
-                require: {
-                    'laravel/framework': '^10.0',
-                },
-            }
-
-            vi.mocked(existsSync).mockImplementation((path) => {
-                const pathStr = typeof path === 'string' ? path : String(path)
-                return (
-                    pathStr.includes('composer.json') ||
-                    pathStr.includes('artisan') ||
-                    pathStr.includes('config') ||
-                    pathStr.includes('app')
-                )
-            })
-
-            vi.mocked(readFileSync).mockImplementation((path) => {
-                if (String(path).includes('composer.json')) {
-                    return JSON.stringify(composerJson)
-                }
-                return ''
+            createFsMockForBackend({
+                existsPaths: ['composer.json', 'artisan', 'config', 'app'],
+                readFileMap: { 'composer.json': JSON.stringify({ require: { 'laravel/framework': '^10.0' } }) },
             })
 
             const result = integration.detect()
@@ -111,7 +59,7 @@ describe('LaravelIntegration', () => {
         })
 
         it('should NOT detect non-Laravel projects', () => {
-            vi.mocked(existsSync).mockReturnValue(false)
+            createFsMockForBackend({ existsReturn: false })
 
             const result = integration.detect()
 
@@ -121,26 +69,14 @@ describe('LaravelIntegration', () => {
         })
 
         it('should detect Laravel without artisan file but with valid composer.json', () => {
-            const composerJson = {
-                require: {
-                    'laravel/framework': '^11.0',
-                },
-            }
-
             vi.mocked(existsSync).mockImplementation((path) => {
                 const pathStr = typeof path === 'string' ? path : String(path)
-                // No artisan file
                 if (pathStr.includes('artisan')) return false
-                // But has composer.json and other Laravel dirs
                 return pathStr.includes('composer.json') || pathStr.includes('config') || pathStr.includes('app')
             })
-
-            vi.mocked(readFileSync).mockImplementation((path) => {
-                if (String(path).includes('composer.json')) {
-                    return JSON.stringify(composerJson)
-                }
-                return ''
-            })
+            vi.mocked(readFileSync).mockImplementation((path) =>
+                String(path).includes('composer.json') ? JSON.stringify({ require: { 'laravel/framework': '^11.0' } }) : '',
+            )
 
             const result = integration.detect()
 
@@ -148,8 +84,7 @@ describe('LaravelIntegration', () => {
         })
 
         it('should handle corrupted composer.json gracefully', () => {
-            vi.mocked(existsSync).mockReturnValue(true)
-            vi.mocked(readFileSync).mockReturnValue('invalid json {')
+            createFsMockForBackend({ existsReturn: true, readFileMap: { 'composer.json': 'invalid json {' } })
 
             const result = integration.detect()
 
@@ -158,32 +93,12 @@ describe('LaravelIntegration', () => {
         })
 
         it('should detect SPA mode with Vite + Vue', () => {
-            const composerJson = {
-                require: {
-                    'laravel/framework': '^11.0',
+            createFsMockForBackend({
+                existsPaths: ['composer.json', 'artisan', 'vite.config', 'config', 'app'],
+                readFileMap: {
+                    'composer.json': JSON.stringify({ require: { 'laravel/framework': '^11.0' } }),
+                    'vite.config': "import vue from '@vitejs/plugin-vue'",
                 },
-            }
-
-            vi.mocked(existsSync).mockImplementation((path) => {
-                const pathStr = typeof path === 'string' ? path : String(path)
-                return (
-                    pathStr.includes('composer.json') ||
-                    pathStr.includes('artisan') ||
-                    pathStr.includes('vite.config') ||
-                    pathStr.includes('config') ||
-                    pathStr.includes('app')
-                )
-            })
-
-            vi.mocked(readFileSync).mockImplementation((path) => {
-                const pathStr = typeof path === 'string' ? path : String(path)
-                if (pathStr.includes('composer.json')) {
-                    return JSON.stringify(composerJson)
-                }
-                if (pathStr.includes('vite.config')) {
-                    return "import vue from '@vitejs/plugin-vue'"
-                }
-                return ''
             })
 
             const result = integration.detect()
@@ -193,28 +108,13 @@ describe('LaravelIntegration', () => {
         })
 
         it('should detect Livewire integration', () => {
-            const composerJson = {
-                require: {
-                    'laravel/framework': '^11.0',
-                    'livewire/livewire': '^3.0',
+            createFsMockForBackend({
+                existsPaths: ['composer.json', 'artisan', 'config', 'app'],
+                readFileMap: {
+                    'composer.json': JSON.stringify({
+                        require: { 'laravel/framework': '^11.0', 'livewire/livewire': '^3.0' },
+                    }),
                 },
-            }
-
-            vi.mocked(existsSync).mockImplementation((path) => {
-                const pathStr = typeof path === 'string' ? path : String(path)
-                return (
-                    pathStr.includes('composer.json') ||
-                    pathStr.includes('artisan') ||
-                    pathStr.includes('config') ||
-                    pathStr.includes('app')
-                )
-            })
-
-            vi.mocked(readFileSync).mockImplementation((path) => {
-                if (String(path).includes('composer.json')) {
-                    return JSON.stringify(composerJson)
-                }
-                return ''
             })
 
             const result = integration.detect()
@@ -328,13 +228,13 @@ describe('LaravelIntegration', () => {
         })
     })
 
-    describe('getApiPatterns()', () => {
-        it('should include REST API patterns', () => {
-            const patterns = integration.getApiPatterns()
-
-            expect(patterns).toContain('/api/**')
+    describe('Backend contract', () => {
+        it('should satisfy common backend contract', () => {
+            expectBackendContract(integration)
         })
+    })
 
+    describe('getApiPatterns()', () => {
         it('should include GraphQL pattern', () => {
             const patterns = integration.getApiPatterns()
 
@@ -349,14 +249,6 @@ describe('LaravelIntegration', () => {
     })
 
     describe('getStaticAssetPatterns()', () => {
-        it('should include common asset extensions', () => {
-            const patterns = integration.getStaticAssetPatterns()
-
-            expect(patterns).toContainEqual(expect.stringContaining('js'))
-            expect(patterns).toContainEqual(expect.stringContaining('css'))
-            expect(patterns).toContainEqual(expect.stringContaining('woff'))
-        })
-
         it('should include storage patterns', () => {
             const patterns = integration.getStaticAssetPatterns()
 
@@ -373,7 +265,7 @@ describe('LaravelIntegration', () => {
 
     describe('validateSetup()', () => {
         it('should warn about missing manifest.json', async () => {
-            vi.mocked(existsSync).mockReturnValue(false)
+            createFsMockForBackend({ existsReturn: false })
 
             const result = await integration.validateSetup()
 
@@ -381,7 +273,7 @@ describe('LaravelIntegration', () => {
         })
 
         it('should warn about missing service worker', async () => {
-            vi.mocked(existsSync).mockReturnValue(false)
+            createFsMockForBackend({ existsReturn: false })
 
             const result = await integration.validateSetup()
 
@@ -389,7 +281,7 @@ describe('LaravelIntegration', () => {
         })
 
         it('should be valid when no errors present', async () => {
-            vi.mocked(existsSync).mockReturnValue(false)
+            createFsMockForBackend({ existsReturn: false })
 
             const result = await integration.validateSetup()
 
@@ -398,7 +290,7 @@ describe('LaravelIntegration', () => {
         })
 
         it('should suggest offline view', async () => {
-            vi.mocked(existsSync).mockReturnValue(false)
+            createFsMockForBackend({ existsReturn: false })
 
             const result = await integration.validateSetup()
 

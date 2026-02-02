@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { mkdirSync, rmSync, existsSync } from 'fs'
-import { join } from 'path'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 import {
   generateIcons,
   generateIconsOnly,
@@ -11,21 +11,14 @@ import {
   STANDARD_SPLASH_SIZES,
 } from './icon-generator.js'
 import type { ManifestIcon, ManifestSplashScreen } from './manifest-generator.js'
-
-const TEST_DIR = join(process.cwd(), '.test-tmp-icon-generator')
+import { createTestDir, cleanupTestDir } from '../__tests__/test-helpers.js'
 
 describe('icon-generator', () => {
+  let TEST_DIR: string
   let sourceImage: string
 
   beforeEach(async () => {
-    try {
-      if (existsSync(TEST_DIR)) {
-        rmSync(TEST_DIR, { recursive: true, force: true })
-      }
-    } catch {
-      // Ignore errors during cleanup
-    }
-    mkdirSync(TEST_DIR, { recursive: true })
+    TEST_DIR = createTestDir('icon-generator')
 
     // Create test source image (PNG 512x512)
     sourceImage = join(TEST_DIR, 'source.png')
@@ -42,6 +35,10 @@ describe('icon-generator', () => {
     })
       .png()
       .toFile(sourceImage)
+  })
+
+  afterEach(() => {
+    cleanupTestDir(TEST_DIR)
   })
 
   describe('generateIcons', () => {

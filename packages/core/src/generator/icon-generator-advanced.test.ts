@@ -4,20 +4,19 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
 import sharp from "sharp";
 import { generateIconsAdvanced } from "./icon-generator.js";
 import { detectIconSources, type IconGenerationConfig } from "./icon-config.js";
 import type { IconSource } from "./icon-config.js";
+import { createTestDir, cleanupTestDir } from "../__tests__/test-helpers.js";
 
 describe("icon-generator-advanced", () => {
   let testDir: string;
   let sourceImagePath: string;
 
   beforeEach(async () => {
-    testDir = await mkdtemp(join(tmpdir(), "icon-advanced-test-"));
+    testDir = createTestDir("icon-advanced");
 
     // Create a test source image (512x512 PNG)
     sourceImagePath = join(testDir, "icon.png");
@@ -33,8 +32,8 @@ describe("icon-generator-advanced", () => {
       .toFile(sourceImagePath);
   });
 
-  afterEach(async () => {
-    await rm(testDir, { recursive: true, force: true });
+  afterEach(() => {
+    cleanupTestDir(testDir);
   });
 
   describe("generateIconsAdvanced - Multi-source", () => {

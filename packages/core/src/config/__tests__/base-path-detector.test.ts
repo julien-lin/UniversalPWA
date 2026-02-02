@@ -3,26 +3,25 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
 import {
   detectBasePath,
   filterByConfidence,
   formatDetectionResult,
   getSuggestionMessage,
 } from "../base-path-detector.js";
+import { createTestDir, cleanupTestDir } from "../../__tests__/test-helpers.js";
 
 describe("basePath Auto-Detection", () => {
   let tempDir: string;
 
   beforeEach(() => {
-    tempDir = join(tmpdir(), `test-basepath-${Date.now()}`);
-    mkdirSync(tempDir, { recursive: true });
+    tempDir = createTestDir("basepath");
   });
 
   afterEach(() => {
-    rmSync(tempDir, { recursive: true, force: true });
+    cleanupTestDir(tempDir);
   });
 
   describe("Vite detection", () => {

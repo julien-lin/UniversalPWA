@@ -5,59 +5,28 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { join } from 'node:path'
-import { mkdirSync, rmSync, writeFileSync, existsSync, readFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { existsSync, readFileSync } from 'node:fs'
 import { SymfonyIntegration } from '../symfony.js'
 import { ServiceWorkerConfigBuilder } from '../../generator/service-worker-config-builder.js'
 import { generateServiceWorkerFromBackend } from '../../generator/service-worker-generator.js'
 import { injectMetaTagsInFile } from '../../injector/meta-injector.js'
 import { generateIcons } from '../../generator/icon-generator.js'
-
-const createSymfonyFixture = (): string => {
-  const root = join(tmpdir(), `symfony-fixture-${Date.now()}-${Math.random().toString(36).slice(2)}`)
-  mkdirSync(root, { recursive: true })
-  mkdirSync(join(root, 'config'), { recursive: true })
-  mkdirSync(join(root, 'public'), { recursive: true })
-  mkdirSync(join(root, 'src'), { recursive: true })
-
-  writeFileSync(
-    join(root, 'composer.json'),
-    JSON.stringify({
-      require: {
-        'php': '>=8.2',
-        'symfony/framework-bundle': '^7.0',
-      },
-    }),
-  )
-
-  writeFileSync(join(root, 'public', 'index.php'), '<?php echo "Symfony";')
-  writeFileSync(join(root, 'config', 'services.yaml'), 'services:\n  _defaults:\n    autowire: true\n')
-
-  writeFileSync(
-    join(root, 'public', 'index.html'),
-    '<!doctype html><html><head><title>Symfony</title></head><body><div id="app"></div></body></html>',
-  )
-
-  return root
-}
-
-const cleanup = (path: string) => {
-  try {
-    rmSync(path, { recursive: true, force: true })
-  } catch {
-    // ignore
-  }
-}
+import {
+  createTestDir,
+  cleanupTestDir,
+  createSymfonyFixture,
+} from '../../__tests__/test-helpers.js'
 
 describe('SymfonyIntegration (integration-lite)', () => {
   let projectRoot = ''
 
   beforeEach(() => {
-    projectRoot = createSymfonyFixture()
+    projectRoot = createTestDir('symfony-integration')
+    createSymfonyFixture(projectRoot, { publicIndexHtml: true })
   })
 
   afterEach(() => {
-    cleanup(projectRoot)
+    cleanupTestDir(projectRoot)
   })
 
   it('should detect and validate ServiceWorkerConfig', () => {

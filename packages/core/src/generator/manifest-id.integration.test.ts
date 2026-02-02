@@ -4,10 +4,8 @@ import {
   generateAndWriteManifest,
 } from "./manifest-generator.js";
 import { generateManifestId } from "./manifest-id-generator.js";
-import { existsSync, readFileSync, rmSync, mkdirSync } from "fs";
-import { join } from "path";
-
-const TEST_DIR = join(process.cwd(), ".test-tmp-manifest-id");
+import { existsSync, readFileSync } from "node:fs";
+import { createTestDir, cleanupTestDir } from "../__tests__/test-helpers.js";
 
 describe("Manifest ID Field - Integration Tests", () => {
   describe("Collision Prevention - Real World Scenarios", () => {
@@ -57,25 +55,14 @@ describe("Manifest ID Field - Integration Tests", () => {
   });
 
   describe("Manifest JSON with ID Field", () => {
+    let TEST_DIR: string;
+
     beforeEach(() => {
-      try {
-        if (existsSync(TEST_DIR)) {
-          rmSync(TEST_DIR, { recursive: true, force: true });
-        }
-      } catch {
-        // Ignore cleanup errors
-      }
-      mkdirSync(TEST_DIR, { recursive: true });
+      TEST_DIR = createTestDir("manifest-id");
     });
 
     afterEach(() => {
-      try {
-        if (existsSync(TEST_DIR)) {
-          rmSync(TEST_DIR, { recursive: true, force: true });
-        }
-      } catch {
-        // Ignore cleanup errors
-      }
+      cleanupTestDir(TEST_DIR);
     });
 
     it("should include ID in generated manifest JSON", () => {

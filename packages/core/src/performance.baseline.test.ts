@@ -10,23 +10,19 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdirSync, writeFileSync, rmSync, existsSync } from "fs";
-import { join } from "path";
-import { tmpdir } from "os";
-import { readFileSync } from "fs";
+import { writeFileSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { createTestDir, cleanupTestDir } from "./__tests__/test-helpers.js";
 
 describe("Performance Baselines", () => {
   let testDir: string;
 
   beforeEach(() => {
-    testDir = join(tmpdir(), `perf-test-${Date.now()}`);
-    mkdirSync(testDir, { recursive: true });
+    testDir = createTestDir("perf-baseline");
   });
 
   afterEach(() => {
-    if (existsSync(testDir)) {
-      rmSync(testDir, { recursive: true, force: true });
-    }
+    cleanupTestDir(testDir);
   });
 
   describe("Framework Detection Performance", () => {

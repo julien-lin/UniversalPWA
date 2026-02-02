@@ -4,16 +4,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import {
-  mkdirSync,
-  writeFileSync,
-  rmSync,
-  existsSync,
-  readFileSync,
-  mkdtempSync,
-} from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
 import {
   generateServiceWorkerFromConfig,
   generateServiceWorker,
@@ -21,15 +13,15 @@ import {
 import type { ServiceWorkerConfig } from "./caching-strategy.js";
 import { PRESET_STRATEGIES } from "./caching-strategy.js";
 import { getAvailableTemplateTypes } from "@julien-lin/universal-pwa-templates";
+import { createTestDir, cleanupTestDir } from "../__tests__/test-helpers.js";
 
 describe.sequential("service-worker-generation-comprehensive", () => {
   let testDir: string;
   let outputDir: string;
 
   beforeEach(() => {
-    testDir = mkdtempSync(join(tmpdir(), "universal-pwa-test-"));
+    testDir = createTestDir("sw-comprehensive");
     outputDir = join(testDir, "output");
-    mkdirSync(testDir, { recursive: true });
     mkdirSync(outputDir, { recursive: true });
     mkdirSync(join(testDir, "public"), { recursive: true });
 
@@ -47,13 +39,7 @@ describe.sequential("service-worker-generation-comprehensive", () => {
   });
 
   afterEach(() => {
-    if (existsSync(testDir)) {
-      try {
-        rmSync(testDir, { recursive: true });
-      } catch {
-        // Ignore cleanup errors
-      }
-    }
+    cleanupTestDir(testDir);
   });
 
   describe("Unit Tests - All Templates", () => {

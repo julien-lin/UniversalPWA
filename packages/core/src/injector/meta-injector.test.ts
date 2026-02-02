@@ -1,25 +1,23 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from "fs";
-import { join } from "path";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { writeFileSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   injectMetaTags,
   injectMetaTagsInFile,
   injectMetaTagsInFilesBatch,
   type MetaInjectorOptions,
 } from "./meta-injector.js";
-
-const TEST_DIR = join(process.cwd(), ".test-tmp-meta-injector");
+import { createTestDir, cleanupTestDir } from "../__tests__/test-helpers.js";
 
 describe("meta-injector", () => {
+  let TEST_DIR: string;
+
   beforeEach(() => {
-    try {
-      if (existsSync(TEST_DIR)) {
-        rmSync(TEST_DIR, { recursive: true, force: true });
-      }
-    } catch {
-      // Ignore errors during cleanup
-    }
-    mkdirSync(TEST_DIR, { recursive: true });
+    TEST_DIR = createTestDir("meta-injector");
+  });
+
+  afterEach(() => {
+    cleanupTestDir(TEST_DIR);
   });
 
   describe("injectMetaTags", () => {

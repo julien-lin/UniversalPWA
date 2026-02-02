@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { mkdirSync, writeFileSync, rmSync, existsSync } from "fs";
-import { join } from "path";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   detectApiType,
   generateAdaptiveCacheStrategies,
@@ -12,8 +12,7 @@ import {
   optimizeProjectImages,
   generateResponsiveImageSizes,
 } from "./optimizer.js";
-
-const TEST_DIR = join(process.cwd(), ".test-tmp-optimizer");
+import { createTestDir, cleanupTestDir } from "../__tests__/test-helpers.js";
 
 // Helpers
 
@@ -93,20 +92,15 @@ const expectOptimizationResultOk = (
 describe("optimizer", () => {
   // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
   let warnSpy: ReturnType<typeof vi.spyOn> | null;
+  let TEST_DIR: string;
 
   beforeEach(() => {
     warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    try {
-      if (existsSync(TEST_DIR)) {
-        rmSync(TEST_DIR, { recursive: true, force: true });
-      }
-    } catch {
-      // Ignore errors during cleanup
-    }
-    mkdirSync(TEST_DIR, { recursive: true });
+    TEST_DIR = createTestDir("optimizer");
   });
 
   afterEach(() => {
+    cleanupTestDir(TEST_DIR);
     warnSpy?.mockRestore();
     warnSpy = null;
   });
@@ -166,24 +160,6 @@ describe("optimizer", () => {
         assets: makeAssets({ apiRoutes: ["/rest/users"] }),
         expected: "REST",
       },
-      {
-        name: "REST detected in JavaScript code",
-        pkg: null,
-        assets: makeAssets({
-          javascript: [join(TEST_DIR, "api.js")],
-          apiRoutes: [],
-        }),
-        expected: "REST",
-      },
-      {
-        name: "GraphQL detected in JavaScript code",
-        pkg: null,
-        assets: makeAssets({
-          javascript: [join(TEST_DIR, "graphql.js")],
-          apiRoutes: [],
-        }),
-        expected: "GraphQL",
-      },
     ])("should detect $name", ({ pkg, assets, expected }) => {
       if (pkg) writeJSON(join(TEST_DIR, "package.json"), pkg);
 
@@ -200,6 +176,26 @@ describe("optimizer", () => {
 
       const apiType = detectApiType(TEST_DIR, assets);
       expect(apiType).toBe(expected);
+    });
+
+    it("should detect REST via JavaScript code", () => {
+      const assets = makeAssets({
+        javascript: [join(TEST_DIR, "api.js")],
+        apiRoutes: [],
+      });
+      writeFileSync(join(TEST_DIR, "api.js"), 'fetch("/api/users")');
+      const apiType = detectApiType(TEST_DIR, assets);
+      expect(apiType).toBe("REST");
+    });
+
+    it("should detect GraphQL via JavaScript code", () => {
+      const assets = makeAssets({
+        javascript: [join(TEST_DIR, "graphql.js")],
+        apiRoutes: [],
+      });
+      writeFileSync(join(TEST_DIR, "graphql.js"), "graphql query { users }");
+      const apiType = detectApiType(TEST_DIR, assets);
+      expect(apiType).toBe("GraphQL");
     });
 
     it("should handle invalid package.json", () => {

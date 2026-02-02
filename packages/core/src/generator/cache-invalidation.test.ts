@@ -3,15 +3,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import {
-  mkdirSync,
-  writeFileSync,
-  rmSync,
-  existsSync,
-  mkdtempSync,
-} from "node:fs";
+import { mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
 import {
   generateCacheVersion,
   buildDependencyGraph,
@@ -24,23 +17,17 @@ import {
 } from "./cache-invalidation.js";
 import type { AdvancedCachingConfig, RouteConfig } from "./caching-strategy.js";
 import { PRESET_STRATEGIES } from "./caching-strategy.js";
+import { createTestDir, cleanupTestDir } from "../__tests__/test-helpers.js";
 
 describe("cache-invalidation", () => {
   let testDir: string;
 
   beforeEach(() => {
-    testDir = mkdtempSync(join(tmpdir(), "universal-pwa-test-"));
-    mkdirSync(testDir, { recursive: true });
+    testDir = createTestDir("cache-invalidation");
   });
 
   afterEach(() => {
-    if (existsSync(testDir)) {
-      try {
-        rmSync(testDir, { recursive: true });
-      } catch {
-        // Ignore cleanup errors
-      }
-    }
+    cleanupTestDir(testDir);
   });
 
   describe("generateCacheVersion", () => {

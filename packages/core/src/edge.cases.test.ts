@@ -11,22 +11,19 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
-import { join } from 'path'
-import { tmpdir } from 'os'
+import { mkdirSync, writeFileSync, existsSync, rmSync } from 'node:fs'
+import { join } from 'node:path'
+import { createTestDir, cleanupTestDir } from './__tests__/test-helpers.js'
 
 describe('Edge Case Scenarios', () => {
   let testDir: string
 
   beforeEach(() => {
-    testDir = join(tmpdir(), `edge-case-${Date.now()}`)
-    mkdirSync(testDir, { recursive: true })
+    testDir = createTestDir('edge-cases')
   })
 
   afterEach(() => {
-    if (existsSync(testDir)) {
-      rmSync(testDir, { recursive: true, force: true })
-    }
+    cleanupTestDir(testDir)
   })
 
   describe('Large Project Handling', () => {

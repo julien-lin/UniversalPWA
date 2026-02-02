@@ -1,76 +1,31 @@
-import { describe, it, expect, afterEach } from 'vitest'
-import { SymfonyIntegration } from '../symfony.js'
-import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { tmpdir } from 'node:os'
-
-const createTestProject = (
-    frameworks: {
-        name?: string
-        version?: string
-        apiPlatform?: boolean
-        hasSPA?: boolean
-    } = {}
-): string => {
-    const testDir = join(tmpdir(), `symfony-test-${Date.now()}-${Math.random().toString(36).slice(2)}`)
-    mkdirSync(testDir, { recursive: true })
-    mkdirSync(join(testDir, 'public'), { recursive: true })
-    mkdirSync(join(testDir, 'config'), { recursive: true })
-
-    // Create composer.json
-    const composer: { name: string; require: Record<string, string>; 'require-dev': Record<string, string> } = {
-        name: frameworks.name || 'test/app',
-        require: {
-            'php': '>=8.2',
-            'symfony/framework-bundle': frameworks.version || '^8.0',
-        },
-        'require-dev': {} as Record<string, string>,
-    }
-
-    if (frameworks.apiPlatform) {
-        composer.require['api-platform/core'] = '^3.0'
-    }
-
-    writeFileSync(join(testDir, 'composer.json'), JSON.stringify(composer))
-
-    // Create minimal Symfony structure
-    writeFileSync(join(testDir, 'public/index.php'), '<?php // Symfony entry point')
-    writeFileSync(join(testDir, 'config/services.yaml'), 'services:\n  _defaults:\n    autowire: true')
-
-    // Create .env if needed
-    if (frameworks.name) {
-        writeFileSync(join(testDir, '.env'), `APP_NAME="${frameworks.name}"\n`)
-    }
-
-    // Create webpack.config.js if SPA
-    if (frameworks.hasSPA) {
-        writeFileSync(join(testDir, 'webpack.config.js'), 'module.exports = { ... }')
-    }
-
-    return testDir
-}
-
-const cleanupTestProject = (testDir: string) => {
-    try {
-        rmSync(testDir, { recursive: true, force: true })
-    } catch {
-        // Ignore cleanup errors
-    }
-}
+import { rmSync } from 'node:fs'
+import { SymfonyIntegration } from '../symfony.js'
+import {
+  createTestDir,
+  cleanupTestDir,
+  createSymfonyFixture,
+} from '../../__tests__/test-helpers.js'
 
 describe('SymfonyIntegration', () => {
     let integration: SymfonyIntegration
     let testDir: string
 
+    beforeEach(() => {
+        testDir = createTestDir('symfony')
+    })
+
     afterEach(() => {
         if (testDir) {
-            cleanupTestProject(testDir)
+            cleanupTestDir(testDir)
         }
     })
 
     describe('detect()', () => {
         it('should detect Symfony 6 project', () => {
-            testDir = createTestProject({ version: '^6.4' })
+            createSymfonyFixture(testDir, { version: '^6.4' })
             integration = new SymfonyIntegration(testDir)
             const result = integration.detect()
 
@@ -80,7 +35,7 @@ describe('SymfonyIntegration', () => {
         })
 
         it('should detect Symfony 7 project', () => {
-            testDir = createTestProject({ version: '^7.0' })
+            createSymfonyFixture(testDir, { version: '^7.0' })
             integration = new SymfonyIntegration(testDir)
             const result = integration.detect()
 
@@ -90,7 +45,7 @@ describe('SymfonyIntegration', () => {
         })
 
         it('should detect Symfony 8 project', () => {
-            testDir = createTestProject({ version: '^8.0' })
+            createSymfonyFixture(testDir, { version: '^8.0' })
             integration = new SymfonyIntegration(testDir)
             const result = integration.detect()
 
@@ -100,7 +55,7 @@ describe('SymfonyIntegration', () => {
         })
 
         it('should detect Symfony 5 project', () => {
-            testDir = createTestProject({ version: '^5.4' })
+            createSymfonyFixture(testDir, { version: '^5.4' })
             integration = new SymfonyIntegration(testDir)
             const result = integration.detect()
 
@@ -109,7 +64,7 @@ describe('SymfonyIntegration', () => {
         })
 
         it('should reject non-Symfony project', () => {
-            testDir = createTestProject({ version: 'no-framework' })
+            createSymfonyFixture(testDir, { version: '^8.0' })
             // Remove Symfony dependency
             writeFileSync(
                 join(testDir, 'composer.json'),
@@ -122,7 +77,7 @@ describe('SymfonyIntegration', () => {
         })
 
         it('should reject project without proper Symfony structure', () => {
-            testDir = createTestProject()
+            createSymfonyFixture(testDir)
             // Remove required folders
             rmSync(join(testDir, 'public'), { recursive: true })
             integration = new SymfonyIntegration(testDir)
@@ -134,7 +89,7 @@ describe('SymfonyIntegration', () => {
 
     describe('generateServiceWorkerConfig()', () => {
         it('should generate config with default routes', () => {
-            testDir = createTestProject()
+            createSymfonyFixture(testDir)
             integration = new SymfonyIntegration(testDir)
             const config = integration.generateServiceWorkerConfig()
 
@@ -144,7 +99,7 @@ describe('SymfonyIntegration', () => {
         })
 
         it('should include build routes', () => {
-            testDir = createTestProject()
+            createSymfonyFixture(testDir)
             integration = new SymfonyIntegration(testDir)
             const config = integration.generateServiceWorkerConfig()
 
@@ -152,7 +107,7 @@ describe('SymfonyIntegration', () => {
         })
 
         it('should include bundle routes', () => {
-            testDir = createTestProject()
+            createSymfonyFixture(testDir)
             integration = new SymfonyIntegration(testDir)
             const config = integration.generateServiceWorkerConfig()
 
@@ -160,7 +115,7 @@ describe('SymfonyIntegration', () => {
         })
 
         it('should include asset routes', () => {
-            testDir = createTestProject()
+            createSymfonyFixture(testDir)
             integration = new SymfonyIntegration(testDir)
             const config = integration.generateServiceWorkerConfig()
 
@@ -171,7 +126,7 @@ describe('SymfonyIntegration', () => {
         })
 
         it('should detect API Platform and include GraphQL', () => {
-            testDir = createTestProject({ apiPlatform: true })
+            createSymfonyFixture(testDir, { apiPlatform: true })
             integration = new SymfonyIntegration(testDir)
             const config = integration.generateServiceWorkerConfig()
 
@@ -179,7 +134,7 @@ describe('SymfonyIntegration', () => {
         })
 
         it('should include offline fallback', () => {
-            testDir = createTestProject()
+            createSymfonyFixture(testDir)
             integration = new SymfonyIntegration(testDir)
             const config = integration.generateServiceWorkerConfig()
 
@@ -189,7 +144,7 @@ describe('SymfonyIntegration', () => {
 
     describe('generateManifestVariables()', () => {
         it('should extract app name from composer.json', () => {
-            testDir = createTestProject({ name: 'my-company/super-app' })
+            createSymfonyFixture(testDir, { name: 'my-company/super-app' })
             // Don't include APP_NAME in .env for this test
             writeFileSync(join(testDir, '.env'), '')
 
@@ -201,7 +156,7 @@ describe('SymfonyIntegration', () => {
         })
 
         it('should use APP_NAME from .env', () => {
-            testDir = createTestProject()
+            createSymfonyFixture(testDir)
             writeFileSync(join(testDir, '.env'), 'APP_NAME="My Custom App"\nAPP_DESCRIPTION="Custom Desc"')
             integration = new SymfonyIntegration(testDir)
             const manifest = integration.generateManifestVariables()
@@ -211,7 +166,7 @@ describe('SymfonyIntegration', () => {
         })
 
         it('should have correct default values', () => {
-            testDir = createTestProject()
+            createSymfonyFixture(testDir)
             writeFileSync(join(testDir, '.env'), '')
             integration = new SymfonyIntegration(testDir)
             const manifest = integration.generateManifestVariables()
@@ -226,7 +181,8 @@ describe('SymfonyIntegration', () => {
 
     describe('getSecureRoutes()', () => {
         it('should return standard Symfony security routes', () => {
-            integration = new SymfonyIntegration(createTestProject())
+            createSymfonyFixture(testDir)
+            integration = new SymfonyIntegration(testDir)
             const routes = integration.getSecureRoutes()
 
             expect(routes).toContain('/login')
@@ -239,7 +195,7 @@ describe('SymfonyIntegration', () => {
 
     describe('Edge cases', () => {
         it('should handle malformed composer.json', () => {
-            testDir = createTestProject()
+            createSymfonyFixture(testDir)
             writeFileSync(join(testDir, 'composer.json'), 'invalid {')
 
             integration = new SymfonyIntegration(testDir)
@@ -248,7 +204,7 @@ describe('SymfonyIntegration', () => {
         })
 
         it('should detect SPA mode with webpack.config.js', () => {
-            testDir = createTestProject({ hasSPA: true })
+            createSymfonyFixture(testDir, { hasSPA: true })
             integration = new SymfonyIntegration(testDir)
             const result = integration.detect()
 
@@ -257,7 +213,7 @@ describe('SymfonyIntegration', () => {
         })
 
         it('should handle project without .env file', () => {
-            testDir = createTestProject()
+            createSymfonyFixture(testDir)
             integration = new SymfonyIntegration(testDir)
             const manifest = integration.generateManifestVariables()
 
@@ -266,8 +222,7 @@ describe('SymfonyIntegration', () => {
         })
 
         it('should handle concurrent operations', () => {
-            testDir = createTestProject({ apiPlatform: true })
-
+            createSymfonyFixture(testDir, { apiPlatform: true })
             integration = new SymfonyIntegration(testDir)
             const detected = integration.detect()
             const config = integration.generateServiceWorkerConfig()
@@ -279,7 +234,7 @@ describe('SymfonyIntegration', () => {
         })
 
         it('should handle Symfony 8 with require-dev', () => {
-            testDir = createTestProject()
+            createSymfonyFixture(testDir)
             const composer = JSON.parse(
                 require('node:fs').readFileSync(join(testDir, 'composer.json'), 'utf-8')
             ) as Record<string, unknown>

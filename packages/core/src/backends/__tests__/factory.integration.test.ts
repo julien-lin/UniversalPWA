@@ -5,104 +5,18 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { join } from "node:path";
-import { mkdirSync, rmSync, writeFileSync, existsSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync } from "node:fs";
 import { getBackendFactory, resetBackendFactory } from "../factory.js";
 import { LaravelIntegration } from "../laravel.js";
 import { SymfonyIntegration } from "../symfony.js";
 import { generateServiceWorkerFromBackend } from "../../generator/service-worker-generator.js";
-
-const createLaravelFixture = (): string => {
-  const root = join(
-    tmpdir(),
-    `laravel-factory-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-  );
-  mkdirSync(root, { recursive: true });
-  mkdirSync(join(root, "app"), { recursive: true });
-  mkdirSync(join(root, "config"), { recursive: true });
-  mkdirSync(join(root, "routes"), { recursive: true });
-  mkdirSync(join(root, "public"), { recursive: true });
-
-  writeFileSync(join(root, "artisan"), "#!/usr/bin/env php");
-  writeFileSync(
-    join(root, "composer.json"),
-    JSON.stringify({
-      require: {
-        "laravel/framework": "^11.0",
-      },
-    }),
-  );
-
-  writeFileSync(
-    join(root, "public", "index.html"),
-    '<!doctype html><html><head><title>Laravel</title></head><body><div id="app"></div></body></html>',
-  );
-
-  return root;
-};
-
-const createSymfonyFixture = (): string => {
-  const root = join(
-    tmpdir(),
-    `symfony-factory-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-  );
-  mkdirSync(root, { recursive: true });
-  mkdirSync(join(root, "config"), { recursive: true });
-  mkdirSync(join(root, "public"), { recursive: true });
-  mkdirSync(join(root, "src"), { recursive: true });
-
-  writeFileSync(
-    join(root, "composer.json"),
-    JSON.stringify({
-      require: {
-        "symfony/framework-bundle": "^7.0",
-      },
-    }),
-  );
-
-  writeFileSync(join(root, "public", "index.php"), '<?php echo "Symfony";');
-
-  // Add config/services.yaml for better detection
-  mkdirSync(join(root, "config"), { recursive: true });
-  writeFileSync(
-    join(root, "config", "services.yaml"),
-    "services:\n  _defaults:\n    autowire: true\n",
-  );
-
-  return root;
-};
-
-const createGenericFixture = (): string => {
-  const root = join(
-    tmpdir(),
-    `generic-factory-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-  );
-  mkdirSync(root, { recursive: true });
-  mkdirSync(join(root, "public"), { recursive: true });
-
-  writeFileSync(
-    join(root, "package.json"),
-    JSON.stringify({
-      name: "generic-app",
-      version: "1.0.0",
-    }),
-  );
-
-  writeFileSync(
-    join(root, "public", "index.html"),
-    "<!doctype html><html><head><title>Generic</title></head><body></body></html>",
-  );
-
-  return root;
-};
-
-const cleanup = (path: string) => {
-  try {
-    rmSync(path, { recursive: true, force: true });
-  } catch {
-    // ignore
-  }
-};
+import {
+  createTestDir,
+  cleanupTestDir,
+  createLaravelFixture,
+  createSymfonyFixture,
+  createGenericFixture,
+} from "../../__tests__/test-helpers.js";
 
 describe("Backend Factory Integration Tests", () => {
   beforeEach(() => {
@@ -111,11 +25,12 @@ describe("Backend Factory Integration Tests", () => {
 
   describe("detectBackend()", () => {
     it("should detect Laravel project with high confidence", () => {
-      const projectPath = createLaravelFixture();
+      const testDir = createTestDir("factory-laravel");
+      createLaravelFixture(testDir);
       const factory = getBackendFactory();
 
       try {
-        const integration = factory.detectBackend(projectPath);
+        const integration = factory.detectBackend(testDir);
 
         expect(integration).not.toBeNull();
         expect(integration).toBeInstanceOf(LaravelIntegration);
@@ -127,16 +42,17 @@ describe("Backend Factory Integration Tests", () => {
         expect(detectionResult?.confidence).toBe("high");
         expect(detectionResult?.framework).toBe("laravel");
       } finally {
-        cleanup(projectPath);
+        cleanupTestDir(testDir);
       }
     });
 
     it("should detect Symfony project with high confidence", () => {
-      const projectPath = createSymfonyFixture();
+      const testDir = createTestDir("factory-symfony");
+      createSymfonyFixture(testDir);
       const factory = getBackendFactory();
 
       try {
-        const integration = factory.detectBackend(projectPath);
+        const integration = factory.detectBackend(testDir);
 
         expect(integration).not.toBeNull();
         expect(integration).toBeInstanceOf(SymfonyIntegration);
@@ -148,31 +64,33 @@ describe("Backend Factory Integration Tests", () => {
         expect(detectionResult?.confidence).toBe("high");
         expect(detectionResult?.framework).toBe("symfony");
       } finally {
-        cleanup(projectPath);
+        cleanupTestDir(testDir);
       }
     });
 
     it("should return null for generic project", () => {
-      const projectPath = createGenericFixture();
+      const testDir = createTestDir("factory-generic");
+      createGenericFixture(testDir);
       const factory = getBackendFactory();
 
       try {
-        const integration = factory.detectBackend(projectPath);
+        const integration = factory.detectBackend(testDir);
 
         expect(integration).toBeNull();
       } finally {
-        cleanup(projectPath);
+        cleanupTestDir(testDir);
       }
     });
   });
 
   describe("getIntegration()", () => {
     it("should return LaravelIntegration for laravel framework", () => {
-      const projectPath = createLaravelFixture();
+      const testDir = createTestDir("factory-laravel");
+      createLaravelFixture(testDir);
       const factory = getBackendFactory();
 
       try {
-        const integration = factory.getIntegration("laravel", projectPath);
+        const integration = factory.getIntegration("laravel", testDir);
 
         expect(integration).not.toBeNull();
         expect(integration).toBeInstanceOf(LaravelIntegration);
@@ -181,16 +99,17 @@ describe("Backend Factory Integration Tests", () => {
         expect(integration?.framework).toBe("laravel");
         expect(integration?.language).toBe("php");
       } finally {
-        cleanup(projectPath);
+        cleanupTestDir(testDir);
       }
     });
 
     it("should return SymfonyIntegration for symfony framework", () => {
-      const projectPath = createSymfonyFixture();
+      const testDir = createTestDir("factory-symfony");
+      createSymfonyFixture(testDir);
       const factory = getBackendFactory();
 
       try {
-        const integration = factory.getIntegration("symfony", projectPath);
+        const integration = factory.getIntegration("symfony", testDir);
 
         expect(integration).not.toBeNull();
         expect(integration).toBeInstanceOf(SymfonyIntegration);
@@ -199,52 +118,55 @@ describe("Backend Factory Integration Tests", () => {
         expect(integration?.framework).toBe("symfony");
         expect(integration?.language).toBe("php");
       } finally {
-        cleanup(projectPath);
+        cleanupTestDir(testDir);
       }
     });
 
     it("should return null for unknown framework", () => {
-      const projectPath = createGenericFixture();
+      const testDir = createTestDir("factory-generic");
+      createGenericFixture(testDir);
       const factory = getBackendFactory();
 
       try {
-        const integration = factory.getIntegration("react", projectPath);
+        const integration = factory.getIntegration("react", testDir);
 
         expect(integration).toBeNull();
       } finally {
-        cleanup(projectPath);
+        cleanupTestDir(testDir);
       }
     });
 
     it("should return null for static framework", () => {
-      const projectPath = createGenericFixture();
+      const testDir = createTestDir("factory-generic");
+      createGenericFixture(testDir);
       const factory = getBackendFactory();
 
       try {
-        const integration = factory.getIntegration("static", projectPath);
+        const integration = factory.getIntegration("static", testDir);
 
         expect(integration).toBeNull();
       } finally {
-        cleanup(projectPath);
+        cleanupTestDir(testDir);
       }
     });
   });
 
   describe("Service Worker Generation with Backends", () => {
     it("should generate service worker from Laravel integration", async () => {
-      const projectPath = createLaravelFixture();
+      const testDir = createTestDir("factory-laravel");
+      createLaravelFixture(testDir);
       const factory = getBackendFactory();
-      const outputDir = join(projectPath, "public");
+      const outputDir = join(testDir, "public");
 
       try {
-        const integration = factory.getIntegration("laravel", projectPath);
+        const integration = factory.getIntegration("laravel", testDir);
         expect(integration).not.toBeNull();
 
         const result = await generateServiceWorkerFromBackend(
           integration!,
           "spa",
           {
-            projectPath,
+            projectPath: testDir,
             outputDir,
             globDirectory: outputDir,
           },
@@ -255,24 +177,25 @@ describe("Backend Factory Integration Tests", () => {
         expect(result.count).toBeGreaterThanOrEqual(0);
         expect(result.size).toBeGreaterThan(0);
       } finally {
-        cleanup(projectPath);
+        cleanupTestDir(testDir);
       }
     });
 
     it("should generate service worker from Symfony integration", async () => {
-      const projectPath = createSymfonyFixture();
+      const testDir = createTestDir("factory-symfony");
+      createSymfonyFixture(testDir);
       const factory = getBackendFactory();
-      const outputDir = join(projectPath, "public");
+      const outputDir = join(testDir, "public");
 
       try {
-        const integration = factory.getIntegration("symfony", projectPath);
+        const integration = factory.getIntegration("symfony", testDir);
         expect(integration).not.toBeNull();
 
         const result = await generateServiceWorkerFromBackend(
           integration!,
           "ssr",
           {
-            projectPath,
+            projectPath: testDir,
             outputDir,
             globDirectory: outputDir,
           },
@@ -283,16 +206,17 @@ describe("Backend Factory Integration Tests", () => {
         expect(result.count).toBeGreaterThanOrEqual(0);
         expect(result.size).toBeGreaterThanOrEqual(0);
       } finally {
-        cleanup(projectPath);
+        cleanupTestDir(testDir);
       }
     });
 
     it("should generate optimized config for Laravel with CSRF routes", () => {
-      const projectPath = createLaravelFixture();
+      const testDir = createTestDir("factory-laravel");
+      createLaravelFixture(testDir);
       const factory = getBackendFactory();
 
       try {
-        const integration = factory.getIntegration("laravel", projectPath);
+        const integration = factory.getIntegration("laravel", testDir);
         expect(integration).not.toBeNull();
 
         const config = integration!.generateServiceWorkerConfig();
@@ -310,16 +234,17 @@ describe("Backend Factory Integration Tests", () => {
         const secureRoutes = integration!.getSecureRoutes();
         expect(secureRoutes.length).toBeGreaterThan(0);
       } finally {
-        cleanup(projectPath);
+        cleanupTestDir(testDir);
       }
     });
 
     it("should generate optimized config for Symfony with API Platform routes", () => {
-      const projectPath = createSymfonyFixture();
+      const testDir = createTestDir("factory-symfony");
+      createSymfonyFixture(testDir);
       const factory = getBackendFactory();
 
       try {
-        const integration = factory.getIntegration("symfony", projectPath);
+        const integration = factory.getIntegration("symfony", testDir);
         expect(integration).not.toBeNull();
 
         const config = integration!.generateServiceWorkerConfig();
@@ -336,39 +261,41 @@ describe("Backend Factory Integration Tests", () => {
         const staticPatterns = integration!.getStaticAssetPatterns();
         expect(staticPatterns.length).toBeGreaterThan(0);
       } finally {
-        cleanup(projectPath);
+        cleanupTestDir(testDir);
       }
     });
   });
 
   describe("Fallback Behavior", () => {
     it("should handle fallback when no backend detected", () => {
-      const projectPath = createGenericFixture();
+      const testDir = createTestDir("factory-generic");
+      createGenericFixture(testDir);
       const factory = getBackendFactory();
 
       try {
         // Detection should return null
-        const detected = factory.detectBackend(projectPath);
+        const detected = factory.detectBackend(testDir);
         expect(detected).toBeNull();
 
         // getIntegration should return null for unknown frameworks
-        const integration = factory.getIntegration("react", projectPath);
+        const integration = factory.getIntegration("react", testDir);
         expect(integration).toBeNull();
 
         // This simulates the CLI fallback behavior
         // In real usage, CLI would fall back to generateServiceWorker()
       } finally {
-        cleanup(projectPath);
+        cleanupTestDir(testDir);
       }
     });
 
     it("should handle case where framework detected but integration not available", () => {
-      const projectPath = createGenericFixture();
+      const testDir = createTestDir("factory-generic");
+      createGenericFixture(testDir);
       const factory = getBackendFactory();
 
       try {
         // For a framework that exists but project doesn't match
-        const integration = factory.getIntegration("laravel", projectPath);
+        const integration = factory.getIntegration("laravel", testDir);
 
         // Integration is created but detection will fail
         if (integration) {
@@ -376,7 +303,7 @@ describe("Backend Factory Integration Tests", () => {
           expect(detection.detected).toBe(false);
         }
       } finally {
-        cleanup(projectPath);
+        cleanupTestDir(testDir);
       }
     });
   });

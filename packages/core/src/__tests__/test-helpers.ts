@@ -221,18 +221,24 @@ def hello():
 /**
  * Create Laravel project fixture
  * @param testDir Directory to create fixture in
+ * @param options Optional: publicIndexHtml for SPA-style public/index.html (default true for integration tests)
  * @returns Object with paths to fixture files
  */
-export function createLaravelFixture(testDir: string): {
+export function createLaravelFixture(
+  testDir: string,
+  options?: { publicIndexHtml?: boolean },
+): {
   root: string;
   composerJson: string;
   artisanFile: string;
   appDirectory: string;
+  publicDirectory: string;
 } {
   const root = testDir;
   mkdirSync(join(root, "app"), { recursive: true });
   mkdirSync(join(root, "config"), { recursive: true });
   mkdirSync(join(root, "routes"), { recursive: true });
+  mkdirSync(join(root, "public"), { recursive: true });
 
   const composerJson = createJsonFile(root, "composer", {
     name: "laravel/laravel",
@@ -244,20 +250,46 @@ export function createLaravelFixture(testDir: string): {
 
   const artisanFile = createFile(root, "artisan", "#!/usr/bin/env php");
 
+  if (options?.publicIndexHtml !== false) {
+    createFile(
+      join(root, "public"),
+      "index.html",
+      '<!doctype html><html><head><title>Laravel</title></head><body><div id="app"></div></body></html>',
+    );
+  }
+
   return {
     root,
     composerJson,
     artisanFile,
     appDirectory: join(root, "app"),
+    publicDirectory: join(root, "public"),
   };
+}
+
+export interface SymfonyFixtureOptions {
+  /** Composer project name (e.g. "my-company/super-app") */
+  name?: string;
+  /** Symfony framework-bundle version (e.g. "^6.4", "^8.0") */
+  version?: string;
+  /** Add api-platform/core to composer and enable API Platform detection */
+  apiPlatform?: boolean;
+  /** Create webpack.config.js for SPA mode detection */
+  hasSPA?: boolean;
+  /** Create public/index.html (SPA-style) for integration tests */
+  publicIndexHtml?: boolean;
 }
 
 /**
  * Create Symfony project fixture
  * @param testDir Directory to create fixture in
+ * @param options Optional: name, version, apiPlatform, hasSPA, publicIndexHtml
  * @returns Object with paths to fixture files
  */
-export function createSymfonyFixture(testDir: string): {
+export function createSymfonyFixture(
+  testDir: string,
+  options: SymfonyFixtureOptions = {},
+): {
   root: string;
   composerJson: string;
   configDirectory: string;
@@ -268,13 +300,51 @@ export function createSymfonyFixture(testDir: string): {
   mkdirSync(join(root, "public"), { recursive: true });
   mkdirSync(join(root, "src"), { recursive: true });
 
+  const composerRequire: Record<string, string> = {
+    php: ">=8.2",
+    "symfony/console": "^7.0",
+    "symfony/framework-bundle": options.version ?? "^7.0",
+  };
+  if (options.apiPlatform) {
+    composerRequire["api-platform/core"] = "^3.0";
+  }
+
   const composerJson = createJsonFile(root, "composer", {
-    name: "symfony/skeleton",
-    require: {
-      "symfony/console": "^7.0",
-      "symfony/framework-bundle": "^7.0",
-    },
+    name: options.name ?? "test/app",
+    require: composerRequire,
+    "require-dev": {},
   });
+
+  createFile(
+    join(root, "public"),
+    "index.php",
+    "<?php // Symfony entry point",
+  );
+  createFile(
+    join(root, "config"),
+    "services.yaml",
+    "services:\n  _defaults:\n    autowire: true",
+  );
+
+  if (options.name) {
+    createFile(
+      root,
+      ".env",
+      `APP_NAME="${options.name.split("/").pop() ?? "App"}"\n`,
+    );
+  }
+
+  if (options.hasSPA) {
+    createFile(root, "webpack.config.js", "module.exports = { ... }");
+  }
+
+  if (options.publicIndexHtml) {
+    createFile(
+      join(root, "public"),
+      "index.html",
+      '<!doctype html><html><head><title>Symfony</title></head><body><div id="app"></div></body></html>',
+    );
+  }
 
   return {
     root,
@@ -282,6 +352,26 @@ export function createSymfonyFixture(testDir: string): {
     configDirectory: join(root, "config"),
     pubDirectory: join(root, "public"),
   };
+}
+
+/**
+ * Create generic (non-backend) project fixture for factory tests
+ * @param testDir Directory to create fixture in
+ * @returns Root path
+ */
+export function createGenericFixture(testDir: string): string {
+  const root = testDir;
+  mkdirSync(join(root, "public"), { recursive: true });
+  createJsonFile(root, "package", {
+    name: "generic-app",
+    version: "1.0.0",
+  });
+  createFile(
+    join(root, "public"),
+    "index.html",
+    "<!doctype html><html><head><title>Generic</title></head><body></body></html>",
+  );
+  return root;
 }
 
 /**

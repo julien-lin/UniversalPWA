@@ -1,53 +1,27 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import {
-  writeFileSync,
-  rmSync,
-  existsSync,
-  readFileSync,
-  mkdtempSync,
-} from "fs";
-import { join } from "path";
-import { tmpdir } from "os";
+import { writeFileSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { initCommand } from "./init.js";
-
-let TEST_DIR = "";
+import { createTestDir, cleanupTestDir } from "../../../core/src/__tests__/test-helpers.js";
+import { createBasicHtml } from "../__tests__/init-helpers.js";
 
 vi.mock("workbox-build", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("workbox-build")>();
-  return {
-    ...actual,
-    generateSW: (config: { swDest: string }) => {
-      writeFileSync(
-        config.swDest,
-        "/* workbox */\nself.__WB_MANIFEST = [];",
-        "utf-8",
-      );
-      return Promise.resolve({
-        count: 1,
-        size: 34,
-        warnings: [],
-        manifestEntries: [{ url: "index.html" }],
-      });
-    },
-  };
+  const { createWorkboxBuildMock } = await import(
+    "../../../core/src/__tests__/mocks/workbox-build.js"
+  );
+  return await createWorkboxBuildMock(
+    importOriginal as () => Promise<typeof import("workbox-build")>,
+  );
 });
 
-function createBasicHtml(): string {
-  return `<!DOCTYPE html>
-<html>
-<head><title>Test</title></head>
-<body>Test App</body>
-</html>`;
-}
+let TEST_DIR: string;
 
 beforeEach(() => {
-  TEST_DIR = mkdtempSync(join(tmpdir(), "universal-pwa-test-"));
+  TEST_DIR = createTestDir("cli-init-basepath");
 });
 
 afterEach(() => {
-  if (existsSync(TEST_DIR)) {
-    rmSync(TEST_DIR, { recursive: true, force: true });
-  }
+  cleanupTestDir(TEST_DIR);
 });
 
 describe("initCommand - BasePath Support", () => {

@@ -7,7 +7,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import type { ServiceWorkerConfig } from '../../generator/caching-strategy.js'
 import { PRESET_STRATEGIES } from '../../generator/caching-strategy.js'
 import { BaseBackendIntegration } from '../base.js'
-import { getBackendFactory, setBackendFactory, resetBackendFactory } from '../factory.js'
+import { resetBackendFactory } from '../factory.js'
 
 /**
  * Mock implementation for testing
@@ -235,42 +235,6 @@ describe('Backend Integration Layer', () => {
             }
 
             expect(config.staticRoutes[0].pattern instanceof RegExp).toBe(true)
-        })
-    })
-
-    describe('Backend Factory', () => {
-        it('should get or create global factory', () => {
-            const factory1 = getBackendFactory()
-            const factory2 = getBackendFactory()
-
-            expect(factory1).toBe(factory2)
-        })
-
-        it('should set custom factory', () => {
-            const customFactory = {
-                getIntegration: (_framework: string, _projectPath: string) => null,
-                detectBackend: (_projectPath: string) => null,
-            }
-
-            setBackendFactory(customFactory)
-            const factory = getBackendFactory()
-
-            expect(factory).toBe(customFactory)
-        })
-
-        it('should reset to default factory', () => {
-            resetBackendFactory()
-            const factory = getBackendFactory()
-
-            expect(factory).toBeDefined()
-            expect(factory.detectBackend('/tmp')).toBeNull()
-        })
-
-        it('should return null for unknown framework', () => {
-            const factory = getBackendFactory()
-            const integration = factory.getIntegration('unknown' as 'symfony' | 'wordpress' | 'static' | 'react', '/tmp')
-
-            expect(integration).toBeNull()
         })
     })
 

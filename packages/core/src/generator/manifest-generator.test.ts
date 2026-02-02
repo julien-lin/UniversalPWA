@@ -1,6 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { mkdirSync, rmSync, existsSync, readFileSync } from "fs";
-import { join } from "path";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { existsSync, readFileSync } from "node:fs";
 import {
   generateManifest,
   writeManifest,
@@ -8,8 +7,7 @@ import {
   ManifestSchema,
   type ManifestGeneratorOptions,
 } from "./manifest-generator.js";
-
-const TEST_DIR = join(process.cwd(), ".test-tmp-manifest");
+import { createTestDir, cleanupTestDir } from "../__tests__/test-helpers.js";
 
 // Helpers
 const makeIcon = (src: string, sizes: string, type = "image/png") => ({
@@ -30,15 +28,14 @@ const makeOptions = (
 const readManifest = (path: string) => JSON.parse(readFileSync(path, "utf-8"));
 
 describe("manifest-generator", () => {
+  let TEST_DIR: string;
+
   beforeEach(() => {
-    try {
-      if (existsSync(TEST_DIR)) {
-        rmSync(TEST_DIR, { recursive: true, force: true });
-      }
-    } catch {
-      // Ignore errors during cleanup
-    }
-    mkdirSync(TEST_DIR, { recursive: true });
+    TEST_DIR = createTestDir("manifest");
+  });
+
+  afterEach(() => {
+    cleanupTestDir(TEST_DIR);
   });
 
   describe("generateManifest", () => {

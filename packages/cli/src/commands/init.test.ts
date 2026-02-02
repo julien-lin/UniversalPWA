@@ -2,120 +2,33 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   mkdirSync,
   writeFileSync,
-  rmSync,
   existsSync,
   readFileSync,
-  mkdtempSync,
-} from "fs";
-import { join } from "path";
-import { tmpdir } from "os";
+} from "node:fs";
+import { join } from "node:path";
 import { initCommand } from "./init.js";
-
-let TEST_DIR = "";
+import { createTestDir, cleanupTestDir } from "../../../core/src/__tests__/test-helpers.js";
+import {
+  createBasicHtml,
+  createIcon,
+  runInitInTestDir,
+  setupPublicWithManifest,
+} from "../__tests__/init-helpers.js";
 
 vi.mock("workbox-build", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("workbox-build")>();
-  return {
-    ...actual,
-    generateSW: (config: { swDest: string }) => {
-      writeFileSync(
-        config.swDest,
-        "/* workbox */\nself.__WB_MANIFEST = [];",
-        "utf-8",
-      );
-      return Promise.resolve({
-        count: 1,
-        size: 34,
-        warnings: [],
-        manifestEntries: [{ url: "index.html" }],
-      });
-    },
-  };
+  const { createWorkboxBuildMock } = await import(
+    "../../../core/src/__tests__/mocks/workbox-build.js"
+  );
+  return await createWorkboxBuildMock(
+    importOriginal as () => Promise<typeof import("workbox-build")>,
+  );
 });
 
-// Valid minimal PNG (1x1 transparent)
-const VALID_PNG = Buffer.from([
-  0x89,
-  0x50,
-  0x4e,
-  0x47,
-  0x0d,
-  0x0a,
-  0x1a,
-  0x0a, // PNG signature
-  0x00,
-  0x00,
-  0x00,
-  0x0d,
-  0x49,
-  0x48,
-  0x44,
-  0x52, // IHDR chunk
-  0x00,
-  0x00,
-  0x00,
-  0x01,
-  0x00,
-  0x00,
-  0x00,
-  0x01, // 1x1
-  0x08,
-  0x06,
-  0x00,
-  0x00,
-  0x00,
-  0x1f,
-  0x15,
-  0xc4,
-  0x89,
-  0x00,
-  0x00,
-  0x00,
-  0x0a,
-  0x49,
-  0x44,
-  0x41,
-  0x54, // IDAT chunk
-  0x78,
-  0x9c,
-  0x63,
-  0x00,
-  0x01,
-  0x00,
-  0x00,
-  0x05,
-  0x00,
-  0x01,
-  0x0d,
-  0x0a,
-  0x2d,
-  0xb4,
-  0x00,
-  0x00,
-  0x00,
-  0x00,
-  0x49,
-  0x45,
-  0x4e,
-  0x44, // IEND
-  0xae,
-  0x42,
-  0x60,
-  0x82,
-]);
+let TEST_DIR: string;
 
-// Helper functions
-const createBasicHtml = (title = "Test") =>
-  `<html><head><title>${title}</title></head><body></body></html>`;
-
+/** Creates public/ and manifest.json in testDir (for tests needing custom name/dir). */
 const createPublicDir = () => {
   mkdirSync(join(TEST_DIR, "public"), { recursive: true });
-};
-
-const createIcon = (filename = "icon.png") => {
-  const iconPath = join(TEST_DIR, filename);
-  writeFileSync(iconPath, VALID_PNG);
-  return iconPath;
 };
 
 const createManifest = (name = "Test", publicDir = "public") => {
@@ -136,14 +49,11 @@ const baseInitCommand = {
 
 describe.sequential("init command", () => {
   beforeEach(() => {
-    TEST_DIR = mkdtempSync(join(tmpdir(), "cli-init-"));
-    mkdirSync(TEST_DIR, { recursive: true });
+    TEST_DIR = createTestDir("cli-init");
   });
 
   afterEach(() => {
-    if (TEST_DIR && existsSync(TEST_DIR)) {
-      rmSync(TEST_DIR, { recursive: true, force: true });
-    }
+    cleanupTestDir(TEST_DIR);
   });
 
   describe("Project path validation", () => {
@@ -158,10 +68,8 @@ describe.sequential("init command", () => {
     });
 
     it("should resolve project path correctly", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
         ...baseInitCommand,
       });
 
@@ -188,10 +96,8 @@ describe.sequential("init command", () => {
     });
 
     it("should handle cache options (forceScan, noCache)", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-
-      const result1 = await initCommand({
-        projectPath: TEST_DIR,
+      const result1 = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
         ...baseInitCommand,
         forceScan: true,
       });
@@ -210,10 +116,8 @@ describe.sequential("init command", () => {
 
   describe("HTTPS warnings", () => {
     it("should warn if HTTPS is not available", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
         ...baseInitCommand,
       });
 
@@ -224,11 +128,10 @@ describe.sequential("init command", () => {
   describe("Output directory resolution", () => {
     it("should use custom output directory (relative path)", async () => {
       const customOutput = join(TEST_DIR, "custom-output");
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      const iconPath = createIcon();
+      const iconPath = createIcon(TEST_DIR);
 
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
         ...baseInitCommand,
         skipIcons: false,
         iconSource: iconPath,
@@ -242,11 +145,10 @@ describe.sequential("init command", () => {
 
     it("should use absolute output directory", async () => {
       const customOutput = join(TEST_DIR, "custom-output-abs");
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      const iconPath = createIcon();
+      const iconPath = createIcon(TEST_DIR);
 
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
         ...baseInitCommand,
         skipIcons: false,
         iconSource: iconPath,
@@ -278,15 +180,20 @@ describe.sequential("init command", () => {
       expect(result).toBeDefined();
     });
 
-    it("should use public/ when dist/ does not exist", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
-        ...baseInitCommand,
-      });
-
+    it.each([
+      {
+        label: "index only (fallback to public/)",
+        setup: () => {},
+        options: { html: createBasicHtml(), ...baseInitCommand },
+      },
+      {
+        label: "index + public/ when dist/ does not exist",
+        setup: () => createPublicDir(),
+        options: { html: createBasicHtml(), ...baseInitCommand },
+      },
+    ])("should complete init ($label)", async ({ setup, options }) => {
+      setup();
+      const result = await runInitInTestDir(TEST_DIR, options);
       expect(result).toBeDefined();
     });
 
@@ -296,21 +203,9 @@ describe.sequential("init command", () => {
         JSON.stringify({ dependencies: { "@wordpress/core": "^6.0.0" } }),
       );
       createPublicDir();
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
 
-      const result = await initCommand({
-        projectPath: TEST_DIR,
-        ...baseInitCommand,
-      });
-
-      expect(result).toBeDefined();
-    });
-
-    it("should fallback to public/ when no directory exists", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
         ...baseInitCommand,
       });
 
@@ -320,10 +215,8 @@ describe.sequential("init command", () => {
 
   describe("Icons generation", () => {
     it("should skip icons if skipIcons is true", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
         ...baseInitCommand,
       });
 
@@ -331,10 +224,8 @@ describe.sequential("init command", () => {
     });
 
     it("should handle icon source not found", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
         ...baseInitCommand,
         skipIcons: false,
         iconSource: "non-existent-icon.png",
@@ -349,11 +240,9 @@ describe.sequential("init command", () => {
     });
 
     it("should handle icon source as relative path", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createIcon();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      createIcon(TEST_DIR);
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
         ...baseInitCommand,
         skipIcons: false,
         iconSource: "icon.png",
@@ -363,12 +252,11 @@ describe.sequential("init command", () => {
     });
 
     it("should handle icon generation errors gracefully", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
       const iconPath = join(TEST_DIR, "invalid-icon.png");
       writeFileSync(iconPath, "not a valid image");
 
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
         ...baseInitCommand,
         skipIcons: false,
         iconSource: iconPath,
@@ -381,10 +269,8 @@ describe.sequential("init command", () => {
 
   describe("Manifest generation", () => {
     it("should warn if manifest cannot be generated without icons", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
         ...baseInitCommand,
       });
 
@@ -394,11 +280,9 @@ describe.sequential("init command", () => {
     });
 
     it("should generate manifest with placeholder icon when no icons provided", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         ...baseInitCommand,
       });
 
@@ -409,12 +293,10 @@ describe.sequential("init command", () => {
     });
 
     it("should use themeColor and backgroundColor when provided", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-      createIcon();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      createIcon(TEST_DIR);
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         name: "Test App",
         shortName: "Test",
         iconSource: join(TEST_DIR, "icon.png"),
@@ -424,22 +306,18 @@ describe.sequential("init command", () => {
         skipInjection: true,
       });
 
-      // Verify result is defined with colors passed
       expect(result).toBeDefined();
       if (result.manifestPath && existsSync(result.manifestPath)) {
         const manifest = JSON.parse(readFileSync(result.manifestPath, "utf-8"));
-        // Validate that manifest has color properties (normalized to lowercase)
         expect(manifest.theme_color).toBeDefined();
         expect(manifest.background_color).toBeDefined();
       }
     });
 
     it("should normalize shortName correctly (max 12 characters)", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         name: "Test App",
         shortName: "Very Long Name That Exceeds Twelve Characters",
         skipIcons: true,
@@ -454,11 +332,9 @@ describe.sequential("init command", () => {
     });
 
     it("should handle empty shortName by using name fallback", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         name: "Test App",
         shortName: "",
         skipIcons: true,
@@ -474,9 +350,6 @@ describe.sequential("init command", () => {
     });
 
     it("should handle manifest generation errors with rollback", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-
       const coreModule = await import("@julien-lin/universal-pwa-core");
       vi.spyOn(coreModule, "generateAndWriteManifest").mockImplementationOnce(
         () => {
@@ -484,8 +357,9 @@ describe.sequential("init command", () => {
         },
       );
 
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         ...baseInitCommand,
       });
 
@@ -498,10 +372,8 @@ describe.sequential("init command", () => {
 
   describe("Service worker generation", () => {
     it("should skip service worker if skipServiceWorker is true", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
         ...baseInitCommand,
       });
 
@@ -509,10 +381,6 @@ describe.sequential("init command", () => {
     });
 
     it("should handle service worker generation errors with rollback", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-      createManifest();
-
       const coreModule = await import("@julien-lin/universal-pwa-core");
       vi.spyOn(coreModule, "generateServiceWorker").mockImplementationOnce(
         () => {
@@ -520,8 +388,9 @@ describe.sequential("init command", () => {
         },
       );
 
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         ...baseInitCommand,
         skipServiceWorker: false,
       });
@@ -535,10 +404,8 @@ describe.sequential("init command", () => {
 
   describe("Meta-tags injection", () => {
     it("should skip injection if skipInjection is true", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
         ...baseInitCommand,
       });
 
@@ -546,12 +413,9 @@ describe.sequential("init command", () => {
     });
 
     it("should inject meta-tags in HTML files", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-      createManifest();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         ...baseInitCommand,
         skipInjection: false,
       });
@@ -560,14 +424,13 @@ describe.sequential("init command", () => {
     });
 
     it("should limit HTML files when maxHtmlFiles is set", async () => {
-      for (let i = 0; i < 5; i++) {
-        writeFileSync(join(TEST_DIR, `index-${i}.html`), createBasicHtml());
-      }
-      createPublicDir();
-      createManifest();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        beforeInit: (dir) => {
+          setupPublicWithManifest(dir);
+          for (let i = 0; i < 5; i++) {
+            writeFileSync(join(dir, `index-${i}.html`), createBasicHtml());
+          }
+        },
         ...baseInitCommand,
         skipInjection: false,
         maxHtmlFiles: 2,
@@ -577,12 +440,9 @@ describe.sequential("init command", () => {
     });
 
     it("should handle injection errors gracefully", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-      createManifest();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         ...baseInitCommand,
         skipInjection: false,
       });
@@ -591,20 +451,13 @@ describe.sequential("init command", () => {
     });
 
     it("should prioritize dist/ files over public/ files", async () => {
-      mkdirSync(join(TEST_DIR, "dist"), { recursive: true });
-      createPublicDir();
-      writeFileSync(
-        join(TEST_DIR, "dist", "index.html"),
-        createBasicHtml("Dist"),
-      );
-      writeFileSync(
-        join(TEST_DIR, "public", "index.html"),
-        createBasicHtml("Public"),
-      );
-      createManifest();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        beforeInit: (dir) => {
+          mkdirSync(join(dir, "dist"), { recursive: true });
+          setupPublicWithManifest(dir);
+          writeFileSync(join(dir, "dist", "index.html"), createBasicHtml("Dist"));
+          writeFileSync(join(dir, "public", "index.html"), createBasicHtml("Public"));
+        },
         ...baseInitCommand,
         skipInjection: false,
       });
@@ -615,12 +468,9 @@ describe.sequential("init command", () => {
 
   describe("Transaction management", () => {
     it("should commit transaction on success", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-      createManifest();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         ...baseInitCommand,
       });
 
@@ -628,9 +478,6 @@ describe.sequential("init command", () => {
     });
 
     it("should rollback transaction on errors", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-
       const coreModule = await import("@julien-lin/universal-pwa-core");
       vi.spyOn(coreModule, "generateAndWriteManifest").mockImplementationOnce(
         () => {
@@ -638,8 +485,9 @@ describe.sequential("init command", () => {
         },
       );
 
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         ...baseInitCommand,
       });
 
@@ -649,21 +497,12 @@ describe.sequential("init command", () => {
     });
 
     it("should backup existing files before modification", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-      const existingManifestPath = join(TEST_DIR, "public", "manifest.json");
-      const existingSwPath = join(TEST_DIR, "public", "sw.js");
-      writeFileSync(
-        existingManifestPath,
-        JSON.stringify({
-          name: "Existing",
-          icons: [{ src: "/icon.png", sizes: "192x192" }],
-        }),
-      );
-      writeFileSync(existingSwPath, "// Existing service worker");
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: (dir) => {
+          setupPublicWithManifest(dir, "Existing");
+          writeFileSync(join(dir, "public", "sw.js"), "// Existing service worker");
+        },
         ...baseInitCommand,
         skipServiceWorker: false,
       });
@@ -676,10 +515,7 @@ describe.sequential("init command", () => {
     it("should handle errors gracefully", async () => {
       writeFileSync(join(TEST_DIR, "package.json"), "invalid json");
 
-      const result = await initCommand({
-        projectPath: TEST_DIR,
-        ...baseInitCommand,
-      });
+      const result = await runInitInTestDir(TEST_DIR, { ...baseInitCommand });
 
       expect(result.framework).toBeDefined();
     });
@@ -689,11 +525,9 @@ describe.sequential("init command", () => {
         join(TEST_DIR, "package.json"),
         JSON.stringify({ dependencies: { react: "^18.0.0" } }),
       );
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         name: "Test App",
         shortName: "Test",
         skipIcons: true,
@@ -709,11 +543,9 @@ describe.sequential("init command", () => {
     });
 
     it("should handle project without framework detected", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         ...baseInitCommand,
       });
 
@@ -721,14 +553,15 @@ describe.sequential("init command", () => {
       expect(result.architecture).toBeDefined();
     });
 
-    it("should handle undefined name and shortName", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
-        name: undefined,
-        shortName: undefined,
+    it.each([
+      { name: undefined, shortName: undefined },
+      { name: "Test App", shortName: undefined },
+    ])("should handle undefined/null shortName (name=$name, shortName=$shortName)", async ({ name, shortName }) => {
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
+        name,
+        shortName,
         skipIcons: true,
         skipServiceWorker: true,
         skipInjection: true,
@@ -738,25 +571,6 @@ describe.sequential("init command", () => {
         const manifest = JSON.parse(readFileSync(result.manifestPath, "utf-8"));
         expect(manifest.name).toBeDefined();
         expect(manifest.short_name).toBeDefined();
-      }
-    });
-
-    it("should handle null shortName", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
-        name: "Test App",
-        shortName: undefined,
-        skipIcons: true,
-        skipServiceWorker: true,
-        skipInjection: true,
-      });
-
-      if (result.manifestPath && existsSync(result.manifestPath)) {
-        const manifest = JSON.parse(readFileSync(result.manifestPath, "utf-8"));
-        expect(manifest.short_name).toBeDefined();
         expect(manifest.short_name.length).toBeGreaterThan(0);
       }
     });
@@ -764,15 +578,13 @@ describe.sequential("init command", () => {
 
   describe("Error scenarios - All ErrorCodes", () => {
     it("should handle PROJECT_SCAN_FAILED error", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-
       const coreModule = await import("@julien-lin/universal-pwa-core");
       vi.spyOn(coreModule, "scanProject").mockRejectedValueOnce(
         new Error("Scan failed"),
       );
 
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
         ...baseInitCommand,
       });
 
@@ -783,16 +595,14 @@ describe.sequential("init command", () => {
     });
 
     it("should handle ICON_GENERATION_FAILED error", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      const iconPath = createIcon();
-
+      const iconPath = createIcon(TEST_DIR);
       const coreModule = await import("@julien-lin/universal-pwa-core");
       vi.spyOn(coreModule, "generateIcons").mockRejectedValueOnce(
         new Error("Icon generation failed"),
       );
 
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
         ...baseInitCommand,
         skipIcons: false,
         iconSource: iconPath,
@@ -805,12 +615,11 @@ describe.sequential("init command", () => {
     });
 
     it("should handle ICON_INVALID_FORMAT error", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
       const iconPath = join(TEST_DIR, "invalid-icon.txt");
       writeFileSync(iconPath, "not an image");
 
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
         ...baseInitCommand,
         skipIcons: false,
         iconSource: iconPath,
@@ -820,10 +629,6 @@ describe.sequential("init command", () => {
     });
 
     it("should handle SERVICE_WORKER_GENERATION_FAILED error with rollback", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-      createManifest();
-
       const coreModule = await import("@julien-lin/universal-pwa-core");
       vi.spyOn(coreModule, "generateServiceWorker").mockRejectedValueOnce(
         new Error("SW generation failed"),
@@ -832,8 +637,9 @@ describe.sequential("init command", () => {
         new Error("SW generation failed"),
       );
 
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         ...baseInitCommand,
         skipServiceWorker: false,
       });
@@ -845,10 +651,6 @@ describe.sequential("init command", () => {
     });
 
     it("should handle HTML_INJECTION_FAILED error gracefully", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-      createManifest();
-
       const coreModule = await import("@julien-lin/universal-pwa-core");
       vi.spyOn(coreModule, "injectMetaTagsInFile").mockImplementationOnce(
         () => {
@@ -856,8 +658,9 @@ describe.sequential("init command", () => {
         },
       );
 
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         ...baseInitCommand,
         skipInjection: false,
       });
@@ -873,11 +676,9 @@ describe.sequential("init command", () => {
         join(TEST_DIR, "invalid.html"),
         "<html><head><title>Invalid</title></head><body><unclosed-tag>",
       );
-      createPublicDir();
-      createManifest();
 
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        beforeInit: setupPublicWithManifest,
         ...baseInitCommand,
         skipInjection: false,
       });
@@ -886,9 +687,6 @@ describe.sequential("init command", () => {
     });
 
     it("should handle unexpected errors with rollback", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-
       const coreModule = await import("@julien-lin/universal-pwa-core");
       vi.spyOn(coreModule, "generateAndWriteManifest").mockImplementationOnce(
         () => {
@@ -896,8 +694,9 @@ describe.sequential("init command", () => {
         },
       );
 
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         ...baseInitCommand,
       });
 
@@ -910,9 +709,6 @@ describe.sequential("init command", () => {
 
   describe("Transaction rollback scenarios", () => {
     it("should rollback on manifest generation error", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-
       const coreModule = await import("@julien-lin/universal-pwa-core");
       vi.spyOn(coreModule, "generateAndWriteManifest").mockImplementationOnce(
         () => {
@@ -920,8 +716,9 @@ describe.sequential("init command", () => {
         },
       );
 
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         ...baseInitCommand,
       });
 
@@ -932,17 +729,14 @@ describe.sequential("init command", () => {
     });
 
     it("should rollback on service worker generation error", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-      createManifest();
-
       const coreModule = await import("@julien-lin/universal-pwa-core");
       vi.spyOn(coreModule, "optimizeProject").mockRejectedValueOnce(
         new Error("Optimization failed"),
       );
 
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         ...baseInitCommand,
         skipServiceWorker: false,
       });
@@ -953,22 +747,18 @@ describe.sequential("init command", () => {
     });
 
     it("should handle injection errors gracefully without rollback", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-      createManifest();
-
       const coreModule = await import("@julien-lin/universal-pwa-core");
       vi.spyOn(coreModule, "injectMetaTagsInFile").mockImplementation(() => {
         throw new Error("Injection failed");
       });
 
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         ...baseInitCommand,
         skipInjection: false,
       });
 
-      // Injection errors are handled gracefully as warnings, not critical errors
       expect(result.warnings.length).toBeGreaterThan(0);
       expect(result.htmlFilesInjected).toBe(0);
 
@@ -976,12 +766,9 @@ describe.sequential("init command", () => {
     });
 
     it("should commit transaction on success", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-      createManifest();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         ...baseInitCommand,
       });
 
@@ -990,13 +777,14 @@ describe.sequential("init command", () => {
   });
 
   describe("Icon generation scenarios", () => {
-    it("should generate icons successfully with valid PNG", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-      const iconPath = createIcon();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+    it.each([
+      { label: "valid PNG", expectManifest: true },
+      { label: "absolute path", expectManifest: false },
+    ])("should generate icons ($label)", async ({ expectManifest }) => {
+      const iconPath = createIcon(TEST_DIR);
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         name: "Test App",
         shortName: "Test",
         iconSource: iconPath,
@@ -1005,33 +793,14 @@ describe.sequential("init command", () => {
       });
 
       expect(result.iconsGenerated).toBeGreaterThan(0);
-      expect(result.manifestPath).toBeDefined();
-    });
-
-    it("should handle icon source as absolute path", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-      const iconPath = createIcon();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
-        name: "Test App",
-        shortName: "Test",
-        iconSource: iconPath,
-        skipServiceWorker: true,
-        skipInjection: true,
-      });
-
-      expect(result.iconsGenerated).toBeGreaterThan(0);
+      if (expectManifest) expect(result.manifestPath).toBeDefined();
     });
 
     it("should generate apple-touch-icon when icons are generated", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-      const iconPath = createIcon();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const iconPath = createIcon(TEST_DIR);
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         name: "Test App",
         shortName: "Test",
         iconSource: iconPath,
@@ -1056,27 +825,44 @@ describe.sequential("init command", () => {
         join(TEST_DIR, "package.json"),
         JSON.stringify({ dependencies: { "apollo-client": "^3.0.0" } }),
       );
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-      createManifest();
+      const coreModule = await import("@julien-lin/universal-pwa-core");
+      vi.spyOn(coreModule, "optimizeProject").mockResolvedValueOnce({
+        cacheStrategies: [
+          {
+            urlPattern: "/graphql",
+            handler: "NetworkFirst",
+            options: { cacheName: "graphql-cache" },
+          },
+        ],
+        manifestConfig: {},
+        assetSuggestions: [],
+        apiType: "GraphQL",
+      } as Awaited<ReturnType<typeof coreModule.optimizeProject>>);
+      const publicSwPath = join(TEST_DIR, "public", "sw.js");
+      vi.spyOn(coreModule, "generateSimpleServiceWorker").mockResolvedValueOnce({
+        swPath: publicSwPath,
+        count: 1,
+        size: 34,
+        warnings: [],
+        filePaths: [publicSwPath],
+      });
 
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         ...baseInitCommand,
         skipServiceWorker: false,
         skipInjection: true,
       });
 
       expect(result.serviceWorkerPath).toBeDefined();
-    }, 20000);
+      vi.restoreAllMocks();
+    });
 
     it("should generate service worker without adaptive strategies", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-      createManifest();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         ...baseInitCommand,
         skipServiceWorker: false,
         skipInjection: true,
@@ -1086,17 +872,14 @@ describe.sequential("init command", () => {
     });
 
     it("should handle Workbox errors gracefully", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      createPublicDir();
-      createManifest();
-
       const coreModule = await import("@julien-lin/universal-pwa-core");
       vi.spyOn(coreModule, "generateServiceWorker").mockRejectedValueOnce(
         new Error("Workbox error"),
       );
 
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: setupPublicWithManifest,
         ...baseInitCommand,
         skipServiceWorker: false,
       });
@@ -1109,17 +892,13 @@ describe.sequential("init command", () => {
 
   describe("HTML injection scenarios", () => {
     it("should inject meta-tags in multiple HTML files", async () => {
-      for (let i = 0; i < 3; i++) {
-        writeFileSync(
-          join(TEST_DIR, `page-${i}.html`),
-          createBasicHtml(`Page ${i}`),
-        );
-      }
-      createPublicDir();
-      createManifest();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        beforeInit: (dir) => {
+          for (let i = 0; i < 3; i++) {
+            writeFileSync(join(dir, `page-${i}.html`), createBasicHtml(`Page ${i}`));
+          }
+          setupPublicWithManifest(dir);
+        },
         ...baseInitCommand,
         skipInjection: false,
       });
@@ -1128,16 +907,12 @@ describe.sequential("init command", () => {
     });
 
     it("should handle HTML files in dist/ directory", async () => {
-      mkdirSync(join(TEST_DIR, "dist"), { recursive: true });
-      writeFileSync(
-        join(TEST_DIR, "dist", "index.html"),
-        createBasicHtml("Dist"),
-      );
-      createPublicDir();
-      createManifest();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        beforeInit: (dir) => {
+          mkdirSync(join(dir, "dist"), { recursive: true });
+          writeFileSync(join(dir, "dist", "index.html"), createBasicHtml("Dist"));
+          setupPublicWithManifest(dir);
+        },
         ...baseInitCommand,
         skipInjection: false,
       });
@@ -1146,15 +921,11 @@ describe.sequential("init command", () => {
     });
 
     it("should handle HTML files in public/ directory", async () => {
-      createPublicDir();
-      writeFileSync(
-        join(TEST_DIR, "public", "index.html"),
-        createBasicHtml("Public"),
-      );
-      createManifest();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        beforeInit: (dir) => {
+          setupPublicWithManifest(dir);
+          writeFileSync(join(dir, "public", "index.html"), createBasicHtml("Public"));
+        },
         ...baseInitCommand,
         skipInjection: false,
       });
@@ -1163,13 +934,12 @@ describe.sequential("init command", () => {
     });
 
     it("should handle injection errors for individual files gracefully", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      writeFileSync(join(TEST_DIR, "invalid.html"), "<html><unclosed>");
-      createPublicDir();
-      createManifest();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
+        beforeInit: (dir) => {
+          writeFileSync(join(dir, "invalid.html"), "<html><unclosed>");
+          setupPublicWithManifest(dir);
+        },
         ...baseInitCommand,
         skipInjection: false,
       });
@@ -1178,8 +948,10 @@ describe.sequential("init command", () => {
     });
 
     it("should inject meta-tags in Twig template files (Symfony)", async () => {
-      mkdirSync(join(TEST_DIR, "templates"), { recursive: true });
-      const twigContent = `<!DOCTYPE html>
+      const result = await runInitInTestDir(TEST_DIR, {
+        beforeInit: (dir) => {
+          mkdirSync(join(dir, "templates"), { recursive: true });
+          const twigContent = `<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -1189,19 +961,14 @@ describe.sequential("init command", () => {
     {% block body %}{% endblock %}
 </body>
 </html>`;
-      writeFileSync(join(TEST_DIR, "templates", "base.html.twig"), twigContent);
-      createPublicDir();
-      createManifest();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+          writeFileSync(join(dir, "templates", "base.html.twig"), twigContent);
+          setupPublicWithManifest(dir);
+        },
         ...baseInitCommand,
         skipInjection: false,
       });
 
       expect(result.htmlFilesInjected).toBeGreaterThan(0);
-
-      // Verify that meta-tags were injected
       const modifiedTwig = readFileSync(
         join(TEST_DIR, "templates", "base.html.twig"),
         "utf-8",
@@ -1212,8 +979,10 @@ describe.sequential("init command", () => {
     });
 
     it("should inject meta-tags in Blade template files (Laravel)", async () => {
-      mkdirSync(join(TEST_DIR, "resources", "views"), { recursive: true });
-      const bladeContent = `<!DOCTYPE html>
+      const result = await runInitInTestDir(TEST_DIR, {
+        beforeInit: (dir) => {
+          mkdirSync(join(dir, "resources", "views"), { recursive: true });
+          const bladeContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -1223,22 +992,17 @@ describe.sequential("init command", () => {
     @yield('content')
 </body>
 </html>`;
-      writeFileSync(
-        join(TEST_DIR, "resources", "views", "layout.blade.php"),
-        bladeContent,
-      );
-      createPublicDir();
-      createManifest();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+          writeFileSync(
+            join(dir, "resources", "views", "layout.blade.php"),
+            bladeContent,
+          );
+          setupPublicWithManifest(dir);
+        },
         ...baseInitCommand,
         skipInjection: false,
       });
 
       expect(result.htmlFilesInjected).toBeGreaterThan(0);
-
-      // Verify that meta-tags were injected
       const modifiedBlade = readFileSync(
         join(TEST_DIR, "resources", "views", "layout.blade.php"),
         "utf-8",
@@ -1251,17 +1015,13 @@ describe.sequential("init command", () => {
 
   describe("Large projects (100+ HTML files)", () => {
     it("should handle projects with many HTML files", async () => {
-      for (let i = 0; i < 105; i++) {
-        writeFileSync(
-          join(TEST_DIR, `page-${i}.html`),
-          createBasicHtml(`Page ${i}`),
-        );
-      }
-      createPublicDir();
-      createManifest();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        beforeInit: (dir) => {
+          for (let i = 0; i < 105; i++) {
+            writeFileSync(join(dir, `page-${i}.html`), createBasicHtml(`Page ${i}`));
+          }
+          setupPublicWithManifest(dir);
+        },
         ...baseInitCommand,
         skipInjection: false,
       });
@@ -1271,17 +1031,13 @@ describe.sequential("init command", () => {
     });
 
     it("should limit HTML files when maxHtmlFiles is set on large project", async () => {
-      for (let i = 0; i < 150; i++) {
-        writeFileSync(
-          join(TEST_DIR, `page-${i}.html`),
-          createBasicHtml(`Page ${i}`),
-        );
-      }
-      createPublicDir();
-      createManifest();
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        beforeInit: (dir) => {
+          for (let i = 0; i < 150; i++) {
+            writeFileSync(join(dir, `page-${i}.html`), createBasicHtml(`Page ${i}`));
+          }
+          setupPublicWithManifest(dir);
+        },
         ...baseInitCommand,
         skipInjection: false,
         maxHtmlFiles: 50,
@@ -1293,10 +1049,8 @@ describe.sequential("init command", () => {
 
   describe("CLI options combinations", () => {
     it("should handle all skip options together", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
         name: "Test App",
         shortName: "Test",
         skipIcons: true,
@@ -1310,10 +1064,8 @@ describe.sequential("init command", () => {
     });
 
     it("should handle forceScan and noCache together", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
         ...baseInitCommand,
         forceScan: true,
         noCache: true,
@@ -1323,13 +1075,11 @@ describe.sequential("init command", () => {
     });
 
     it("should handle custom outputDir with all features", async () => {
-      const customOutput = join(TEST_DIR, "custom");
-      mkdirSync(customOutput, { recursive: true });
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-      const iconPath = createIcon();
+      mkdirSync(join(TEST_DIR, "custom"), { recursive: true });
+      const iconPath = createIcon(TEST_DIR);
 
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
         name: "Test App",
         shortName: "Test",
         iconSource: iconPath,
@@ -1395,10 +1145,8 @@ describe.sequential("init command", () => {
 
   describe("Output directory edge cases", () => {
     it("should handle outputDir same as projectPath", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
         ...baseInitCommand,
         outputDir: ".",
       });
@@ -1407,16 +1155,12 @@ describe.sequential("init command", () => {
     });
 
     it("should create output directory if it does not exist", async () => {
-      writeFileSync(join(TEST_DIR, "index.html"), createBasicHtml());
-
-      const result = await initCommand({
-        projectPath: TEST_DIR,
+      const result = await runInitInTestDir(TEST_DIR, {
+        html: createBasicHtml(),
         ...baseInitCommand,
         outputDir: "new-output",
       });
 
-      // Output directory is created when manifest is written
-      // Check if manifest was created (which means directory was created)
       if (result.manifestPath) {
         expect(existsSync(result.manifestPath)).toBe(true);
         expect(existsSync(join(TEST_DIR, "new-output"))).toBe(true);
