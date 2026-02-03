@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'fs'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'fs'
 import { join } from 'path'
+import { createTestDir, cleanupTestDir } from '../../../core/src/__tests__/test-helpers.js'
 import { removeCommand } from './remove.js'
 
-const TEST_DIR = join(process.cwd(), '.test-tmp-cli-remove')
+let TEST_DIR: string
 
 // ============= Test Helpers =============
 
@@ -66,23 +67,18 @@ function createPackageJson(dependencies: Record<string, string> = {}): void {
 }
 
 /**
- * Base remove command options
+ * Base remove command options (set in beforeEach)
  */
-const baseRemoveCommand = {
-  projectPath: TEST_DIR,
-  skipHtmlRestore: true,
-}
+let baseRemoveCommand: { projectPath: string; skipHtmlRestore: boolean }
 
 describe('remove command', () => {
   beforeEach(() => {
-    try {
-      if (existsSync(TEST_DIR)) {
-        rmSync(TEST_DIR, { recursive: true, force: true })
-      }
-    } catch {
-      // Ignore errors during cleanup
-    }
-    mkdirSync(TEST_DIR, { recursive: true })
+    TEST_DIR = createTestDir('cli-remove')
+    baseRemoveCommand = { projectPath: TEST_DIR, skipHtmlRestore: true }
+  })
+
+  afterEach(() => {
+    cleanupTestDir(TEST_DIR)
   })
 
   describe('Project path validation', () => {

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
-import { join } from 'path'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { createTestDir, cleanupTestDir } from '../__tests__/test-helpers.js'
 import {
   validatePath,
   validatePathAdvanced,
@@ -13,91 +14,78 @@ import {
   DEFAULT_MAX_FILE_SIZE,
 } from './path-validator.js'
 
-const TEST_DIR = join(process.cwd(), '.test-tmp-path-validator')
-
 describe('path-validator', () => {
+  let testDir: string
+
   beforeEach(() => {
-    try {
-      if (existsSync(TEST_DIR)) {
-        rmSync(TEST_DIR, { recursive: true, force: true })
-      }
-    } catch {
-      // Ignore errors during cleanup
-    }
-    mkdirSync(TEST_DIR, { recursive: true })
+    testDir = createTestDir('path-validator')
   })
 
   afterEach(() => {
-    try {
-      if (existsSync(TEST_DIR)) {
-        rmSync(TEST_DIR, { recursive: true, force: true })
-      }
-    } catch {
-      // Ignore errors during cleanup
-    }
+    cleanupTestDir(testDir)
   })
 
   describe('validatePath', () => {
     it('should allow valid relative paths', () => {
-      expect(validatePath('./src/index.html', TEST_DIR)).toBe(true)
-      expect(validatePath('src/index.html', TEST_DIR)).toBe(true)
-      expect(validatePath('index.html', TEST_DIR)).toBe(true)
+      expect(validatePath('./src/index.html', testDir)).toBe(true)
+      expect(validatePath('src/index.html', testDir)).toBe(true)
+      expect(validatePath('index.html', testDir)).toBe(true)
     })
 
     it('should block path traversal attacks', () => {
-      // Test 1: Simple parent directory traversal from TEST_DIR
-      expect(validatePath('../etc/passwd', TEST_DIR)).toBe(false)
+      // Test 1: Simple parent directory traversal from testDir
+      expect(validatePath('../etc/passwd', testDir)).toBe(false)
 
       // Test 2: Multiple parent directory traversal
-      expect(validatePath('../../etc/passwd', TEST_DIR)).toBe(false)
+      expect(validatePath('../../etc/passwd', testDir)).toBe(false)
 
       // Test 3: Very deep parent directory traversal
-      expect(validatePath('../../../../../../../etc/passwd', TEST_DIR)).toBe(false)
+      expect(validatePath('../../../../../../../etc/passwd', testDir)).toBe(false)
 
       // Test 4: Mixed relative and absolute-like paths
-      expect(validatePath('../..', TEST_DIR)).toBe(false)
+      expect(validatePath('../..', testDir)).toBe(false)
 
       // Test 5: Create a deep subdirectory and test traversal from there
-      const deepDir = join(TEST_DIR, 'a', 'b', 'c', 'd', 'e')
+      const deepDir = join(testDir, 'a', 'b', 'c', 'd', 'e')
       mkdirSync(deepDir, { recursive: true })
       expect(validatePath('../../../../../../../../../etc/passwd', deepDir)).toBe(false)
     })
 
     it('should allow paths within base directory', () => {
-      const subDir = join(TEST_DIR, 'subdir')
+      const subDir = join(testDir, 'subdir')
       mkdirSync(subDir, { recursive: true })
-      expect(validatePath('subdir/file.txt', TEST_DIR)).toBe(true)
-      expect(validatePath(join('subdir', 'nested', 'file.txt'), TEST_DIR)).toBe(true)
+      expect(validatePath('subdir/file.txt', testDir)).toBe(true)
+      expect(validatePath(join('subdir', 'nested', 'file.txt'), testDir)).toBe(true)
     })
 
     it('should handle absolute paths correctly', () => {
-      const absolutePath = join(TEST_DIR, 'file.txt')
-      expect(validatePath(absolutePath, TEST_DIR)).toBe(true)
+      const absolutePath = join(testDir, 'file.txt')
+      expect(validatePath(absolutePath, testDir)).toBe(true)
     })
 
     it('should return false for invalid paths', () => {
       // \0 is a null character that can cause issues, validatePath should handle it gracefully
-      const result = validatePath('\0', TEST_DIR)
+      const result = validatePath('\0', testDir)
       expect(typeof result).toBe('boolean')
       // On some systems this might throw, so we just check it doesn't crash
     })
 
     it('should handle empty path', () => {
       // Empty path resolves to base, which is valid
-      expect(validatePath('', TEST_DIR)).toBe(true)
+      expect(validatePath('', testDir)).toBe(true)
     })
   })
 
   describe('validatePathAdvanced', () => {
     it('should validate with default options', () => {
-      const result = validatePathAdvanced('src/index.html', { basePath: TEST_DIR })
+      const result = validatePathAdvanced('src/index.html', { basePath: testDir })
       expect(result.valid).toBe(true)
       expect(result.resolvedPath).toBeDefined()
     })
 
     it('should reject absolute paths when not allowed', () => {
       const result = validatePathAdvanced('/absolute/path', {
-        basePath: TEST_DIR,
+        basePath: testDir,
         allowAbsolute: false,
       })
       expect(result.valid).toBe(false)
@@ -106,7 +94,7 @@ describe('path-validator', () => {
 
     it('should reject relative paths when not allowed', () => {
       const result = validatePathAdvanced('relative/path', {
-        basePath: TEST_DIR,
+        basePath: testDir,
         allowRelative: false,
       })
       expect(result.valid).toBe(false)
@@ -114,15 +102,15 @@ describe('path-validator', () => {
     })
 
     it('should detect path traversal', () => {
-      const result = validatePathAdvanced('../../etc/passwd', { basePath: TEST_DIR })
+      const result = validatePathAdvanced('../../etc/passwd', { basePath: testDir })
       expect(result.valid).toBe(false)
       expect(result.error).toContain('Path traversal')
     })
 
     it('should allow absolute paths within base path', () => {
-      const absolutePath = join(TEST_DIR, 'file.txt')
+      const absolutePath = join(testDir, 'file.txt')
       const result = validatePathAdvanced(absolutePath, {
-        basePath: TEST_DIR,
+        basePath: testDir,
         allowAbsolute: true,
       })
       expect(result.valid).toBe(true)
@@ -146,32 +134,32 @@ describe('path-validator', () => {
 
   describe('validateFileSize', () => {
     it('should validate file size within limit', () => {
-      const filePath = join(TEST_DIR, 'small.txt')
+      const filePath = join(testDir, 'small.txt')
       writeFileSync(filePath, 'small content', 'utf-8')
       expect(validateFileSize(filePath, 1000)).toBe(true)
     })
 
     it('should reject files exceeding size limit', () => {
-      const filePath = join(TEST_DIR, 'large.txt')
+      const filePath = join(testDir, 'large.txt')
       const largeContent = 'x'.repeat(2000)
       writeFileSync(filePath, largeContent, 'utf-8')
       expect(validateFileSize(filePath, 1000)).toBe(false)
     })
 
     it('should use default max size', () => {
-      const filePath = join(TEST_DIR, 'default.txt')
+      const filePath = join(testDir, 'default.txt')
       writeFileSync(filePath, 'content', 'utf-8')
       expect(validateFileSize(filePath)).toBe(true)
     })
 
     it('should return false for non-existent files', () => {
-      expect(validateFileSize(join(TEST_DIR, 'nonexistent.txt'))).toBe(false)
+      expect(validateFileSize(join(testDir, 'nonexistent.txt'))).toBe(false)
     })
   })
 
   describe('validateFile', () => {
     it('should validate existing file', () => {
-      const filePath = join(TEST_DIR, 'test.txt')
+      const filePath = join(testDir, 'test.txt')
       writeFileSync(filePath, 'content', 'utf-8')
       const result = validateFile(filePath)
       expect(result.valid).toBe(true)
@@ -179,20 +167,20 @@ describe('path-validator', () => {
     })
 
     it('should reject non-existent files when checkExists is true', () => {
-      const result = validateFile(join(TEST_DIR, 'nonexistent.txt'), { checkExists: true })
+      const result = validateFile(join(testDir, 'nonexistent.txt'), { checkExists: true })
       expect(result.valid).toBe(false)
       expect(result.error).toContain('does not exist')
     })
 
     it('should validate file extensions', () => {
-      const filePath = join(TEST_DIR, 'test.html')
+      const filePath = join(testDir, 'test.html')
       writeFileSync(filePath, '<html></html>', 'utf-8')
       const result = validateFile(filePath, { allowedExtensions: ['.html', '.htm'] })
       expect(result.valid).toBe(true)
     })
 
     it('should reject files with disallowed extensions', () => {
-      const filePath = join(TEST_DIR, 'test.js')
+      const filePath = join(testDir, 'test.js')
       writeFileSync(filePath, 'content', 'utf-8')
       const result = validateFile(filePath, { allowedExtensions: ['.html', '.htm'] })
       expect(result.valid).toBe(false)
@@ -200,7 +188,7 @@ describe('path-validator', () => {
     })
 
     it('should validate file size', () => {
-      const filePath = join(TEST_DIR, 'large.txt')
+      const filePath = join(testDir, 'large.txt')
       const largeContent = 'x'.repeat(2000)
       writeFileSync(filePath, largeContent, 'utf-8')
       const result = validateFile(filePath, { maxSize: 1000 })
@@ -210,24 +198,24 @@ describe('path-validator', () => {
     })
 
     it('should skip existence check when checkExists is false', () => {
-      const result = validateFile(join(TEST_DIR, 'nonexistent.txt'), { checkExists: false })
+      const result = validateFile(join(testDir, 'nonexistent.txt'), { checkExists: false })
       expect(result.valid).toBe(true)
     })
   })
 
   describe('validatePathDepth', () => {
     it('should allow paths within depth limit', () => {
-      expect(validatePathDepth('src/index.html', TEST_DIR, 10)).toBe(true)
-      expect(validatePathDepth('src/components/App.tsx', TEST_DIR, 10)).toBe(true)
+      expect(validatePathDepth('src/index.html', testDir, 10)).toBe(true)
+      expect(validatePathDepth('src/components/App.tsx', testDir, 10)).toBe(true)
     })
 
     it('should reject paths exceeding depth limit', () => {
       const deepPath = 'a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z/file.txt'
-      expect(validatePathDepth(deepPath, TEST_DIR, 20)).toBe(false)
+      expect(validatePathDepth(deepPath, testDir, 20)).toBe(false)
     })
 
     it('should use default max depth', () => {
-      expect(validatePathDepth('src/index.html', TEST_DIR)).toBe(true)
+      expect(validatePathDepth('src/index.html', testDir)).toBe(true)
     })
   })
 
@@ -253,27 +241,27 @@ describe('path-validator', () => {
 
   describe('Edge cases', () => {
     it('should handle special characters in paths', () => {
-      const specialPath = join(TEST_DIR, 'file with spaces.txt')
+      const specialPath = join(testDir, 'file with spaces.txt')
       writeFileSync(specialPath, 'content', 'utf-8')
-      expect(validatePath(specialPath, TEST_DIR)).toBe(true)
+      expect(validatePath(specialPath, testDir)).toBe(true)
     })
 
     it('should handle unicode characters', () => {
-      const unicodePath = join(TEST_DIR, 'fichier-émojis-🚀.txt')
+      const unicodePath = join(testDir, 'fichier-émojis-🚀.txt')
       writeFileSync(unicodePath, 'content', 'utf-8')
-      expect(validatePath(unicodePath, TEST_DIR)).toBe(true)
+      expect(validatePath(unicodePath, testDir)).toBe(true)
     })
 
     it('should handle very long paths', () => {
       const longPath = 'a'.repeat(200) + '/file.txt'
-      const result = validatePathAdvanced(longPath, { basePath: TEST_DIR })
+      const result = validatePathAdvanced(longPath, { basePath: testDir })
       expect(result.valid).toBe(true)
     })
   })
 
   describe('Security - File Size Limits (DoS Protection)', () => {
     it('should enforce maximum file size limits', () => {
-      const filePath = join(TEST_DIR, 'large-file.bin')
+      const filePath = join(testDir, 'large-file.bin')
       const size = 15 * 1024 * 1024 // 15MB, exceeds 10MB default
       const buffer = Buffer.alloc(size)
       writeFileSync(filePath, buffer)
@@ -283,7 +271,7 @@ describe('path-validator', () => {
     })
 
     it('should accept files within size limit', () => {
-      const filePath = join(TEST_DIR, 'normal-file.txt')
+      const filePath = join(testDir, 'normal-file.txt')
       const size = 5 * 1024 * 1024 // 5MB
       const buffer = Buffer.alloc(size)
       writeFileSync(filePath, buffer)
@@ -292,7 +280,7 @@ describe('path-validator', () => {
     })
 
     it('should handle custom size limits', () => {
-      const filePath = join(TEST_DIR, 'custom-limit.txt')
+      const filePath = join(testDir, 'custom-limit.txt')
       const size = 2 * 1024 * 1024 // 2MB
       const buffer = Buffer.alloc(size)
       writeFileSync(filePath, buffer)
@@ -302,7 +290,7 @@ describe('path-validator', () => {
     })
 
     it('should return detailed size info on validation failure', () => {
-      const filePath = join(TEST_DIR, 'oversized.txt')
+      const filePath = join(testDir, 'oversized.txt')
       const largeContent = 'x'.repeat(5000)
       writeFileSync(filePath, largeContent, 'utf-8')
 
@@ -317,14 +305,14 @@ describe('path-validator', () => {
     it('should block null bytes in paths', () => {
       // Null bytes in paths are security risks and should be rejected
       // The validator should handle this gracefully
-      const result = validatePathAdvanced('file\0.txt', { basePath: TEST_DIR })
+      const result = validatePathAdvanced('file\0.txt', { basePath: testDir })
       // Whether it rejects or sanitizes is okay, but shouldn't crash
       expect(typeof result.valid).toBe('boolean')
     })
 
     it('should block double-encoded paths', () => {
       // %2e%2e is URL-encoded ".." but we don't decode URLs in path validator
-      const result = validatePathAdvanced('%2e%2e/etc/passwd', { basePath: TEST_DIR })
+      const result = validatePathAdvanced('%2e%2e/etc/passwd', { basePath: testDir })
       // Should treat as literal path name, not decode it
       expect(result.valid).toBe(true)
     })
@@ -332,23 +320,23 @@ describe('path-validator', () => {
     it('should properly resolve mixed path separators', () => {
       // After normalization, should resolve correctly
       const mixedPath = 'src/index.html'
-      const result = validatePathAdvanced(mixedPath, { basePath: TEST_DIR })
+      const result = validatePathAdvanced(mixedPath, { basePath: testDir })
       expect(result.valid).toBe(true)
       expect(result.resolvedPath).toBeDefined()
     })
 
     it('should reject attempts to escape with relative paths', () => {
       // Simple relative escapes should fail
-      expect(validatePath('../etc/passwd', TEST_DIR)).toBe(false)
-      expect(validatePath('./../../etc/passwd', TEST_DIR)).toBe(false)
+      expect(validatePath('../etc/passwd', testDir)).toBe(false)
+      expect(validatePath('./../../etc/passwd', testDir)).toBe(false)
     })
   })
 
   describe('Security - Depth Limits (DoS Protection)', () => {
     it('should enforce maximum directory depth', () => {
       const veryDeepPath = 'a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z/file.txt'
-      expect(validatePathDepth(veryDeepPath, TEST_DIR, 10)).toBe(false)
-      expect(validatePathDepth(veryDeepPath, TEST_DIR, 30)).toBe(true)
+      expect(validatePathDepth(veryDeepPath, testDir, 10)).toBe(false)
+      expect(validatePathDepth(veryDeepPath, testDir, 30)).toBe(true)
     })
 
     it('should use realistic default depth limits', () => {
@@ -356,21 +344,21 @@ describe('path-validator', () => {
       const reasonableDepth = 'a/b/c/d/e/f/g/h/i/j/file.txt'
       const extremeDepth = 'a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z/file.txt'
 
-      expect(validatePathDepth(reasonableDepth, TEST_DIR)).toBe(true)
-      expect(validatePathDepth(extremeDepth, TEST_DIR)).toBe(false)
+      expect(validatePathDepth(reasonableDepth, testDir)).toBe(true)
+      expect(validatePathDepth(extremeDepth, testDir)).toBe(false)
     })
 
     it('should handle symlinks safely in depth calculation', () => {
       // Depth is calculated from resolved path, not symlink chain
-      const symlinked = join(TEST_DIR, 'a', 'b', 'c')
+      const symlinked = join(testDir, 'a', 'b', 'c')
       mkdirSync(symlinked, { recursive: true })
-      expect(validatePathDepth('a/b/c/file.txt', TEST_DIR, 10)).toBe(true)
+      expect(validatePathDepth('a/b/c/file.txt', testDir, 10)).toBe(true)
     })
   })
 
   describe('Security - File Type Validation', () => {
     it('should validate file extensions strictly', () => {
-      const htmlFile = join(TEST_DIR, 'index.html')
+      const htmlFile = join(testDir, 'index.html')
       writeFileSync(htmlFile, '<html></html>', 'utf-8')
 
       const result = validateFile(htmlFile, { allowedExtensions: ['.html', '.htm'] })
@@ -378,7 +366,7 @@ describe('path-validator', () => {
     })
 
     it('should reject disallowed extensions', () => {
-      const execFile = join(TEST_DIR, 'script.sh')
+      const execFile = join(testDir, 'script.sh')
       writeFileSync(execFile, '#!/bin/bash\necho "hi"', 'utf-8')
 
       const result = validateFile(execFile, { allowedExtensions: ['.html', '.css'] })
@@ -387,7 +375,7 @@ describe('path-validator', () => {
     })
 
     it('should handle case-insensitive extension matching', () => {
-      const file = join(TEST_DIR, 'IMAGE.JPG')
+      const file = join(testDir, 'IMAGE.JPG')
       writeFileSync(file, 'fake image data', 'utf-8')
 
       const result = validateFile(file, { allowedExtensions: ['.jpg', '.jpeg', '.png'] })
@@ -395,7 +383,7 @@ describe('path-validator', () => {
     })
 
     it('should handle files without extensions', () => {
-      const file = join(TEST_DIR, 'README')
+      const file = join(testDir, 'README')
       writeFileSync(file, 'readme content', 'utf-8')
 
       // If extensions are restricted, file without extension should fail
@@ -410,7 +398,7 @@ describe('path-validator', () => {
 
   describe('Security - Input Validation Combined', () => {
     it('should validate path + size + extension together', () => {
-      const filePath = join(TEST_DIR, 'safe-file.html')
+      const filePath = join(testDir, 'safe-file.html')
       writeFileSync(filePath, '<html></html>', 'utf-8')
 
       const result = validateFile(filePath, {
@@ -422,7 +410,7 @@ describe('path-validator', () => {
     })
 
     it('should fail if any validation criteria fails', () => {
-      const filePath = join(TEST_DIR, 'test.html')
+      const filePath = join(testDir, 'test.html')
       writeFileSync(filePath, 'x'.repeat(5000), 'utf-8')
 
       // Size exceeds limit
@@ -436,12 +424,12 @@ describe('path-validator', () => {
     })
 
     it('should validate advanced paths with all options', () => {
-      const testFile = join(TEST_DIR, 'subdir', 'document.pdf')
-      mkdirSync(join(TEST_DIR, 'subdir'), { recursive: true })
+      const testFile = join(testDir, 'subdir', 'document.pdf')
+      mkdirSync(join(testDir, 'subdir'), { recursive: true })
       writeFileSync(testFile, 'fake pdf', 'utf-8')
 
       const result = validatePathAdvanced(testFile, {
-        basePath: TEST_DIR,
+        basePath: testDir,
         allowAbsolute: true,
         allowRelative: true,
       })
@@ -451,7 +439,7 @@ describe('path-validator', () => {
 
   describe('Performance - Optimizations', () => {
     it('should short-circuit on invalid extension before file IO', () => {
-      const filePath = join(TEST_DIR, 'invalid-ext.sh')
+      const filePath = join(testDir, 'invalid-ext.sh')
       writeFileSync(filePath, 'content', 'utf-8')
 
       const startTime = performance.now()
@@ -470,10 +458,10 @@ describe('path-validator', () => {
     it('should reuse extension cache for multiple validations', () => {
       const extensions = ['.html', '.htm', '.css']
       const files = [
-        join(TEST_DIR, 'file1.html'),
-        join(TEST_DIR, 'file2.htm'),
-        join(TEST_DIR, 'file3.css'),
-        join(TEST_DIR, 'file4.js'),
+        join(testDir, 'file1.html'),
+        join(testDir, 'file2.htm'),
+        join(testDir, 'file3.css'),
+        join(testDir, 'file4.js'),
       ]
 
       files.forEach((f) => writeFileSync(f, 'content'))
@@ -490,7 +478,7 @@ describe('path-validator', () => {
     })
 
     it('should use single statSync() call instead of multiple FS operations', () => {
-      const filePath = join(TEST_DIR, 'perf-test.txt')
+      const filePath = join(testDir, 'perf-test.txt')
       writeFileSync(filePath, 'x'.repeat(1000), 'utf-8')
 
       const startTime = performance.now()
@@ -508,7 +496,7 @@ describe('path-validator', () => {
 
     it('should handle batch validation of large file lists efficiently', () => {
       const files = Array.from({ length: 100 }, (_, i) => {
-        const f = join(TEST_DIR, `file-${i}.txt`)
+        const f = join(testDir, `file-${i}.txt`)
         writeFileSync(f, `content-${i}`, 'utf-8')
         return f
       })
@@ -529,7 +517,7 @@ describe('path-validator', () => {
 
     it('should reject invalid extensions fast without expensive stat() calls', () => {
       const invalidFiles = Array.from({ length: 50 }, (_, i) => {
-        const f = join(TEST_DIR, `invalid-${i}.exe`)
+        const f = join(testDir, `invalid-${i}.exe`)
         writeFileSync(f, 'content', 'utf-8')
         return f
       })

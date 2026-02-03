@@ -19,12 +19,14 @@ export default defineConfig({
         '**/*.config.ts',
         'dist/**',
         'src/index.ts',
+        'src/utils/ui-utils.ts', // Affichage pur (banner, prompts) — non critique pour coverage
       ],
+      // ENGINEERING_RULES cible 80%. lines/statements/functions >80% (ui-utils exclu). branches à 74% (init/remove branches conditionnelles).
       thresholds: {
-        lines: 75,
-        functions: 72, // prompts.ts + all commands = ~73%
-        branches: 70, // CLI a beaucoup de branches conditionnelles
-        statements: 75,
+        lines: 80,
+        statements: 80,
+        functions: 80,
+        branches: 74,
       },
     },
   },

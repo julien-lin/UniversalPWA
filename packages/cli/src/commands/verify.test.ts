@@ -1,16 +1,18 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { mkdirSync, writeFileSync } from 'fs'
 import { join } from 'path'
+import { createTestDir, cleanupTestDir } from '../../../core/src/__tests__/test-helpers.js'
 import { verifyCommand } from './verify.js'
 
-const TEST_DIR = '/tmp/.test-verify-pwa'
+let TEST_DIR: string
 
 describe('verify', () => {
   beforeEach(() => {
-    if (existsSync(TEST_DIR)) {
-      rmSync(TEST_DIR, { recursive: true, force: true })
-    }
-    mkdirSync(TEST_DIR, { recursive: true })
+    TEST_DIR = createTestDir('cli-verify')
+  })
+
+  afterEach(() => {
+    cleanupTestDir(TEST_DIR)
   })
 
   it('should return error if project path does not exist', async () => {

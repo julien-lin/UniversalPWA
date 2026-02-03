@@ -8,13 +8,13 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       exclude: ['**/*.test.ts', '**/*.config.ts', 'dist/**'],
+      // ENGINEERING_RULES cible 85% ; seuils à 80%. Aligner quand coverage ≥85%.
       thresholds: {
         lines: 80,
         functions: 80,
         branches: 80,
         statements: 80,
       },
-      // Forcer la génération même si seuils non atteints
       reportOnFailure: true,
     },
   },

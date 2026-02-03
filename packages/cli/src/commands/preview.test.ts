@@ -1,20 +1,18 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { mkdirSync, writeFileSync } from 'fs'
 import { join } from 'path'
+import { createTestDir, cleanupTestDir } from '../../../core/src/__tests__/test-helpers.js'
 import { previewCommand } from './preview.js'
 
-const TEST_DIR = join(process.cwd(), '.test-tmp-cli-preview')
+let TEST_DIR: string
 
 describe('preview command', () => {
   beforeEach(() => {
-    try {
-      if (existsSync(TEST_DIR)) {
-        rmSync(TEST_DIR, { recursive: true, force: true })
-      }
-    } catch {
-      // Ignore errors during cleanup
-    }
-    mkdirSync(TEST_DIR, { recursive: true })
+    TEST_DIR = createTestDir('cli-preview')
+  })
+
+  afterEach(() => {
+    cleanupTestDir(TEST_DIR)
   })
 
   it('should fail if project path does not exist', async () => {

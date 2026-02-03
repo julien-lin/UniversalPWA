@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { mkdirSync, writeFileSync } from 'fs'
 import { join } from 'path'
+import { createTestDir, cleanupTestDir } from '../__tests__/test-helpers.js'
 import { detectFramework } from './framework-detector.js'
 
-const TEST_DIR = join(process.cwd(), '.test-tmp-framework-detector')
+let TEST_DIR: string
 
 // ============= Test Helpers =============
 
@@ -76,15 +77,11 @@ function expectNotFramework(framework: string): void {
 
 describe('framework-detector', () => {
   beforeEach(() => {
-    // Cleanup - use try/catch to handle deletion errors
-    try {
-      if (existsSync(TEST_DIR)) {
-        rmSync(TEST_DIR, { recursive: true, force: true })
-      }
-    } catch {
-      // Ignore errors during cleanup
-    }
-    mkdirSync(TEST_DIR, { recursive: true })
+    TEST_DIR = createTestDir('framework-detector')
+  })
+
+  afterEach(() => {
+    cleanupTestDir(TEST_DIR)
   })
 
   describe('WordPress', () => {
