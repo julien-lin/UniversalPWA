@@ -32,6 +32,7 @@ import { getEffectiveConfig } from "../utils/config-loader.js";
 import {
   DEFAULT_INJECTION_EXTENSIONS,
   WORDPRESS_INJECTION_PATTERNS,
+  detectBasePath,
 } from "@julien-lin/universal-pwa-core";
 import { displayPWABanner } from "../utils/ui-utils.js";
 
@@ -230,12 +231,21 @@ export async function initCommand(
   // Normalize and validate basePath
   let finalBasePath: string;
   try {
-    // TODO: Implement intelligent auto-detection of basePath
-    // For now, only use explicitly provided basePath or default to "/"
-    const effectiveBasePath = rawBasePath || "/";
+    let effectiveBasePath: string;
+    if (rawBasePath) {
+      effectiveBasePath = rawBasePath;
+    } else {
+      const detected = detectBasePath(result.projectPath);
+      effectiveBasePath =
+        detected.basePath != null && detected.confidence >= 0.7
+          ? detected.basePath
+          : "/";
+    }
     finalBasePath = normalizeBasePath(effectiveBasePath);
-    if (effectiveBasePath && effectiveBasePath !== "/") {
-      console.log(chalk.gray(`  Base path: ${finalBasePath}`));
+    if (finalBasePath !== "/") {
+      console.log(
+        chalk.gray(`  Base path: ${finalBasePath}${rawBasePath ? "" : " (auto)"}`),
+      );
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

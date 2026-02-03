@@ -327,6 +327,10 @@ Next.js uses **`public/`** for static assets (manifest, SW, icons). The `.next/`
 
 WordPress is detected in the scanner’s `framework-detector.ts` via the generic helper `hasFileAndDirectory(projectPath, file, dir)`: presence of `wp-config.php` and `wp-content/`. The same helper is used for Joomla (`configuration.php` + `administrator/`). This avoids duplicating file+dir checks.
 
+### Autres CMS PHP (Drupal, Joomla, Magento, Shopify, PrestaShop, etc.)
+
+**Décision (P3)** : le template Service Worker **`php`** reste **générique** pour tous ces CMS. Aucune backend dédiée (pas de Laravel/Symfony-style integration). Le scanner détecte le framework (Drupal, Joomla, Magento, etc.) et `determineTemplateType()` renvoie `php` ; routes et cache sont ceux du template générique. **Limites documentées** : pas de routes/cache optimisés par CMS, pas d’injection ciblée type WordPress (header/footer) ; utiliser `--output-dir` / `--html-extensions` si besoin. Un preset “PHP CMS” commun pourra être extrait plus tard si on affine par CMS.
+
 ### WordPress injection (restricted glob)
 
 For WordPress, the CLI does **not** inject into every `.php` file. It uses a restricted set of patterns (`WORDPRESS_INJECTION_PATTERNS` in core config): only `**/wp-content/themes/**/header.php` and `**/wp-content/themes/**/footer.php`. Override with `--html-extensions` or config `injection.extensions` if you need other files. This avoids touching core/plugins and limits injection to theme head/footer.
@@ -406,11 +410,18 @@ if (integration) {
 
 ### Phase 4+ Future
 - [ ] ASP.NET Core (.NET)
+- [ ] **Node (Express, Fastify)** : à plus long terme, backend optionnelle (routes API/static, template SW dédié) en réutilisant BaseBackendIntegration et la factory ; pas d’implémentation prévue à court terme.
 - [ ] Express.js (Node.js)
 - [ ] Fastify (Node.js)
 - [ ] And more...
 
 ---
+
+## Autres langages (détectés, sans backend)
+
+**Rails / Sinatra (Ruby), Go, Spring, ASP.NET** : le scanner peut détecter ces frameworks ; il n’y a **pas d’intégration backend dédiée** pour l’instant. On utilise le template Service Worker **static** ou **ssr** selon l’architecture détectée. Une intégration dédiée ne sera ajoutée que si la roadmap le prévoit ou sur besoin explicite.
+
+**Si ajout d’un backend** (ex. Rails, Node/Express) : réutiliser **BaseBackendIntegration** et la **factory** existante ; ne pas dupliquer la logique de détection/génération (voir §6 Principe de réutilisation dans la TODOLIST).
 
 ## Detection Patterns
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { mkdirSync, writeFileSync, rmSync, existsSync } from "fs";
+import { writeFileSync, existsSync } from "fs";
 import { join } from "path";
 import {
   loadCache,
@@ -12,8 +12,7 @@ import {
   type ScanCache,
 } from "./cache.js";
 import type { ScannerResult } from "./index.js";
-
-const TEST_DIR = join(process.cwd(), ".test-tmp-cache");
+import { createTestDir, cleanupTestDir } from "../__tests__/test-helpers.js";
 
 // Helpers
 type DeepPartial<T> = {
@@ -89,22 +88,17 @@ const expectCacheHit = (
 describe("cache", () => {
   // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
   let warnSpy: ReturnType<typeof vi.spyOn> | null;
+  let TEST_DIR: string;
 
   beforeEach(() => {
     warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    try {
-      if (existsSync(TEST_DIR)) {
-        rmSync(TEST_DIR, { recursive: true, force: true });
-      }
-    } catch {
-      // Ignore errors during cleanup
-    }
-    mkdirSync(TEST_DIR, { recursive: true });
+    TEST_DIR = createTestDir("cache");
   });
 
   afterEach(() => {
     warnSpy?.mockRestore();
     warnSpy = null;
+    cleanupTestDir(TEST_DIR);
   });
 
   describe("loadCache and saveCache", () => {
