@@ -108,75 +108,76 @@ export function getAvailableTemplateTypes(): ServiceWorkerTemplateType[] {
 }
 
 /**
- * Détermine le type de template à partir de l'architecture et du framework
+ * Détermine le type de template à partir de l'architecture et du framework.
+ * Point unique de mapping framework → template SW ; le paramètre framework est normalisé en minuscules.
+ *
+ * Valeurs de framework attendues (scan) → type de template :
+ * - wordpress, woocommerce → wordpress
+ * - drupal, joomla, magento, shopify, prestashop → php
+ * - symfony + spa → symfony-spa ; symfony + ssr/static → symfony-api
+ * - laravel + spa → laravel-spa ; laravel + ssr → laravel-ssr ; laravel + static → laravel-api
+ * - codeigniter, cakephp, yii, laminas → php
+ * - django + spa → django-spa ; django + ssr/static → django-api
+ * - flask + spa → flask-spa ; flask + ssr/static → flask-api
+ * - nextjs + ssr → next-ssr ; nuxt + ssr → nuxt-ssr ; remix + ssr → remix-ssr ; sveltekit + ssr → sveltekit-ssr ; astro + ssr → ssr
+ * - sinon : architecture seule → spa | ssr | static
  */
 export function determineTemplateType(
   architecture: "spa" | "ssr" | "static",
   framework?: string | null,
 ): ServiceWorkerTemplateType {
+  const f = framework?.toLowerCase() ?? "";
+
   // Framework specific
-  if (framework === "WordPress" || framework === "WooCommerce") {
+  if (f === "wordpress" || f === "woocommerce") {
     return "wordpress";
   }
 
   // CMS & E-commerce
   if (
-    framework === "Drupal" ||
-    framework === "Joomla" ||
-    framework === "Magento" ||
-    framework === "Shopify" ||
-    framework === "PrestaShop"
-  ) {
-    return "php"; // Use generic PHP template for CMS/e-commerce
-  }
-
-  if (framework === "Symfony") {
-    return architecture === "spa" ? "symfony-spa" : "symfony-api";
-  }
-
-  // PHP frameworks
-  if (
-    framework === "CodeIgniter" ||
-    framework === "CakePHP" ||
-    framework === "Yii" ||
-    framework === "Laminas"
+    f === "drupal" ||
+    f === "joomla" ||
+    f === "magento" ||
+    f === "shopify" ||
+    f === "prestashop"
   ) {
     return "php";
   }
 
-  if (framework === "Laravel") {
-    if (architecture === "spa") {
-      return "laravel-spa";
-    }
-    if (architecture === "ssr") {
-      return "laravel-ssr";
-    }
+  if (f === "symfony") {
+    return architecture === "spa" ? "symfony-spa" : "symfony-api";
+  }
+
+  // PHP frameworks
+  if (f === "codeigniter" || f === "cakephp" || f === "yii" || f === "laminas") {
+    return "php";
+  }
+
+  if (f === "laravel") {
+    if (architecture === "spa") return "laravel-spa";
+    if (architecture === "ssr") return "laravel-ssr";
     return "laravel-api";
   }
 
   // Python frameworks
-  if (framework === "Django") {
+  if (f === "django") {
     return architecture === "spa" ? "django-spa" : "django-api";
   }
-
-  if (framework === "Flask") {
+  if (f === "flask") {
     return architecture === "spa" ? "flask-spa" : "flask-api";
   }
 
-  // Backend frameworks (Python, Ruby, Go, Java, .NET) - use static or SSR template based on architecture
-  // Django, Flask, FastAPI, Rails, Sinatra, Go, Spring, ASP.NET typically serve static files
-  // They will use the architecture-based template (static/ssr/spa)
+  // JS/TS SSR frameworks — templates dédiés (scan retourne : nextjs, nuxt, remix, sveltekit, astro)
+  if (f === "nextjs" && architecture === "ssr") return "next-ssr";
+  if (f === "nuxt" && architecture === "ssr") return "nuxt-ssr";
+  if (f === "remix" && architecture === "ssr") return "remix-ssr";
+  if (f === "sveltekit" && architecture === "ssr") return "sveltekit-ssr";
+  // Astro : pas de template dédié, fallback ssr
+  if (f === "astro" && architecture === "ssr") return "ssr";
 
   // Architecture
-  if (architecture === "spa") {
-    return "spa";
-  }
-
-  if (architecture === "ssr") {
-    return "ssr";
-  }
-
-  // Default: static
+  if (architecture === "spa") return "spa";
+  if (architecture === "ssr") return "ssr";
   return "static";
 }
 

@@ -163,6 +163,20 @@ describe("service-worker templates", () => {
       expect(determineTemplateType("ssr", "Next.js")).toBe("ssr");
     });
 
+    it("should return framework-specific SSR templates for nextjs, nuxt, remix, sveltekit (lowercase from scan)", () => {
+      expect(determineTemplateType("ssr", "nextjs")).toBe("next-ssr");
+      expect(determineTemplateType("ssr", "nuxt")).toBe("nuxt-ssr");
+      expect(determineTemplateType("ssr", "remix")).toBe("remix-ssr");
+      expect(determineTemplateType("ssr", "sveltekit")).toBe("sveltekit-ssr");
+      expect(determineTemplateType("ssr", "astro")).toBe("ssr");
+    });
+
+    it("should accept framework in any case (normalized to lowercase)", () => {
+      expect(determineTemplateType("ssr", "SYMFONY")).toBe("symfony-api");
+      expect(determineTemplateType("spa", "LARAVEL")).toBe("laravel-spa");
+      expect(determineTemplateType("ssr", "NextJS")).toBe("next-ssr");
+    });
+
     it("should return static for static architecture", () => {
       expect(determineTemplateType("static", null)).toBe("static");
       expect(determineTemplateType("static", "Static")).toBe("static");
@@ -171,6 +185,31 @@ describe("service-worker templates", () => {
     it("should prioritize framework over architecture", () => {
       expect(determineTemplateType("spa", "WordPress")).toBe("wordpress");
       expect(determineTemplateType("ssr", "Symfony")).toBe("symfony-api");
+    });
+
+    it("should cover all framework + architecture combinations (Symfony, Laravel, Django, Flask, Next/Nuxt/Remix/SvelteKit/Astro)", () => {
+      // Symfony SPA vs API
+      expect(determineTemplateType("spa", "symfony")).toBe("symfony-spa");
+      expect(determineTemplateType("ssr", "symfony")).toBe("symfony-api");
+      expect(determineTemplateType("static", "symfony")).toBe("symfony-api");
+      // Laravel SPA / SSR / API
+      expect(determineTemplateType("spa", "laravel")).toBe("laravel-spa");
+      expect(determineTemplateType("ssr", "laravel")).toBe("laravel-ssr");
+      expect(determineTemplateType("static", "laravel")).toBe("laravel-api");
+      // Django SPA vs API
+      expect(determineTemplateType("spa", "django")).toBe("django-spa");
+      expect(determineTemplateType("ssr", "django")).toBe("django-api");
+      expect(determineTemplateType("static", "django")).toBe("django-api");
+      // Flask SPA vs API
+      expect(determineTemplateType("spa", "flask")).toBe("flask-spa");
+      expect(determineTemplateType("ssr", "flask")).toBe("flask-api");
+      expect(determineTemplateType("static", "flask")).toBe("flask-api");
+      // Next / Nuxt / Remix / SvelteKit / Astro (SSR)
+      expect(determineTemplateType("ssr", "nextjs")).toBe("next-ssr");
+      expect(determineTemplateType("ssr", "nuxt")).toBe("nuxt-ssr");
+      expect(determineTemplateType("ssr", "remix")).toBe("remix-ssr");
+      expect(determineTemplateType("ssr", "sveltekit")).toBe("sveltekit-ssr");
+      expect(determineTemplateType("ssr", "astro")).toBe("ssr");
     });
   });
 

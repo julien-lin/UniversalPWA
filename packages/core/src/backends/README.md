@@ -282,6 +282,76 @@ private initializeIntegrations(): void {
 
 ---
 
+## Middleware injection (Symfony / Laravel)
+
+The CLI does **not** auto-inject middleware (safety, no file writes outside PWA assets). Each backend can expose `injectMiddleware()` so the developer can add the snippet manually.
+
+### Return shape
+
+```typescript
+injectMiddleware(): {
+  code: string      // Snippet to add (e.g. PHP class, Python decorator)
+  path: string     // File path where to add it (relative to project)
+  language: string // 'php' | 'python' | etc.
+  instructions: string[] // Steps: register in Kernel, add to routes, etc.
+}
+```
+
+### Laravel
+
+- **Path**: `app/Http/Middleware/PWAMiddleware.php`
+- **Code**: Full PHP class (PWA headers, Service-Worker-Allowed, Cache-Control for manifest/sw, X-CSRF-Token).
+- **Instructions**: Register in `app/Http/Kernel.php` (`$middleware` array) or use route middleware in `routes/web.php`.
+
+### Symfony
+
+- Uses base implementation (generic snippet and path). Override in `SymfonyIntegration` to return Symfony-specific middleware (e.g. EventSubscriber or kernel response listener) and path (e.g. `src/EventSubscriber/PwaSubscriber.php`).
+
+### Using from CLI
+
+After `universal-pwa init`, if a backend was detected you can get the middleware payload programmatically (e.g. via a future `--show-middleware` flag or by calling the backend integration). For now, refer to the backend’s `injectMiddleware()` return value and add the code at the given path, then follow the instructions.
+
+### SPA detection (Encore/Vite) – shared logic
+
+Symfony and Laravel both detect SPA mode (Vite + package.json vue/react/…). The logic is shared in `spa-detector.ts`: `detectSPAFromViteAndPackage(projectRoot, options)`. Symfony adds a Webpack Encore check (webpack.config.js/ts) before calling it; Laravel uses only the shared helper with framework-specific keys (e.g. Inertia for Laravel, Svelte for Symfony). This avoids duplication while keeping backend-specific behaviour.
+
+### Laravel: outputDir and getStartUrl()
+
+Laravel serves the `public/` directory at the document root. The backend’s `getStartUrl()` returns `"/"` and the Service Worker destination is `public/sw.js`. The CLI auto-detects `public/` when present, so **outputDir `public/` is consistent with getStartUrl() and Laravel’s structure.**
+
+### Next.js: outputDir (.next/ vs out/ vs public/)
+
+Next.js uses **`public/`** for static assets (manifest, SW, icons). The `.next/` directory is the build cache (not the served output); `out/` is used only for static export (`next export`). The CLI uses `dist/` if it exists (e.g. custom build), otherwise **`public/`** for Next projects, which is correct for PWA assets.
+
+### WordPress detection (framework-detector)
+
+WordPress is detected in the scanner’s `framework-detector.ts` via the generic helper `hasFileAndDirectory(projectPath, file, dir)`: presence of `wp-config.php` and `wp-content/`. The same helper is used for Joomla (`configuration.php` + `administrator/`). This avoids duplicating file+dir checks.
+
+### WordPress injection (restricted glob)
+
+For WordPress, the CLI does **not** inject into every `.php` file. It uses a restricted set of patterns (`WORDPRESS_INJECTION_PATTERNS` in core config): only `**/wp-content/themes/**/header.php` and `**/wp-content/themes/**/footer.php`. Override with `--html-extensions` or config `injection.extensions` if you need other files. This avoids touching core/plugins and limits injection to theme head/footer.
+
+---
+
+## Reference: framework → template SW, extensions, outputDir
+
+| Framework / type | Template SW | Extensions injected (default) | outputDir (auto) |
+|------------------|------------|-------------------------------|------------------|
+| Laravel | laravel-spa / laravel-ssr / laravel-api | html, twig, html.twig, blade.php, jinja2, j2, html.j2 | public/ |
+| Symfony | symfony-spa / symfony-api | same | public/ |
+| WordPress | wordpress | header.php, footer.php (themes only) | public/ |
+| Django | django-spa / django-api | same | static/ if exists, else public/ |
+| Flask | flask-spa / flask-api | same | static/ if exists, else public/ |
+| Next.js | next-ssr | same | dist/ if exists (prod build), else public/ |
+| Nuxt / Remix / SvelteKit | nuxt-ssr / remix-ssr / sveltekit-ssr | same | dist/ or public/ |
+| Astro | ssr | same | dist/ or public/ |
+| React / Vite (SPA) | spa | same | dist/ if exists, else public/ |
+| static | static | html, twig, blade.php, jinja2, j2, html.j2 | public/ or dist/ |
+
+Override: `--output-dir`, `--html-extensions` or config `injection.extensions`.
+
+---
+
 ## Usage
 
 ### From CLI

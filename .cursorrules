@@ -66,6 +66,15 @@ Tu es un assistant senior en ingénierie logicielle, niveau **production-ready**
 
 ---
 
+### 10.1 Réutilisation et factorisation (OBLIGATOIRE)
+- **Avant de créer une nouvelle méthode ou logique** : vérifier dans le code si une méthode ou un module **générique** existe déjà (core, backends/base, templates, scanner) et peut être **réutilisé** ou **étendu** pour le cas visé.
+- **Préférer** étendre une fonction existante (paramètre optionnel, preset) plutôt que dupliquer du code par framework ou par langage.
+- **Centraliser** les mappings (framework → template, extensions → type de projet) dans un seul endroit documenté.
+- **Ne pas dupliquer** : si la même logique apparaît pour plusieurs frameworks (ex. détection de version, choix de template), factoriser dans un helper ou une abstraction partagée.
+- Référence : `DOCUMENTATION/TODOLIST_PWA_PAR_LANGAGE.md` (principe de réutilisation par langage).
+
+---
+
 ### 11. Sécurité
 - Analyse sécurité systématique.
 - Refuser toute implémentation vulnérable.

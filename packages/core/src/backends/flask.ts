@@ -15,6 +15,10 @@ import type { BackendDetectionResult, BackendLanguage } from "./types.js";
 import type { ServiceWorkerConfig } from "../generator/caching-strategy.js";
 import { PRESET_STRATEGIES } from "../generator/caching-strategy.js";
 import { BaseBackendIntegration } from "./base.js";
+import {
+  getPythonPackageVersion,
+  hasPythonPackage,
+} from "./python-deps.js";
 
 export interface FlaskConfig {
   projectRoot: string;
@@ -34,79 +38,6 @@ export interface FlaskBlueprint {
   prefix?: string;
   folder: string;
   routes: string[];
-}
-
-/**
- * Detects Flask version from requirements.txt or pyproject.toml
- */
-function detectFlaskVersion(projectRoot: string): string | null {
-  // Try requirements.txt first
-  try {
-    const requirementsPath = join(projectRoot, "requirements.txt");
-    if (existsSync(requirementsPath)) {
-      const content = readFileSync(requirementsPath, "utf-8");
-      // Match patterns like: Flask==3.0.0, Flask>=2.0, Flask~=3.0
-      const match = content.match(
-        /Flask[>=<~!]*(\d+)(?:\.(\d+))?(?:\.(\d+))?/i,
-      );
-      if (match) {
-        const major = match[1] ?? "0";
-        const minor = match[2] ?? "0";
-        const patch = match[3] ?? "0";
-        return `${major}.${minor}.${patch}`;
-      }
-    }
-  } catch {
-    // Continue to next method
-  }
-
-  // Try pyproject.toml
-  try {
-    const pyprojectPath = join(projectRoot, "pyproject.toml");
-    if (existsSync(pyprojectPath)) {
-      const content = readFileSync(pyprojectPath, "utf-8");
-      // Match Flask in dependencies
-      const match = content.match(
-        /flask\s*=\s*["']?[>=<~!]*(\d+)(?:\.(\d+))?(?:\.(\d+))?/i,
-      );
-      if (match) {
-        const major = match[1] ?? "0";
-        const minor = match[2] ?? "0";
-        const patch = match[3] ?? "0";
-        return `${major}.${minor}.${patch}`;
-      }
-    }
-  } catch {
-    // Return null if both methods fail
-  }
-
-  return null;
-}
-
-function hasFlaskDependency(projectRoot: string): boolean {
-  try {
-    // Check requirements.txt
-    const requirementsPath = join(projectRoot, "requirements.txt");
-    if (existsSync(requirementsPath)) {
-      const content = readFileSync(requirementsPath, "utf-8");
-      if (/Flask/i.test(content)) {
-        return true;
-      }
-    }
-
-    // Check pyproject.toml
-    const pyprojectPath = join(projectRoot, "pyproject.toml");
-    if (existsSync(pyprojectPath)) {
-      const content = readFileSync(pyprojectPath, "utf-8");
-      if (/flask/i.test(content)) {
-        return true;
-      }
-    }
-
-    return false;
-  } catch {
-    return false;
-  }
 }
 
 /**
@@ -337,7 +268,7 @@ export class FlaskIntegration extends BaseBackendIntegration {
     }
 
     // Check for Flask dependency
-    if (hasFlaskDependency(projectRoot)) {
+    if (hasPythonPackage(projectRoot, "Flask")) {
       indicators.push("Flask dependency in requirements.txt or pyproject.toml");
       if (confidence === "medium") {
         confidence = "high";
@@ -365,7 +296,7 @@ export class FlaskIntegration extends BaseBackendIntegration {
       }
     }
 
-    const version = detectFlaskVersion(projectRoot);
+    const version = getPythonPackageVersion(projectRoot, "Flask");
 
     return {
       detected: indicators.length > 0,

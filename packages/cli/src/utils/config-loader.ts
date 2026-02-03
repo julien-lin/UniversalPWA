@@ -122,9 +122,14 @@ export function mergeConfigWithOptions(
 
   // Merge injection config
   const injectionConfig = cfg?.injection as Record<string, unknown> | undefined;
-  if (injectionConfig && merged.skipInjection === undefined) {
-    const inject = injectionConfig.inject as boolean | undefined;
-    merged.skipInjection = inject !== undefined ? !inject : false;
+  if (injectionConfig) {
+    if (merged.skipInjection === undefined) {
+      const inject = injectionConfig.inject as boolean | undefined;
+      merged.skipInjection = inject !== undefined ? !inject : false;
+    }
+    if (!merged.htmlExtensions && Array.isArray(injectionConfig.extensions)) {
+      merged.htmlExtensions = injectionConfig.extensions as string[];
+    }
   }
 
   // Merge output config

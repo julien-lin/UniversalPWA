@@ -2,6 +2,7 @@ import { scanProject, optimizeProject } from "@julien-lin/universal-pwa-core";
 import {
   generateAndWriteManifest,
   generateManifestId,
+  mapBackendManifestVarsToOptions,
 } from "@julien-lin/universal-pwa-core";
 import { generateIcons } from "@julien-lin/universal-pwa-core";
 import {
@@ -28,6 +29,10 @@ import type {
 import type { Architecture } from "@julien-lin/universal-pwa-core";
 import { Transaction } from "../utils/transaction.js";
 import { getEffectiveConfig } from "../utils/config-loader.js";
+import {
+  DEFAULT_INJECTION_EXTENSIONS,
+  WORDPRESS_INJECTION_PATTERNS,
+} from "@julien-lin/universal-pwa-core";
 import { displayPWABanner } from "../utils/ui-utils.js";
 
 // @types/cli-progress not available, using any type
@@ -54,6 +59,8 @@ export interface InitOptions {
   forceScan?: boolean;
   noCache?: boolean;
   maxHtmlFiles?: number; // Optionnel : limite le nombre de fichiers HTML traités (par défaut: illimité)
+  /** Extensions pour l'injection HTML (ex. html, twig, blade.php, j2). Par défaut : html, twig, html.twig, blade.php, jinja2, j2, html.j2 */
+  htmlExtensions?: string[];
 }
 
 export interface InitResult {
@@ -206,6 +213,7 @@ export async function initCommand(
     outputDir,
     basePath: rawBasePath,
     maxHtmlFiles,
+    htmlExtensions,
   } = mergedOptions;
 
   const result: InitResult = {
@@ -304,9 +312,10 @@ export async function initCommand(
           : join(result.projectPath, outputDir);
       console.log(chalk.gray(`  Using output directory: ${finalOutputDir}`));
     } else {
-      // Auto-detect: prefer dist/ for React/Vite projects (production builds)
+      // Auto-detect: prefer dist/ for React/Vite, static/ for Django/Flask, public/ otherwise
       const distDir = join(result.projectPath, "dist");
       const publicDir = join(result.projectPath, "public");
+      const staticDir = join(result.projectPath, "static");
 
       // For React/Vite: prefer dist/ if it exists (production build), otherwise public/
       if (
@@ -319,6 +328,16 @@ export async function initCommand(
         );
       } else if (result.framework === "wordpress") {
         finalOutputDir = publicDir;
+      } else if (
+        (result.framework === "django" || result.framework === "flask") &&
+        existsSync(staticDir)
+      ) {
+        finalOutputDir = staticDir;
+        console.log(
+          chalk.gray(
+            `  Using static/ directory (${result.framework} detected)`,
+          ),
+        );
       } else if (existsSync(publicDir)) {
         finalOutputDir = publicDir;
       } else if (existsSync(distDir)) {
@@ -356,6 +375,48 @@ export async function initCommand(
       const swRelative = relative(result.projectPath, existingSwPath);
       if (swRelative && !swRelative.startsWith("..")) {
         transaction.backupFile(swRelative);
+      }
+    }
+
+    // Detect backend once for manifest merge and service worker
+    const factory = getBackendFactory();
+    let backendIntegration: unknown = null;
+    if (
+      factory &&
+      typeof factory === "object" &&
+      "detectBackend" in factory
+    ) {
+      backendIntegration =
+        factory.detectBackend(result.projectPath) ?? null;
+    }
+    if (
+      !backendIntegration &&
+      result.framework &&
+      factory &&
+      typeof factory === "object" &&
+      "getIntegration" in factory
+    ) {
+      backendIntegration = factory.getIntegration(
+        result.framework,
+        result.projectPath,
+      );
+      if (
+        backendIntegration &&
+        typeof backendIntegration === "object" &&
+        "detect" in backendIntegration
+      ) {
+        const detectionResult = (
+          backendIntegration as BackendIntegration
+        ).detect();
+        if (detectionResult && typeof detectionResult === "object") {
+          const detected =
+            (detectionResult as DetectionResult).detected ?? false;
+          const confidence =
+            (detectionResult as DetectionResult).confidence ?? "low";
+          if (!detected || confidence === "low") {
+            backendIntegration = null;
+          }
+        }
       }
     }
 
@@ -500,19 +561,37 @@ export async function initCommand(
         .substring(0, 20);
     }
 
+    const backendManifestDefaults =
+      backendIntegration &&
+      typeof backendIntegration === "object" &&
+      "generateManifestVariables" in backendIntegration &&
+      typeof (backendIntegration as { generateManifestVariables: () => Record<string, string | number> })
+        .generateManifestVariables === "function"
+        ? mapBackendManifestVarsToOptions(
+            (
+              backendIntegration as {
+                generateManifestVariables: () => Record<string, string | number>;
+              }
+            ).generateManifestVariables(),
+          )
+        : {};
+
     let manifestPath: string | undefined;
     try {
       if (iconPaths.length > 0) {
-        // Manifest with generated icons
+        // Manifest with generated icons (backend defaults merged, user/cli wins)
         const manifestWithIconsOptions = {
+          ...backendManifestDefaults,
           name: appName,
           shortName: finalShortName,
           id: manifestId,
           startUrl: finalBasePath,
           scope: finalBasePath,
           display: "standalone" as const,
-          themeColor: themeColor ?? "#ffffff",
-          backgroundColor: backgroundColor ?? "#000000",
+          themeColor:
+            themeColor ?? backendManifestDefaults.themeColor ?? "#ffffff",
+          backgroundColor:
+            backgroundColor ?? backendManifestDefaults.backgroundColor ?? "#000000",
           icons: iconPaths.map((src) => ({
             src,
             sizes: src.match(/(\d+)x(\d+)/)?.[0] ?? "192x192",
@@ -550,17 +629,19 @@ export async function initCommand(
           chalk.yellow("⚠ Generating manifest with placeholder icon"),
         );
 
-        // Create manifest with placeholder icon
-        // finalShortName is already validated above
+        // Create manifest with placeholder icon (backend defaults merged, user/cli wins)
         const manifestMinimalOptions = {
+          ...backendManifestDefaults,
           name: appName,
           shortName: finalShortName,
           id: manifestId,
           startUrl: finalBasePath,
           scope: finalBasePath,
           display: "standalone" as const,
-          themeColor: themeColor ?? "#ffffff",
-          backgroundColor: backgroundColor ?? "#000000",
+          themeColor:
+            themeColor ?? backendManifestDefaults.themeColor ?? "#ffffff",
+          backgroundColor:
+            backgroundColor ?? backendManifestDefaults.backgroundColor ?? "#000000",
           icons: [
             {
               src: "/icon-192x192.png", // Placeholder - user must add a real icon
@@ -610,54 +691,7 @@ export async function initCommand(
       console.log(chalk.blue("⚙️ Generating service worker..."));
 
       try {
-        // Try to detect backend integration (Laravel, Symfony, etc.)
-
-        const factory = getBackendFactory();
-        let backendIntegration: unknown = null;
-
-        // First, try to detect backend automatically
-        if (
-          factory &&
-          typeof factory === "object" &&
-          "detectBackend" in factory
-        ) {
-          backendIntegration =
-            factory.detectBackend(result.projectPath) ?? null;
-        }
-
-        // If auto-detection failed but framework is known, try to get integration directly
-        if (
-          !backendIntegration &&
-          result.framework &&
-          factory &&
-          typeof factory === "object" &&
-          "getIntegration" in factory
-        ) {
-          backendIntegration = factory.getIntegration(
-            result.framework,
-            result.projectPath,
-          );
-          // Verify the integration actually detects this project
-          if (
-            backendIntegration &&
-            typeof backendIntegration === "object" &&
-            "detect" in backendIntegration
-          ) {
-            const detectionResult = (
-              backendIntegration as BackendIntegration
-            ).detect();
-            if (detectionResult && typeof detectionResult === "object") {
-              const detected =
-                (detectionResult as DetectionResult).detected ?? false;
-              const confidence =
-                (detectionResult as DetectionResult).confidence ?? "low";
-              if (!detected || confidence === "low") {
-                backendIntegration = null;
-              }
-            }
-          }
-        }
-
+        // backendIntegration already detected before manifest
         let swResult;
         if (
           backendIntegration &&
@@ -823,18 +857,43 @@ export async function initCommand(
 
       try {
         // Find all HTML files and template files (including dist/ for production builds)
-        // Priority: dist/ > public/ > root
-        // Support: .html, .twig (Symfony), .html.twig (Symfony), .blade.php (Laravel)
-        const htmlFiles = await glob("**/*.{html,twig,html.twig,blade.php}", {
-          cwd: result.projectPath,
-          ignore: [
-            "**/node_modules/**",
-            "**/.next/**",
-            "**/.nuxt/**",
-            "**/vendor/**",
-          ],
-          absolute: true,
-        });
+        // WordPress: restricted to theme header/footer only (no injection in every .php)
+        // Others: configurable via htmlExtensions / config injection.extensions
+        const useWordPressRestricted =
+          result.framework === "wordpress" &&
+          !(htmlExtensions && htmlExtensions.length > 0);
+        let htmlFiles: string[];
+        if (useWordPressRestricted) {
+          htmlFiles = await glob([...WORDPRESS_INJECTION_PATTERNS], {
+            cwd: result.projectPath,
+            ignore: [
+              "**/node_modules/**",
+              "**/.next/**",
+              "**/.nuxt/**",
+              "**/vendor/**",
+            ],
+            absolute: true,
+          });
+        } else {
+          const injectionExts =
+            htmlExtensions && htmlExtensions.length > 0
+              ? htmlExtensions
+              : [...DEFAULT_INJECTION_EXTENSIONS];
+          const htmlGlobPattern =
+            injectionExts.length > 0
+              ? `**/*.{${injectionExts.join(",")}}`
+              : "**/*.html";
+          htmlFiles = await glob(htmlGlobPattern, {
+            cwd: result.projectPath,
+            ignore: [
+              "**/node_modules/**",
+              "**/.next/**",
+              "**/.nuxt/**",
+              "**/vendor/**",
+            ],
+            absolute: true,
+          });
+        }
 
         // Sort: dist/ files first, then public/, then others
         htmlFiles.sort((a, b) => {
@@ -866,10 +925,18 @@ export async function initCommand(
           const bladeCount = htmlFiles.filter((f) =>
             f.endsWith(".blade.php"),
           ).length;
+          const wpThemeCount = useWordPressRestricted
+            ? htmlFiles.filter(
+                (f) =>
+                  f.endsWith("header.php") || f.endsWith("footer.php"),
+              ).length
+            : 0;
           const fileTypes = [];
           if (htmlCount > 0) fileTypes.push(`${htmlCount} HTML`);
           if (twigCount > 0) fileTypes.push(`${twigCount} Twig`);
           if (bladeCount > 0) fileTypes.push(`${bladeCount} Blade`);
+          if (wpThemeCount > 0)
+            fileTypes.push(`${wpThemeCount} WordPress theme`);
           const typeSummary =
             fileTypes.length > 0 ? ` (${fileTypes.join(", ")})` : "";
           console.log(

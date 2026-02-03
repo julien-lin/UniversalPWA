@@ -1,11 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { FlaskIntegration } from '../flask.js'
+import { getPythonPackageVersion, hasPythonPackage } from '../python-deps.js'
 import { existsSync, readFileSync } from 'node:fs'
 import { createFsMockForBackend } from './helpers/fs-mock.js'
 import { expectBackendContract } from './helpers/expect-backend-contract.js'
 
-// Mock fs module
+// Mock fs for backend detection
 vi.mock('node:fs')
+
+// Mock python-deps so version/presence is controlled per test (parsing tested in python-deps.test.ts)
+vi.mock('../python-deps.js', () => ({
+  getPythonPackageVersion: vi.fn(),
+  hasPythonPackage: vi.fn(),
+}))
 
 describe('FlaskIntegration', () => {
     let integration: FlaskIntegration
@@ -14,6 +21,7 @@ describe('FlaskIntegration', () => {
     beforeEach(() => {
         integration = new FlaskIntegration(projectRoot)
         vi.clearAllMocks()
+        vi.mocked(hasPythonPackage).mockReturnValue(true)
     })
 
     describe('detect()', () => {
@@ -22,7 +30,7 @@ describe('FlaskIntegration', () => {
                 existsPaths: ['app.py', 'requirements.txt', 'static', 'templates'],
                 readFileMap: { 'requirements.txt': 'Flask==3.0.0\nrequests==2.28.0' },
             })
-
+            vi.mocked(getPythonPackageVersion).mockReturnValue('3.0.0')
             const result = integration.detect()
 
             expect(result.detected).toBe(true)
@@ -55,6 +63,7 @@ describe('FlaskIntegration', () => {
 
         it('should not detect non-Flask project', () => {
             createFsMockForBackend({ existsReturn: false })
+            vi.mocked(hasPythonPackage).mockReturnValue(false)
 
             const result = integration.detect()
             expect(result.detected).toBe(false)
@@ -62,6 +71,7 @@ describe('FlaskIntegration', () => {
 
         it('should have medium confidence with only app.py', () => {
             createFsMockForBackend({ existsPaths: ['app.py'] })
+            vi.mocked(hasPythonPackage).mockReturnValue(false)
 
             const result = integration.detect()
 

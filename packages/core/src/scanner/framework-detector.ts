@@ -317,6 +317,18 @@ function createResult(
 }
 
 /**
+ * Generic helper: true when both a file and a directory exist at project path.
+ * Reused for WordPress (wp-config.php + wp-content), Joomla (configuration.php + administrator), etc.
+ */
+function hasFileAndDirectory(
+  projectPath: string,
+  file: string,
+  dir: string,
+): boolean {
+  return existsSync(join(projectPath, file)) && existsSync(join(projectPath, dir))
+}
+
+/**
  * Détecte le framework utilisé dans un projet
  */
 export function detectFramework(projectPath: string): FrameworkDetectionResult {
@@ -327,22 +339,18 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
   // Détecter la configuration du projet une seule fois
   const projectConfig = detectProjectConfiguration(projectPath)
 
-  // WordPress
-  if (existsSync(join(projectPath, 'wp-config.php'))) {
-    indicators.push('wp-config.php')
-    if (existsSync(join(projectPath, 'wp-content'))) {
-      indicators.push('wp-content/')
-      // Check for WooCommerce
-      if (existsSync(join(projectPath, 'wp-content', 'plugins', 'woocommerce'))) {
-        indicators.push('wp-content/plugins/woocommerce/')
-        framework = 'woocommerce'
-        confidence = 'high'
-        return createResult(framework, confidence, indicators, null, projectConfig)
-      }
-      framework = 'wordpress'
+  // WordPress (reuses hasFileAndDirectory)
+  if (hasFileAndDirectory(projectPath, 'wp-config.php', 'wp-content')) {
+    indicators.push('wp-config.php', 'wp-content/')
+    if (existsSync(join(projectPath, 'wp-content', 'plugins', 'woocommerce'))) {
+      indicators.push('wp-content/plugins/woocommerce/')
+      framework = 'woocommerce'
       confidence = 'high'
       return createResult(framework, confidence, indicators, null, projectConfig)
     }
+    framework = 'wordpress'
+    confidence = 'high'
+    return createResult(framework, confidence, indicators, null, projectConfig)
   }
 
   // Drupal
@@ -356,15 +364,12 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
     }
   }
 
-  // Joomla
-  if (existsSync(join(projectPath, 'configuration.php'))) {
-    indicators.push('configuration.php (Joomla)')
-    if (existsSync(join(projectPath, 'administrator'))) {
-      indicators.push('administrator/')
-      framework = 'joomla'
-      confidence = 'high'
-      return createResult(framework, confidence, indicators, null, projectConfig)
-    }
+  // Joomla (reuses hasFileAndDirectory)
+  if (hasFileAndDirectory(projectPath, 'configuration.php', 'administrator')) {
+    indicators.push('configuration.php (Joomla)', 'administrator/')
+    framework = 'joomla'
+    confidence = 'high'
+    return createResult(framework, confidence, indicators, null, projectConfig)
   }
 
   // Shopify (détection via fichiers de thème - avant composer.json pour éviter conflits)

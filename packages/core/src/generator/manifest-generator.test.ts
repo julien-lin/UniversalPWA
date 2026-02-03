@@ -4,6 +4,7 @@ import {
   generateManifest,
   writeManifest,
   generateAndWriteManifest,
+  mapBackendManifestVarsToOptions,
   ManifestSchema,
   type ManifestGeneratorOptions,
 } from "./manifest-generator.js";
@@ -201,6 +202,38 @@ describe("manifest-generator", () => {
       const id2 = "my-app-a1b2c3d4"; // /app/ basePath
 
       expect(id1).not.toBe(id2);
+    });
+  });
+
+  describe("mapBackendManifestVarsToOptions", () => {
+    it("should map snake_case backend vars to camelCase options", () => {
+      const vars = {
+        name: "Backend App",
+        short_name: "Backend",
+        start_url: "/",
+        scope: "/",
+        theme_color: "#3B82F6",
+        background_color: "#FFFFFF",
+      };
+      const options = mapBackendManifestVarsToOptions(vars);
+      expect(options.name).toBe("Backend App");
+      expect(options.shortName).toBe("Backend");
+      expect(options.startUrl).toBe("/");
+      expect(options.scope).toBe("/");
+      expect(options.themeColor).toBe("#3B82F6");
+      expect(options.backgroundColor).toBe("#FFFFFF");
+    });
+
+    it("should omit keys with wrong type", () => {
+      const vars = { name: 123, short_name: "OK" };
+      const options = mapBackendManifestVarsToOptions(vars);
+      expect(options.name).toBeUndefined();
+      expect(options.shortName).toBe("OK");
+    });
+
+    it("should return empty object for empty input", () => {
+      const options = mapBackendManifestVarsToOptions({});
+      expect(options).toEqual({});
     });
   });
 });

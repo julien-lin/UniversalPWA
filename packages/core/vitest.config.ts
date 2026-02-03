@@ -11,11 +11,8 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: true,
-      },
-    },
+    maxWorkers: 1,
+    // isolate: true (default) — required so vi.mock('node:fs') in backend tests works per file
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

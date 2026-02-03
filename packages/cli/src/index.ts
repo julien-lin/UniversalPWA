@@ -54,6 +54,7 @@ program
   .option('--force-scan', 'Force scan (bypass cache)')
   .option('--no-cache', 'Disable cache')
   .option('--max-html-files <number>', 'Maximum number of HTML files to process (default: unlimited)', (value) => Number.parseInt(value, 10))
+  .option('--html-extensions <extensions>', 'Comma-separated HTML/template extensions (e.g. html,twig,blade.php,j2)', (value: string) => value ? value.split(',').map((s) => s.trim()).filter(Boolean) : undefined)
   .action(async (options: {
     projectPath?: string
     name?: string
@@ -68,6 +69,7 @@ program
     forceScan?: boolean
     noCache?: boolean
     maxHtmlFiles?: number
+    htmlExtensions?: string[]
   }) => {
     try {
       const projectPath = options.projectPath ?? process.cwd()
@@ -146,6 +148,7 @@ program
         forceScan: options.forceScan,
         noCache: options.noCache,
         maxHtmlFiles: options.maxHtmlFiles,
+        htmlExtensions: options.htmlExtensions,
       })
       process.exit(result.success ? 0 : 1)
     } catch (error) {

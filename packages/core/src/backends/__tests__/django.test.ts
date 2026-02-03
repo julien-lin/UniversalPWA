@@ -1,11 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { DjangoIntegration } from '../django.js'
+import { getPythonPackageVersion, hasPythonPackage } from '../python-deps.js'
 import { existsSync, readFileSync } from 'node:fs'
 import { createFsMockForBackend } from './helpers/fs-mock.js'
 import { expectBackendContract } from './helpers/expect-backend-contract.js'
 
-// Mock fs module
+// Mock fs for backend detection (manage.py, settings, etc.)
 vi.mock('node:fs')
+
+// Mock python-deps so version/presence is controlled per test (parsing tested in python-deps.test.ts)
+vi.mock('../python-deps.js', () => ({
+    getPythonPackageVersion: vi.fn(),
+    hasPythonPackage: vi.fn(),
+}))
 
 describe('DjangoIntegration', () => {
     let integration: DjangoIntegration
@@ -14,6 +21,7 @@ describe('DjangoIntegration', () => {
     beforeEach(() => {
         integration = new DjangoIntegration(projectRoot)
         vi.clearAllMocks()
+        vi.mocked(hasPythonPackage).mockReturnValue(true)
     })
 
     describe('detect()', () => {
@@ -22,7 +30,7 @@ describe('DjangoIntegration', () => {
                 existsPaths: ['manage.py', 'settings.py', 'urls.py', 'requirements.txt'],
                 readFileMap: { 'requirements.txt': 'Django==4.2.0\nrequests==2.28.0' },
             })
-
+            vi.mocked(getPythonPackageVersion).mockReturnValue('4.2.0')
             const result = integration.detect()
 
             expect(result.detected).toBe(true)
@@ -35,7 +43,7 @@ describe('DjangoIntegration', () => {
                 existsPaths: ['manage.py', 'settings.py', 'requirements.txt'],
                 readFileMap: { 'requirements.txt': 'Django>=5.0.0' },
             })
-
+            vi.mocked(getPythonPackageVersion).mockReturnValue('5.0.0')
             const result = integration.detect()
 
             expect(result.detected).toBe(true)
@@ -57,6 +65,7 @@ describe('DjangoIntegration', () => {
 
         it('should not detect non-Django project', () => {
             createFsMockForBackend({ existsReturn: false })
+            vi.mocked(hasPythonPackage).mockReturnValue(false)
 
             const result = integration.detect()
 
@@ -65,6 +74,7 @@ describe('DjangoIntegration', () => {
 
         it('should have medium confidence with only manage.py', () => {
             createFsMockForBackend({ existsPaths: ['manage.py'] })
+            vi.mocked(hasPythonPackage).mockReturnValue(false)
 
             const result = integration.detect()
 

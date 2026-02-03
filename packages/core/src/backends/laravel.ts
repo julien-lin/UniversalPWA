@@ -10,6 +10,7 @@
 
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { detectSPAFromViteAndPackage } from "./spa-detector.js";
 import type { BackendDetectionResult } from "./types.js";
 import type { ServiceWorkerConfig } from "../generator/caching-strategy.js";
 import { PRESET_STRATEGIES } from "../generator/caching-strategy.js";
@@ -93,54 +94,14 @@ function hasLumenDependency(projectRoot: string): boolean {
 }
 
 /**
- * Checks if Laravel project is in SPA mode (Vue/React)
+ * Checks if Laravel project is in SPA mode (Vue/React/Inertia).
+ * Uses shared spa-detector for Vite/package.json.
  */
 function detectSPAMode(projectRoot: string): boolean {
-  try {
-    // Check for Vite config
-    const viteExists =
-      existsSync(join(projectRoot, "vite.config.ts")) ||
-      existsSync(join(projectRoot, "vite.config.js")) ||
-      existsSync(join(projectRoot, "vite.config.mjs"));
-    if (viteExists) {
-      const vitePath = existsSync(join(projectRoot, "vite.config.ts"))
-        ? join(projectRoot, "vite.config.ts")
-        : existsSync(join(projectRoot, "vite.config.js"))
-          ? join(projectRoot, "vite.config.js")
-          : join(projectRoot, "vite.config.mjs");
-      const viteContent = readFileSync(vitePath, "utf-8");
-      return (
-        viteContent.includes("vue") ||
-        viteContent.includes("react") ||
-        viteContent.includes("inertia")
-      );
-    }
-
-    // Check package.json for Vue/React
-    const packagePath = join(projectRoot, "package.json");
-    if (existsSync(packagePath)) {
-      const content = readFileSync(packagePath, "utf-8");
-      const pkg = JSON.parse(content) as Record<string, unknown>;
-      const dependencies = pkg.dependencies as
-        | Record<string, unknown>
-        | undefined;
-      const devDependencies = pkg.devDependencies as
-        | Record<string, unknown>
-        | undefined;
-      return !!(
-        dependencies?.vue ||
-        dependencies?.react ||
-        dependencies?.["@inertiajs/inertia"] ||
-        devDependencies?.vue ||
-        devDependencies?.react ||
-        devDependencies?.["@inertiajs/inertia"]
-      );
-    }
-
-    return false;
-  } catch {
-    return false;
-  }
+  return detectSPAFromViteAndPackage(projectRoot, {
+    viteIncludes: ["vue", "react", "inertia"],
+    packageKeys: ["vue", "react", "@inertiajs/inertia"],
+  });
 }
 
 /**

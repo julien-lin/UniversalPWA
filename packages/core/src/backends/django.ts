@@ -15,6 +15,10 @@ import type { BackendDetectionResult, BackendLanguage } from "./types.js";
 import type { ServiceWorkerConfig } from "../generator/caching-strategy.js";
 import { PRESET_STRATEGIES } from "../generator/caching-strategy.js";
 import { BaseBackendIntegration } from "./base.js";
+import {
+  getPythonPackageVersion,
+  hasPythonPackage,
+} from "./python-deps.js";
 
 export interface DjangoConfig {
   projectRoot: string;
@@ -23,79 +27,6 @@ export interface DjangoConfig {
   staticUrl?: string;
   staticRoot?: string;
   hasAPIRestFramework?: boolean;
-}
-
-/**
- * Detects Django version from requirements.txt or pyproject.toml
- */
-function detectDjangoVersion(projectRoot: string): string | null {
-  // Try requirements.txt first
-  try {
-    const requirementsPath = join(projectRoot, "requirements.txt");
-    if (existsSync(requirementsPath)) {
-      const content = readFileSync(requirementsPath, "utf-8");
-      // Match patterns like: Django==4.2.0, Django>=4.0, Django~=4.2
-      const match = content.match(
-        /Django[>=<~!]*(\d+)(?:\.(\d+))?(?:\.(\d+))?/i,
-      );
-      if (match) {
-        const major = match[1] ?? "0";
-        const minor = match[2] ?? "0";
-        const patch = match[3] ?? "0";
-        return `${major}.${minor}.${patch}`;
-      }
-    }
-  } catch {
-    // Continue to next method
-  }
-
-  // Try pyproject.toml
-  try {
-    const pyprojectPath = join(projectRoot, "pyproject.toml");
-    if (existsSync(pyprojectPath)) {
-      const content = readFileSync(pyprojectPath, "utf-8");
-      // Match Django in dependencies
-      const match = content.match(
-        /django\s*=\s*["']?[>=<~!]*(\d+)(?:\.(\d+))?(?:\.(\d+))?/i,
-      );
-      if (match) {
-        const major = match[1] ?? "0";
-        const minor = match[2] ?? "0";
-        const patch = match[3] ?? "0";
-        return `${major}.${minor}.${patch}`;
-      }
-    }
-  } catch {
-    // Return null if both methods fail
-  }
-
-  return null;
-}
-
-function hasDjangoDependency(projectRoot: string): boolean {
-  try {
-    // Check requirements.txt
-    const requirementsPath = join(projectRoot, "requirements.txt");
-    if (existsSync(requirementsPath)) {
-      const content = readFileSync(requirementsPath, "utf-8");
-      if (/Django/i.test(content)) {
-        return true;
-      }
-    }
-
-    // Check pyproject.toml
-    const pyprojectPath = join(projectRoot, "pyproject.toml");
-    if (existsSync(pyprojectPath)) {
-      const content = readFileSync(pyprojectPath, "utf-8");
-      if (/django/i.test(content)) {
-        return true;
-      }
-    }
-
-    return false;
-  } catch {
-    return false;
-  }
 }
 
 /**
@@ -142,15 +73,11 @@ function detectASGI(projectRoot: string): boolean {
  * Detects Django REST Framework
  */
 function detectDjangoRESTFramework(projectRoot: string): boolean {
-  try {
-    const requirementsPath = join(projectRoot, "requirements.txt");
-    if (existsSync(requirementsPath)) {
-      const content = readFileSync(requirementsPath, "utf-8");
-      if (/djangorestframework|django-rest-framework/i.test(content)) {
-        return true;
-      }
-    }
+  if (hasPythonPackage(projectRoot, "djangorestframework")) {
+    return true;
+  }
 
+  try {
     // Check settings.py for INSTALLED_APPS
     const settingsPath = join(projectRoot, "settings.py");
     if (existsSync(settingsPath)) {
@@ -290,7 +217,7 @@ export class DjangoIntegration extends BaseBackendIntegration {
     }
 
     // Check for Django dependency
-    if (hasDjangoDependency(projectRoot)) {
+    if (hasPythonPackage(projectRoot, "Django")) {
       indicators.push(
         "Django dependency in requirements.txt or pyproject.toml",
       );
@@ -299,7 +226,7 @@ export class DjangoIntegration extends BaseBackendIntegration {
       }
     }
 
-    const version = detectDjangoVersion(projectRoot);
+    const version = getPythonPackageVersion(projectRoot, "Django");
 
     return {
       detected: indicators.length > 0,

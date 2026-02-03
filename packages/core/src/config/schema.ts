@@ -69,6 +69,39 @@ export const ManifestConfigSchema = z.object({
 })
 
 /**
+ * Default HTML/template extensions for injection (PHP, Python/Jinja2, Twig, Blade).
+ * Used when no custom extensions are set (config or CLI).
+ */
+export const DEFAULT_INJECTION_EXTENSIONS = [
+  'html',
+  'twig',
+  'html.twig',
+  'blade.php',
+  'jinja2',
+  'j2',
+  'html.j2',
+] as const
+
+/**
+ * Extensions by project type for reuse (PHP: Twig/Blade, Python: Jinja2, static: HTML).
+ * Single source of truth; DEFAULT_INJECTION_EXTENSIONS = union of PHP + Python + static.
+ */
+export const INJECTION_EXTENSIONS_BY_PROJECT_TYPE = {
+  php: ['html', 'twig', 'html.twig', 'blade.php'] as const,
+  python: ['html', 'jinja2', 'j2', 'html.j2'] as const,
+  static: ['html'] as const,
+} as const
+
+/**
+ * WordPress: restricted glob patterns for injection (theme header/footer only).
+ * Avoids injecting into every .php; use when framework is wordpress and no custom extensions set.
+ */
+export const WORDPRESS_INJECTION_PATTERNS = [
+  '**/wp-content/themes/**/header.php',
+  '**/wp-content/themes/**/footer.php',
+] as const
+
+/**
  * HTML injection configuration
  */
 export const InjectionConfigSchema = z.object({
@@ -76,7 +109,9 @@ export const InjectionConfigSchema = z.object({
   inject: z.boolean().default(true),
   /** Maximum number of HTML files to process */
   maxFiles: z.number().positive().optional(),
-  /** HTML file patterns to include */
+  /** File extensions for HTML/template injection (e.g. html, twig, blade.php, j2). Used to build glob pattern. */
+  extensions: z.array(z.string()).optional(),
+  /** HTML file patterns to include (overrides extensions if set) */
   include: z.array(z.string()).optional(),
   /** HTML file patterns to exclude */
   exclude: z.array(z.string()).optional(),

@@ -14,6 +14,7 @@ import type { BackendDetectionResult } from "./types.js";
 import type { ServiceWorkerConfig } from "../generator/caching-strategy.js";
 import { PRESET_STRATEGIES } from "../generator/caching-strategy.js";
 import { BaseBackendIntegration } from "./base.js";
+import { detectSPAFromViteAndPackage } from "./spa-detector.js";
 
 export interface SymfonyConfig {
   projectRoot: string;
@@ -87,62 +88,20 @@ function hasSymfonyDependency(projectRoot: string): boolean {
 }
 
 /**
- * Checks if Symfony project is in SPA mode (using Webpack Encore or Vite)
+ * Checks if Symfony project is in SPA mode (Webpack Encore or Vite).
+ * Uses shared spa-detector for Vite/package.json; Symfony adds Webpack Encore.
  */
 function detectSPAMode(projectRoot: string): boolean {
-  try {
-    // Check for webpack.config.js (Webpack Encore)
-    if (
-      existsSync(join(projectRoot, "webpack.config.js")) ||
-      existsSync(join(projectRoot, "webpack.config.ts"))
-    ) {
-      return true;
-    }
-
-    // Check for Vite config
-    const viteExists =
-      existsSync(join(projectRoot, "vite.config.ts")) ||
-      existsSync(join(projectRoot, "vite.config.js")) ||
-      existsSync(join(projectRoot, "vite.config.mjs"));
-    if (viteExists) {
-      const vitePath = existsSync(join(projectRoot, "vite.config.ts"))
-        ? join(projectRoot, "vite.config.ts")
-        : existsSync(join(projectRoot, "vite.config.js"))
-          ? join(projectRoot, "vite.config.js")
-          : join(projectRoot, "vite.config.mjs");
-      const viteContent = readFileSync(vitePath, "utf-8");
-      return (
-        viteContent.includes("vue") ||
-        viteContent.includes("react") ||
-        viteContent.includes("svelte")
-      );
-    }
-
-    // Check package.json for frontend framework
-    const packagePath = join(projectRoot, "package.json");
-    if (existsSync(packagePath)) {
-      const content = readFileSync(packagePath, "utf-8");
-      const pkg = JSON.parse(content) as Record<string, unknown>;
-      const dependencies = pkg.dependencies as
-        | Record<string, unknown>
-        | undefined;
-      const devDependencies = pkg.devDependencies as
-        | Record<string, unknown>
-        | undefined;
-      return !!(
-        dependencies?.vue ||
-        dependencies?.react ||
-        dependencies?.svelte ||
-        devDependencies?.vue ||
-        devDependencies?.react ||
-        devDependencies?.svelte
-      );
-    }
-
-    return false;
-  } catch {
-    return false;
+  if (
+    existsSync(join(projectRoot, "webpack.config.js")) ||
+    existsSync(join(projectRoot, "webpack.config.ts"))
+  ) {
+    return true;
   }
+  return detectSPAFromViteAndPackage(projectRoot, {
+    viteIncludes: ["vue", "react", "svelte"],
+    packageKeys: ["vue", "react", "svelte"],
+  });
 }
 
 /**

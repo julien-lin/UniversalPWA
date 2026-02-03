@@ -70,6 +70,29 @@ export interface ManifestGeneratorOptions {
 }
 
 /**
+ * Maps backend generateManifestVariables() (snake_case) to manifest options (camelCase).
+ * Used to merge backend defaults without overwriting user-provided values.
+ */
+export function mapBackendManifestVarsToOptions(
+  vars: Record<string, string | number>,
+): Partial<ManifestGeneratorOptions> {
+  const out: Partial<ManifestGeneratorOptions> = {};
+  if (typeof vars.name === "string") out.name = vars.name;
+  if (typeof vars.short_name === "string") out.shortName = vars.short_name;
+  if (typeof vars.description === "string") out.description = vars.description;
+  if (typeof vars.start_url === "string") out.startUrl = vars.start_url;
+  if (typeof vars.scope === "string") out.scope = vars.scope;
+  if (typeof vars.display === "string")
+    out.display = vars.display as ManifestGeneratorOptions["display"];
+  if (typeof vars.theme_color === "string") out.themeColor = vars.theme_color;
+  if (typeof vars.background_color === "string")
+    out.backgroundColor = vars.background_color;
+  if (typeof vars.orientation === "string")
+    out.orientation = vars.orientation as ManifestGeneratorOptions["orientation"];
+  return out;
+}
+
+/**
  * Generates a manifest.json for PWA
  */
 export function generateManifest(options: ManifestGeneratorOptions): Manifest {
