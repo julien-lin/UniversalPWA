@@ -28,19 +28,7 @@ Democratize PWAs for SMEs/artisans/solo developers, targeting 10k installs/year 
 
 ## 🚀 Installation
 
-### Via NPM (recommended)
-
-```bash
-npm install -g @julien-lin/universal-pwa-cli
-```
-
-### Via pnpm
-
-```bash
-pnpm add -g @julien-lin/universal-pwa-cli
-```
-
-### Direct usage with npx
+No global install required — use **npx** to run the CLI on demand.
 
 ```bash
 npx @julien-lin/universal-pwa-cli init
@@ -52,11 +40,11 @@ npx @julien-lin/universal-pwa-cli init
 
 #### Interactive Mode (Recommended)
 
-Simply run `universal-pwa init` without any arguments to launch the interactive mode:
+Simply run the init command without any arguments to launch the interactive mode:
 
 ```bash
 # In your project directory
-universal-pwa init
+npx @julien-lin/universal-pwa-cli init
 ```
 
 The CLI will:
@@ -84,7 +72,7 @@ All prompts include smart defaults, validation, and contextual suggestions!
 You can also provide all options directly:
 
 ```bash
-universal-pwa init \
+npx @julien-lin/universal-pwa-cli init \
   --name "My Application" \
   --short-name "MyApp" \
   --icon-source ./logo.png \
@@ -95,7 +83,7 @@ universal-pwa init \
 ### Scan a project
 
 ```bash
-universal-pwa scan
+npx @julien-lin/universal-pwa-cli scan
 ```
 
 This will display:
@@ -108,7 +96,7 @@ This will display:
 ### Preview PWA configuration
 
 ```bash
-universal-pwa preview
+npx @julien-lin/universal-pwa-cli preview
 ```
 
 This checks:
@@ -124,7 +112,7 @@ This checks:
 
 ```bash
 cd my-static-site
-universal-pwa init --icon-source ./icon.png
+npx @julien-lin/universal-pwa-cli init --icon-source ./icon.png
 ```
 
 ### React / Vue / Angular
@@ -132,31 +120,31 @@ universal-pwa init --icon-source ./icon.png
 ```bash
 cd my-react-project
 # Interactive mode (recommended)
-universal-pwa init
+npx @julien-lin/universal-pwa-cli init
 
 # Or with options
-universal-pwa init --icon-source ./src/assets/logo.png
+npx @julien-lin/universal-pwa-cli init --icon-source ./src/assets/logo.png
 ```
 
 ### Next.js / Nuxt
 
 ```bash
 cd my-nextjs-project
-universal-pwa init --icon-source ./public/logo.png
+npx @julien-lin/universal-pwa-cli init --icon-source ./public/logo.png
 ```
 
 ### WordPress
 
 ```bash
 cd my-wordpress-theme
-universal-pwa init --icon-source ./assets/icon.png --output-dir ./public
+npx @julien-lin/universal-pwa-cli init --icon-source ./assets/icon.png --output-dir ./public
 ```
 
 ### Symfony / Laravel
 
 ```bash
 cd my-symfony-project
-universal-pwa init --icon-source ./public/logo.png --output-dir ./public
+npx @julien-lin/universal-pwa-cli init --icon-source ./public/logo.png --output-dir ./public
 ```
 
 ## ⚙️ Configuration
@@ -191,7 +179,7 @@ UniversalPWA fully supports deployments under a sub-path, which is essential for
 
 ```bash
 # Tell UniversalPWA about the base path
-universal-pwa init \
+npx @julien-lin/universal-pwa-cli init \
   --project-path ./myapp \
   --base-path "/app/" \
   --icon-source ./logo.png
@@ -208,7 +196,7 @@ universal-pwa init \
 ```bash
 # Django uses FORCE_SCRIPT_NAME for reverse proxy
 export FORCE_SCRIPT_NAME="/app"
-universal-pwa init --base-path "${FORCE_SCRIPT_NAME}/"
+npx @julien-lin/universal-pwa-cli init --base-path "${FORCE_SCRIPT_NAME}/"
 ```
 
 #### Example: Laravel under Nginx subdirectory
@@ -223,7 +211,7 @@ location /public-app/ {
 }
 
 # Then run:
-universal-pwa init --base-path "/public-app/" --output-dir "./public"
+npx @julien-lin/universal-pwa-cli init --base-path "/public-app/" --output-dir "./public"
 ```
 
 **Verification:**
@@ -244,7 +232,7 @@ curl https://example.com/public-app/manifest.json
 TENANT_ID="$1"
 BASE_PATH="/tenants/${TENANT_ID}/"
 
-universal-pwa init \
+npx @julien-lin/universal-pwa-cli init \
   --project-path "./tenant-app" \
   --base-path "${BASE_PATH}" \
   --name "Tenant ${TENANT_ID} App" \
@@ -257,7 +245,7 @@ universal-pwa init \
 - Tenant B: `/tenants/b/manifest.json`, `/tenants/b/sw.js`
 - All fully isolated with correct Service Worker scopes
 
-When using interactive mode (`universal-pwa init` without arguments):
+When using interactive mode (`npx @julien-lin/universal-pwa-cli init` without arguments):
 
 - ✅ **Smart Defaults** : Automatically detects project name from `package.json`
 - ✅ **Icon Detection** : Searches for icons in common locations (`public/`, `src/assets/`, etc.)
@@ -267,7 +255,7 @@ When using interactive mode (`universal-pwa init` without arguments):
 
 ## 📦 Generated Files
 
-After running `universal-pwa init`, the following files are generated:
+After running `npx @julien-lin/universal-pwa-cli init`, the following files are generated:
 
 ### In `public/` (or specified output directory):
 
@@ -357,7 +345,7 @@ Make sure the path to the source image is correct and the file exists.
 ls -la ./icon.png
 
 # Use an absolute path if necessary
-universal-pwa init --icon-source /absolute/path/icon.png
+npx @julien-lin/universal-pwa-cli init --icon-source /absolute/path/icon.png
 ```
 
 ### Error: "Manifest requires at least one icon"

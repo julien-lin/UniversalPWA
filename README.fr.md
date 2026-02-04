@@ -27,19 +27,7 @@ Démocratiser les PWA pour PME/artisans/développeurs solo, viser 10k installs/a
 
 ## 🚀 Installation
 
-### Via NPM (recommandé)
-
-```bash
-npm install -g @julien-lin/universal-pwa-cli
-```
-
-### Via pnpm
-
-```bash
-pnpm add -g @julien-lin/universal-pwa-cli
-```
-
-### Utilisation directe avec npx
+Aucune installation globale : utilisez **npx** pour exécuter le CLI à la demande.
 
 ```bash
 npx @julien-lin/universal-pwa-cli init
@@ -51,11 +39,11 @@ npx @julien-lin/universal-pwa-cli init
 
 #### Mode Interactif (Recommandé)
 
-Exécutez simplement `universal-pwa init` sans arguments pour lancer le mode interactif :
+Exécutez simplement la commande init sans arguments pour lancer le mode interactif :
 
 ```bash
 # Dans le répertoire de votre projet
-universal-pwa init
+npx @julien-lin/universal-pwa-cli init
 ```
 
 Le CLI va :
@@ -75,7 +63,7 @@ Tous les prompts incluent des valeurs par défaut intelligentes et une validatio
 Vous pouvez également fournir toutes les options directement :
 
 ```bash
-universal-pwa init \
+npx @julien-lin/universal-pwa-cli init \
   --name "Mon Application" \
   --short-name "MonApp" \
   --icon-source ./logo.png \
@@ -86,7 +74,7 @@ universal-pwa init \
 ### Scanner un projet
 
 ```bash
-universal-pwa scan
+npx @julien-lin/universal-pwa-cli scan
 ```
 
 Affiche :
@@ -98,7 +86,7 @@ Affiche :
 ### Prévisualiser la configuration PWA
 
 ```bash
-universal-pwa preview
+npx @julien-lin/universal-pwa-cli preview
 ```
 
 Vérifie :
@@ -113,7 +101,7 @@ Vérifie :
 
 ```bash
 cd mon-site-statique
-universal-pwa init --icon-source ./icon.png
+npx @julien-lin/universal-pwa-cli init --icon-source ./icon.png
 ```
 
 ### React / Vue / Angular
@@ -121,31 +109,31 @@ universal-pwa init --icon-source ./icon.png
 ```bash
 cd mon-projet-react
 # Mode interactif (recommandé)
-universal-pwa init
+npx @julien-lin/universal-pwa-cli init
 
 # Ou avec options
-universal-pwa init --icon-source ./src/assets/logo.png
+npx @julien-lin/universal-pwa-cli init --icon-source ./src/assets/logo.png
 ```
 
 ### Next.js / Nuxt
 
 ```bash
 cd mon-projet-nextjs
-universal-pwa init --icon-source ./public/logo.png
+npx @julien-lin/universal-pwa-cli init --icon-source ./public/logo.png
 ```
 
 ### WordPress
 
 ```bash
 cd mon-theme-wordpress
-universal-pwa init --icon-source ./assets/icon.png --output-dir ./public
+npx @julien-lin/universal-pwa-cli init --icon-source ./assets/icon.png --output-dir ./public
 ```
 
 ### Symfony / Laravel
 
 ```bash
 cd mon-projet-symfony
-universal-pwa init --icon-source ./public/logo.png --output-dir ./public
+npx @julien-lin/universal-pwa-cli init --icon-source ./public/logo.png --output-dir ./public
 ```
 
 ## ⚙️ Configuration
@@ -167,7 +155,7 @@ universal-pwa init --icon-source ./public/logo.png --output-dir ./public
 
 ### Fonctionnalités du Mode Interactif
 
-Lors de l'utilisation du mode interactif (`universal-pwa init` sans arguments) :
+Lors de l'utilisation du mode interactif (`npx @julien-lin/universal-pwa-cli init` sans arguments) :
 
 - ✅ **Valeurs par Défaut Intelligentes** : Détecte automatiquement le nom du projet depuis `package.json`
 - ✅ **Détection d'Icônes** : Recherche les icônes dans les emplacements courants (`public/`, `src/assets/`, etc.)
@@ -177,7 +165,7 @@ Lors de l'utilisation du mode interactif (`universal-pwa init` sans arguments) :
 
 ## 📦 Fichiers Générés
 
-Après avoir exécuté `universal-pwa init`, les fichiers suivants sont générés :
+Après avoir exécuté `npx @julien-lin/universal-pwa-cli init`, les fichiers suivants sont générés :
 
 ### Dans `public/` (ou le répertoire de sortie spécifié) :
 
@@ -266,7 +254,7 @@ Assurez-vous que le chemin vers l'image source est correct et que le fichier exi
 ls -la ./icon.png
 
 # Utiliser un chemin absolu si nécessaire
-universal-pwa init --icon-source /chemin/absolu/icon.png
+npx @julien-lin/universal-pwa-cli init --icon-source /chemin/absolu/icon.png
 ```
 
 ### Erreur : "Manifest requires at least one icon"

@@ -19,19 +19,7 @@ This command will:
 - Generate all PWA assets (icons, manifest, service worker)
 - Inject meta tags into your HTML files
 
-No global installation needed!
-
-## Installation
-
-```bash
-npm install -g @julien-lin/universal-pwa-cli
-```
-
-Or with pnpm:
-
-```bash
-pnpm add -g @julien-lin/universal-pwa-cli
-```
+No global installation needed — npx is the recommended way to run the CLI.
 
 ## Configuration
 
@@ -40,7 +28,7 @@ UniversalPWA peut être configuré via un fichier de configuration pour éviter 
 ### Génération automatique
 
 ```bash
-universal-pwa generate-config
+npx @julien-lin/universal-pwa-cli generate-config
 ```
 
 Cette commande génère un fichier `universal-pwa.config.ts` (ou `.js`, `.json`, `.yaml`) basé sur votre projet.
@@ -83,10 +71,10 @@ yarn build
 # 2. Then initialize PWA
 # In interactive mode, select "Production" when prompted
 # The CLI will auto-detect dist/ directory and suggest it
-universal-pwa init
+npx @julien-lin/universal-pwa-cli init
 
 # Or explicitly specify output directory
-universal-pwa init --output-dir dist
+npx @julien-lin/universal-pwa-cli init --output-dir dist
 ```
 
 **Why?** The service worker needs to precache all your built assets (JS/CSS with hashes). If you initialize before building, the service worker won't know about the hashed filenames.
@@ -104,7 +92,7 @@ universal-pwa init --output-dir dist
 Simply run without arguments to launch interactive prompts:
 
 ```bash
-universal-pwa init
+npx @julien-lin/universal-pwa-cli init
 ```
 
 The CLI will guide you through a 2-phase workflow:
@@ -128,7 +116,7 @@ All prompts include smart defaults, validation, and contextual suggestions!
 #### Command Line Mode
 
 ```bash
-universal-pwa init [options]
+npx @julien-lin/universal-pwa-cli init [options]
 ```
 
 **Options:**
@@ -150,23 +138,23 @@ universal-pwa init [options]
 ```bash
 # For production build (React/Vite)
 npm run build
-universal-pwa init --output-dir dist --icon-source ./logo.png
+npx @julien-lin/universal-pwa-cli init --output-dir dist --icon-source ./logo.png
 
 # For development or static sites
-universal-pwa init \
+npx @julien-lin/universal-pwa-cli init \
   --name "My Application" \
   --short-name "MyApp" \
   --icon-source ./logo.png \
   --theme-color "#2c3e50"
 
 # For deployment under a subpath
-universal-pwa init \
+npx @julien-lin/universal-pwa-cli init \
   --name "CreativeHub" \
   --output-dir public \
   --base-path "/creativehub/"
 
 # For API-based PWA
-universal-pwa init \
+npx @julien-lin/universal-pwa-cli init \
   --name "PWA API" \
   --output-dir dist \
   --base-path "/api/pwa/"
@@ -203,7 +191,7 @@ This ensures:
 
 ```bash
 npm run build
-universal-pwa init \
+npx @julien-lin/universal-pwa-cli init \
   --name "Creative Hub" \
   --output-dir public \
   --base-path "/creative-hub/"
@@ -213,7 +201,7 @@ universal-pwa init \
 
 ```bash
 pnpm build
-universal-pwa init \
+npx @julien-lin/universal-pwa-cli init \
   --output-dir .next \
   --base-path "/dashboard/"
 ```
@@ -221,7 +209,7 @@ universal-pwa init \
 **Static Site on Shared Hosting** - Deployed at `example.com/apps/myapp/`:
 
 ```bash
-universal-pwa init \
+npx @julien-lin/universal-pwa-cli init \
   --name "My App" \
   --output-dir dist \
   --base-path "/apps/myapp/"
@@ -313,7 +301,7 @@ The injected script emits custom events you can listen to:
 Scan a project and detect framework, architecture, and assets.
 
 ```bash
-universal-pwa scan [options]
+npx @julien-lin/universal-pwa-cli scan [options]
 ```
 
 **Options:**
@@ -323,7 +311,7 @@ universal-pwa scan [options]
 **Example:**
 
 ```bash
-universal-pwa scan
+npx @julien-lin/universal-pwa-cli scan
 ```
 
 Output:
@@ -338,7 +326,7 @@ Output:
 Preview the PWA configuration of a project.
 
 ```bash
-universal-pwa preview [options]
+npx @julien-lin/universal-pwa-cli preview [options]
 ```
 
 **Options:**
@@ -350,12 +338,12 @@ universal-pwa preview [options]
 **Example:**
 
 ```bash
-universal-pwa preview --port 8080
+npx @julien-lin/universal-pwa-cli preview --port 8080
 ```
 
 ## Generated Files
 
-After running `universal-pwa init`, the following files are generated:
+After running `npx @julien-lin/universal-pwa-cli init`, the following files are generated:
 
 - `manifest.json` - PWA manifest file
 - `sw.js` - Service Worker (Workbox)

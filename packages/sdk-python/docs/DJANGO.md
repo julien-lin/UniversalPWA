@@ -227,8 +227,9 @@ myproject/
 
 ```bash
 pip install universal-pwa-python
-npm install -g @julien-lin/universal-pwa-cli
 ```
+
+Le CLI UniversalPWA s’utilise via **npx** (étape suivante), sans installation globale.
 
 #### 2. Génération PWA
 

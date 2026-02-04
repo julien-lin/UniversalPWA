@@ -35,6 +35,9 @@ jobs:
           rm -rf packages/*/.tsbuildinfo
           find packages -name "*.tsbuildinfo" -delete || true
 
+      - name: Build (for type resolution in lint: templates → core)
+        run: pnpm build
+
       - name: Lint
         run: pnpm -r lint
 

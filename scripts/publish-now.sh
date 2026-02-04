@@ -64,8 +64,7 @@ echo -e "  https://www.npmjs.com/package/@universal-pwa/templates"
 echo -e "  https://www.npmjs.com/package/@universal-pwa/core"
 echo -e "  https://www.npmjs.com/package/@universal-pwa/cli"
 echo ""
-echo -e "${BLUE}Testez l'installation:${NC}"
-echo -e "  npm install -g @universal-pwa/cli"
-echo -e "  universal-pwa --version"
+echo -e "${BLUE}Testez avec npx:${NC}"
+echo -e "  npx @julien-lin/universal-pwa-cli --version"
 
 

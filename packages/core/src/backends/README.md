@@ -309,7 +309,7 @@ injectMiddleware(): {
 
 ### Using from CLI
 
-After `universal-pwa init`, if a backend was detected you can get the middleware payload programmatically (e.g. via a future `--show-middleware` flag or by calling the backend integration). For now, refer to the backend’s `injectMiddleware()` return value and add the code at the given path, then follow the instructions.
+After `npx @julien-lin/universal-pwa-cli init`, if a backend was detected you can get the middleware payload programmatically (e.g. via a future `--show-middleware` flag or by calling the backend integration). For now, refer to the backend’s `injectMiddleware()` return value and add the code at the given path, then follow the instructions.
 
 ### SPA detection (Encore/Vite) – shared logic
 

@@ -16,7 +16,7 @@ export function getPythonPackageVersion(
 ): string | null {
   const reqName = packageName.replace(/-/g, "[-_]");
   const reqRegex = new RegExp(
-    `${reqName}[>=<~!]*(\d+)(?:\\.(\d+))?(?:\\.(\d+))?`,
+    `${reqName}[>=<~!]*(\\d+)(?:\\.(\\d+))?(?:\\.(\\d+))?`,
     "i",
   );
   const pyprojectName = packageName.toLowerCase().replace(/-/g, "_");
