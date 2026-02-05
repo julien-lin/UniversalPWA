@@ -288,7 +288,7 @@ export async function generateIconsAdvanced(
     }
   }
 
-  // Generate splash screens if requested
+  // Generate splash screens if requested (non-fatal: continue on failure for Linux/sandbox compatibility)
   const splashSizes = options?.splashSizes || STANDARD_SPLASH_SIZES;
   if (splashSizes.length > 0) {
     const splashResults = await Promise.all(
@@ -338,9 +338,11 @@ export async function generateIconsAdvanced(
           };
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : String(err);
-          throw new Error(
-            `Failed to generate splash screen ${size.name}: ${message}`,
+          logger.warn(
+            { module: "icon-generator", size: size.name },
+            `Splash screen ${size.name} skipped: ${message}`,
           );
+          return { success: false as const, error: message };
         }
       }),
     );

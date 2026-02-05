@@ -527,6 +527,13 @@ export async function initCommand(
             error instanceof Error ? error.message : String(error);
           result.errors.push(`Failed to generate icons: ${errorMessage}`);
           console.log(chalk.red(`✗ Failed to generate icons: ${errorMessage}`));
+          if (process.platform === "linux") {
+            console.log(
+              chalk.dim(
+                "  Tip: On Linux, ensure libvips is installed (e.g. apt install libvips-dev). Run with DEBUG=sharp for details.",
+              ),
+            );
+          }
         }
       } else {
         const errorCode = ErrorCode.ICON_SOURCE_NOT_FOUND;
