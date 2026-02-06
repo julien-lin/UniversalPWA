@@ -27,7 +27,18 @@ export const ManifestSchema = z.object({
   display: z
     .enum(["standalone", "fullscreen", "minimal-ui", "browser"])
     .default("standalone"),
-  orientation: z.enum(["any", "portrait", "landscape"]).optional(),
+  orientation: z
+    .enum([
+      "any",
+      "natural",
+      "portrait",
+      "portrait-primary",
+      "portrait-secondary",
+      "landscape",
+      "landscape-primary",
+      "landscape-secondary",
+    ])
+    .optional(),
   theme_color: z
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/)
@@ -57,7 +68,15 @@ export interface ManifestGeneratorOptions {
   startUrl?: string;
   scope?: string;
   display?: "standalone" | "fullscreen" | "minimal-ui" | "browser";
-  orientation?: "any" | "portrait" | "landscape";
+  orientation?:
+    | "any"
+    | "natural"
+    | "portrait"
+    | "portrait-primary"
+    | "portrait-secondary"
+    | "landscape"
+    | "landscape-primary"
+    | "landscape-secondary";
   themeColor?: string;
   backgroundColor?: string;
   icons: ManifestIcon[];

@@ -62,7 +62,7 @@ describe("manifest-generator", () => {
           startUrl: "/app",
           scope: "/app",
           display: "fullscreen",
-          orientation: "portrait",
+          orientation: "portrait-primary",
           themeColor: "#ffffff",
           backgroundColor: "#000000",
           icons: [
@@ -82,7 +82,7 @@ describe("manifest-generator", () => {
       expect(manifest.start_url).toBe("/app");
       expect(manifest.scope).toBe("/app");
       expect(manifest.display).toBe("fullscreen");
-      expect(manifest.orientation).toBe("portrait");
+      expect(manifest.orientation).toBe("portrait-primary");
       expect(manifest.theme_color).toBe("#ffffff");
       expect(manifest.background_color).toBe("#000000");
       expect(manifest.icons).toHaveLength(2);
@@ -129,6 +129,29 @@ describe("manifest-generator", () => {
     ])("should handle display mode: %s", (display) => {
       const manifest = generateManifest(makeOptions({ display }));
       expect(manifest.display).toBe(display);
+    });
+
+    it.each<
+      | "any"
+      | "natural"
+      | "portrait"
+      | "portrait-primary"
+      | "portrait-secondary"
+      | "landscape"
+      | "landscape-primary"
+      | "landscape-secondary"
+    >([
+      "any",
+      "natural",
+      "portrait",
+      "portrait-primary",
+      "portrait-secondary",
+      "landscape",
+      "landscape-primary",
+      "landscape-secondary",
+    ])("should handle orientation mode: %s", (orientation) => {
+      const manifest = generateManifest(makeOptions({ orientation }));
+      expect(manifest.orientation).toBe(orientation);
     });
   });
 
