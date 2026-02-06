@@ -4,14 +4,19 @@
  */
 
 import chalk from "chalk";
-import stripAnsi from "strip-ansi";
-import stringWidth from "string-width";
+
+/** Strip ANSI escape codes (colors, etc.) for width calculation */
+function stripAnsi(s: string): string {
+  // eslint-disable-next-line no-control-regex -- intentional: match ANSI escape sequences
+  return s.replace(/\u001B\[\d*(?:;\d*)*[a-zA-Z]/g, "");
+}
 
 /**
- * Get visible width of a string (excluding ANSI color codes)
+ * Get visible width of a string (excluding ANSI color codes).
+ * Safe for ASCII banner; uses length for simplicity.
  */
 function visibleWidth(s: string): number {
-  return stringWidth(stripAnsi(s));
+  return stripAnsi(s).length;
 }
 
 /**
