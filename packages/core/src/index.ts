@@ -13,6 +13,7 @@ export * from "./generator/cache-invalidation.js";
 export * from "./generator/https-checker.js";
 export * from "./injector/html-parser.js";
 export * from "./injector/meta-injector.js";
+export * from "./injector/nextjs-metadata-injector.js";
 export * from "./validator/pwa-validator.js";
 export * from "./utils/parallel-processor.js";
 export * from "./config/index.js";

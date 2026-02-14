@@ -1,68 +1,68 @@
-import { existsSync, readFileSync } from 'fs'
-import { join } from 'path'
-import { globSync } from 'glob'
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
+import { globSync } from "glob";
 
 export type Framework =
-  | 'wordpress'
-  | 'drupal'
-  | 'joomla'
-  | 'magento'
-  | 'shopify'
-  | 'woocommerce'
-  | 'prestashop'
-  | 'symfony'
-  | 'laravel'
-  | 'codeigniter'
-  | 'cakephp'
-  | 'yii'
-  | 'laminas'
-  | 'django'
-  | 'flask'
-  | 'fastapi'
-  | 'rails'
-  | 'sinatra'
-  | 'go'
-  | 'spring'
-  | 'aspnet'
-  | 'react'
-  | 'vue'
-  | 'angular'
-  | 'nextjs'
-  | 'nuxt'
-  | 'svelte'
-  | 'sveltekit'
-  | 'remix'
-  | 'astro'
-  | 'solidjs'
-  | 'jekyll'
-  | 'hugo'
-  | 'gatsby'
-  | 'eleventy'
-  | 'vitepress'
-  | 'docusaurus'
-  | 'static'
+  | "wordpress"
+  | "drupal"
+  | "joomla"
+  | "magento"
+  | "shopify"
+  | "woocommerce"
+  | "prestashop"
+  | "symfony"
+  | "laravel"
+  | "codeigniter"
+  | "cakephp"
+  | "yii"
+  | "laminas"
+  | "django"
+  | "flask"
+  | "fastapi"
+  | "rails"
+  | "sinatra"
+  | "go"
+  | "spring"
+  | "aspnet"
+  | "react"
+  | "vue"
+  | "angular"
+  | "nextjs"
+  | "nuxt"
+  | "svelte"
+  | "sveltekit"
+  | "remix"
+  | "astro"
+  | "solidjs"
+  | "jekyll"
+  | "hugo"
+  | "gatsby"
+  | "eleventy"
+  | "vitepress"
+  | "docusaurus"
+  | "static";
 
 export interface FrameworkVersion {
-  major: number
-  minor: number | null
-  patch: number | null
-  raw: string
+  major: number;
+  minor: number | null;
+  patch: number | null;
+  raw: string;
 }
 
 export interface ProjectConfiguration {
-  language: 'typescript' | 'javascript' | null
-  cssInJs: string[] // Liste des librairies CSS-in-JS détectées (styled-components, emotion, etc.)
-  stateManagement: string[] // Liste des state management détectés (Redux, Zustand, Pinia, etc.)
-  buildTool: string | null // Vite, Webpack, Rollup, etc.
+  language: "typescript" | "javascript" | null;
+  cssInJs: string[]; // Liste des librairies CSS-in-JS détectées (styled-components, emotion, etc.)
+  stateManagement: string[]; // Liste des state management détectés (Redux, Zustand, Pinia, etc.)
+  buildTool: string | null; // Vite, Webpack, Rollup, etc.
 }
 
 export interface FrameworkDetectionResult {
-  framework: Framework | null
-  confidence: 'high' | 'medium' | 'low'
-  confidenceScore: number // Score numérique 0-100
-  indicators: string[]
-  version: FrameworkVersion | null // Version du framework détectée
-  configuration: ProjectConfiguration // Configurations spécifiques du projet
+  framework: Framework | null;
+  confidence: "high" | "medium" | "low";
+  confidenceScore: number; // Score numérique 0-100
+  indicators: string[];
+  version: FrameworkVersion | null; // Version du framework détectée
+  configuration: ProjectConfiguration; // Configurations spécifiques du projet
 }
 
 /**
@@ -70,77 +70,80 @@ export interface FrameworkDetectionResult {
  */
 function calculateConfidenceScore(
   framework: Framework | null,
-  confidence: 'high' | 'medium' | 'low',
+  confidence: "high" | "medium" | "low",
   indicators: string[],
 ): number {
   if (!framework) {
-    return 0
+    return 0;
   }
 
   // Score de base selon le niveau de confiance
-  let baseScore = 0
+  let baseScore = 0;
   switch (confidence) {
-    case 'high':
-      baseScore = 80
-      break
-    case 'medium':
-      baseScore = 50
-      break
-    case 'low':
-      baseScore = 20
-      break
+    case "high":
+      baseScore = 80;
+      break;
+    case "medium":
+      baseScore = 50;
+      break;
+    case "low":
+      baseScore = 20;
+      break;
   }
 
   // Bonus pour chaque indicateur (max +20 points)
-  const indicatorBonus = Math.min(indicators.length * 2, 20)
+  const indicatorBonus = Math.min(indicators.length * 2, 20);
 
   // Bonus pour frameworks avec détection très spécifique (max +10 points)
-  const specificFrameworkBonus = indicators.some((ind) =>
-    ind.includes('composer.json:') || ind.includes('package.json:') || ind.includes('Gemfile'),
+  const specificFrameworkBonus = indicators.some(
+    (ind) =>
+      ind.includes("composer.json:") ||
+      ind.includes("package.json:") ||
+      ind.includes("Gemfile"),
   )
     ? 10
-    : 0
+    : 0;
 
-  const totalScore = baseScore + indicatorBonus + specificFrameworkBonus
+  const totalScore = baseScore + indicatorBonus + specificFrameworkBonus;
 
   // Limiter à 100
-  return Math.min(totalScore, 100)
+  return Math.min(totalScore, 100);
 }
 
 /**
  * Convertit un score numérique en niveau de confiance
  */
-function scoreToConfidence(score: number): 'high' | 'medium' | 'low' {
-  if (score >= 70) return 'high'
-  if (score >= 40) return 'medium'
-  return 'low'
+function scoreToConfidence(score: number): "high" | "medium" | "low" {
+  if (score >= 70) return "high";
+  if (score >= 40) return "medium";
+  return "low";
 }
 
 /**
  * Parse une version semver en FrameworkVersion
  */
 function parseVersion(versionString: string): FrameworkVersion | null {
-  if (!versionString) return null
+  if (!versionString) return null;
 
   // Nettoyer la version (enlever ^, ~, >=, etc.)
-  const cleanVersion = versionString.replace(/^[\^~>=<]+\s*/, '').trim()
+  const cleanVersion = versionString.replace(/^[\^~>=<]+\s*/, "").trim();
 
   // Parser major.minor.patch
-  const parts = cleanVersion.split('.')
-  if (parts.length === 0) return null
+  const parts = cleanVersion.split(".");
+  if (parts.length === 0) return null;
 
-  const major = parseInt(parts[0], 10)
-  if (isNaN(major)) return null
+  const major = parseInt(parts[0], 10);
+  if (isNaN(major)) return null;
 
-  const minor = parts[1] ? parseInt(parts[1], 10) : null
-  const patch = parts[2] ? parseInt(parts[2], 10) : null
+  const minor = parts[1] ? parseInt(parts[1], 10) : null;
+  const patch = parts[2] ? parseInt(parts[2], 10) : null;
 
   return {
     major,
     minor: isNaN(minor ?? 0) ? null : minor,
     patch: isNaN(patch ?? 0) ? null : patch,
     raw: versionString,
-  }
+  };
 }
 
 /**
@@ -151,25 +154,25 @@ function detectFrameworkVersion(
   dependencies: Record<string, string>,
 ): FrameworkVersion | null {
   switch (framework) {
-    case 'react':
+    case "react":
       if (dependencies.react) {
-        return parseVersion(dependencies.react)
+        return parseVersion(dependencies.react);
       }
-      break
-    case 'vue':
+      break;
+    case "vue":
       if (dependencies.vue) {
-        return parseVersion(dependencies.vue)
+        return parseVersion(dependencies.vue);
       }
-      break
-    case 'angular':
-      if (dependencies['@angular/core']) {
-        return parseVersion(dependencies['@angular/core'])
+      break;
+    case "angular":
+      if (dependencies["@angular/core"]) {
+        return parseVersion(dependencies["@angular/core"]);
       }
-      break
+      break;
     default:
-      break
+      break;
   }
-  return null
+  return null;
 }
 
 /**
@@ -181,110 +184,126 @@ function detectProjectConfiguration(projectPath: string): ProjectConfiguration {
     cssInJs: [],
     stateManagement: [],
     buildTool: null,
-  }
+  };
 
   // Détection TypeScript
-  const tsConfigPath = join(projectPath, 'tsconfig.json')
+  const tsConfigPath = join(projectPath, "tsconfig.json");
   if (existsSync(tsConfigPath)) {
-    config.language = 'typescript'
+    config.language = "typescript";
   } else {
     // Vérifier s'il y a des fichiers .ts ou .tsx
     try {
-      const tsFiles = globSync('**/*.{ts,tsx}', {
+      const tsFiles = globSync("**/*.{ts,tsx}", {
         cwd: projectPath,
-        ignore: ['**/node_modules/**', '**/dist/**', '**/build/**'],
+        ignore: ["**/node_modules/**", "**/dist/**", "**/build/**"],
         absolute: false,
         maxDepth: 3,
-      })
+      });
       if (tsFiles.length > 0) {
-        config.language = 'typescript'
+        config.language = "typescript";
       } else {
-        config.language = 'javascript'
+        config.language = "javascript";
       }
     } catch {
-      config.language = 'javascript'
+      config.language = "javascript";
     }
   }
 
   // Détection depuis package.json
-  const packageJsonPath = join(projectPath, 'package.json')
+  const packageJsonPath = join(projectPath, "package.json");
   if (existsSync(packageJsonPath)) {
     try {
-      const packageContent = JSON.parse(readFileSync(packageJsonPath, 'utf-8')) as {
-        dependencies?: Record<string, string>
-        devDependencies?: Record<string, string>
-      }
+      const packageContent = JSON.parse(
+        readFileSync(packageJsonPath, "utf-8"),
+      ) as {
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+      };
       const dependencies = {
         ...(packageContent.dependencies ?? {}),
         ...(packageContent.devDependencies ?? {}),
-      }
+      };
 
       // CSS-in-JS
-      if (dependencies['styled-components']) {
-        config.cssInJs.push('styled-components')
+      if (dependencies["styled-components"]) {
+        config.cssInJs.push("styled-components");
       }
-      if (dependencies['@emotion/react'] || dependencies['@emotion/styled']) {
-        config.cssInJs.push('emotion')
+      if (dependencies["@emotion/react"] || dependencies["@emotion/styled"]) {
+        config.cssInJs.push("emotion");
       }
-      if (dependencies['@stitches/react'] || dependencies['@stitches/core']) {
-        config.cssInJs.push('stitches')
+      if (dependencies["@stitches/react"] || dependencies["@stitches/core"]) {
+        config.cssInJs.push("stitches");
       }
       if (dependencies.linaria) {
-        config.cssInJs.push('linaria')
+        config.cssInJs.push("linaria");
       }
       if (dependencies.goober) {
-        config.cssInJs.push('goober')
+        config.cssInJs.push("goober");
       }
       if (dependencies.aphrodite) {
-        config.cssInJs.push('aphrodite')
+        config.cssInJs.push("aphrodite");
       }
 
       // State Management
-      if (dependencies.redux || dependencies['@reduxjs/toolkit']) {
-        config.stateManagement.push('redux')
+      if (dependencies.redux || dependencies["@reduxjs/toolkit"]) {
+        config.stateManagement.push("redux");
       }
       if (dependencies.zustand) {
-        config.stateManagement.push('zustand')
+        config.stateManagement.push("zustand");
       }
-      if (dependencies.pinia || dependencies['@pinia/core']) {
-        config.stateManagement.push('pinia')
+      if (dependencies.pinia || dependencies["@pinia/core"]) {
+        config.stateManagement.push("pinia");
       }
-      if (dependencies.mobx || dependencies['mobx-react']) {
-        config.stateManagement.push('mobx')
+      if (dependencies.mobx || dependencies["mobx-react"]) {
+        config.stateManagement.push("mobx");
       }
       if (dependencies.recoil) {
-        config.stateManagement.push('recoil')
+        config.stateManagement.push("recoil");
       }
       if (dependencies.jotai) {
-        config.stateManagement.push('jotai')
+        config.stateManagement.push("jotai");
       }
       if (dependencies.valtio) {
-        config.stateManagement.push('valtio')
+        config.stateManagement.push("valtio");
       }
-      if (dependencies['@tanstack/react-query'] || dependencies['react-query']) {
-        config.stateManagement.push('react-query')
+      if (
+        dependencies["@tanstack/react-query"] ||
+        dependencies["react-query"]
+      ) {
+        config.stateManagement.push("react-query");
       }
 
       // Build Tool
-      if (dependencies.vite || Object.keys(dependencies).some((key) => key.startsWith('vite-plugin-'))) {
-        config.buildTool = 'vite'
-      } else if (dependencies.webpack || Object.keys(dependencies).some((key) => key.startsWith('webpack-'))) {
-        config.buildTool = 'webpack'
-      } else if (dependencies.rollup || Object.keys(dependencies).some((key) => key.startsWith('rollup-plugin-'))) {
-        config.buildTool = 'rollup'
+      if (
+        dependencies.vite ||
+        Object.keys(dependencies).some((key) => key.startsWith("vite-plugin-"))
+      ) {
+        config.buildTool = "vite";
+      } else if (
+        dependencies.webpack ||
+        Object.keys(dependencies).some((key) => key.startsWith("webpack-"))
+      ) {
+        config.buildTool = "webpack";
+      } else if (
+        dependencies.rollup ||
+        Object.keys(dependencies).some((key) =>
+          key.startsWith("rollup-plugin-"),
+        )
+      ) {
+        config.buildTool = "rollup";
       } else if (dependencies.esbuild) {
-        config.buildTool = 'esbuild'
-      } else if (dependencies.parcel || dependencies['parcel-bundler']) {
-        config.buildTool = 'parcel'
-      } else if (dependencies['@turbo/*'] || dependencies.turbo) {
-        config.buildTool = 'turbopack'
+        config.buildTool = "esbuild";
+      } else if (dependencies.parcel || dependencies["parcel-bundler"]) {
+        config.buildTool = "parcel";
+      } else if (dependencies["@turbo/*"] || dependencies.turbo) {
+        config.buildTool = "turbopack";
       }
     } catch {
       // Ignore JSON parse errors
     }
   }
 
-  return config
+  return config;
 }
 
 /**
@@ -292,20 +311,24 @@ function detectProjectConfiguration(projectPath: string): ProjectConfiguration {
  */
 function createResult(
   framework: Framework | null,
-  confidence: 'high' | 'medium' | 'low',
+  confidence: "high" | "medium" | "low",
   indicators: string[],
   version: FrameworkVersion | null = null,
   configuration: ProjectConfiguration | null = null,
 ): FrameworkDetectionResult {
-  const confidenceScore = calculateConfidenceScore(framework, confidence, indicators)
-  const finalConfidence = scoreToConfidence(confidenceScore)
+  const confidenceScore = calculateConfidenceScore(
+    framework,
+    confidence,
+    indicators,
+  );
+  const finalConfidence = scoreToConfidence(confidenceScore);
   // Si configuration n'est pas fournie, créer une config vide
   const finalConfig: ProjectConfiguration = configuration ?? {
     language: null,
     cssInJs: [],
     stateManagement: [],
     buildTool: null,
-  }
+  };
   return {
     framework,
     confidence: finalConfidence,
@@ -313,7 +336,7 @@ function createResult(
     indicators,
     version,
     configuration: finalConfig,
-  }
+  };
 }
 
 /**
@@ -325,159 +348,250 @@ function hasFileAndDirectory(
   file: string,
   dir: string,
 ): boolean {
-  return existsSync(join(projectPath, file)) && existsSync(join(projectPath, dir))
+  return (
+    existsSync(join(projectPath, file)) && existsSync(join(projectPath, dir))
+  );
 }
 
 /**
  * Détecte le framework utilisé dans un projet
  */
 export function detectFramework(projectPath: string): FrameworkDetectionResult {
-  const indicators: string[] = []
-  let framework: Framework | null = null
-  let confidence: 'high' | 'medium' | 'low' = 'low'
+  const indicators: string[] = [];
+  let framework: Framework | null = null;
+  let confidence: "high" | "medium" | "low" = "low";
 
   // Détecter la configuration du projet une seule fois
-  const projectConfig = detectProjectConfiguration(projectPath)
+  const projectConfig = detectProjectConfiguration(projectPath);
 
   // WordPress (reuses hasFileAndDirectory)
-  if (hasFileAndDirectory(projectPath, 'wp-config.php', 'wp-content')) {
-    indicators.push('wp-config.php', 'wp-content/')
-    if (existsSync(join(projectPath, 'wp-content', 'plugins', 'woocommerce'))) {
-      indicators.push('wp-content/plugins/woocommerce/')
-      framework = 'woocommerce'
-      confidence = 'high'
-      return createResult(framework, confidence, indicators, null, projectConfig)
+  if (hasFileAndDirectory(projectPath, "wp-config.php", "wp-content")) {
+    indicators.push("wp-config.php", "wp-content/");
+    if (existsSync(join(projectPath, "wp-content", "plugins", "woocommerce"))) {
+      indicators.push("wp-content/plugins/woocommerce/");
+      framework = "woocommerce";
+      confidence = "high";
+      return createResult(
+        framework,
+        confidence,
+        indicators,
+        null,
+        projectConfig,
+      );
     }
-    framework = 'wordpress'
-    confidence = 'high'
-    return createResult(framework, confidence, indicators, null, projectConfig)
+    framework = "wordpress";
+    confidence = "high";
+    return createResult(framework, confidence, indicators, null, projectConfig);
   }
 
   // Drupal
-  if (existsSync(join(projectPath, 'sites')) && existsSync(join(projectPath, 'modules'))) {
-    indicators.push('sites/ and modules/ (Drupal)')
-    if (existsSync(join(projectPath, 'themes'))) {
-      indicators.push('themes/')
-      framework = 'drupal'
-      confidence = 'high'
-      return createResult(framework, confidence, indicators, null, projectConfig)
+  if (
+    existsSync(join(projectPath, "sites")) &&
+    existsSync(join(projectPath, "modules"))
+  ) {
+    indicators.push("sites/ and modules/ (Drupal)");
+    if (existsSync(join(projectPath, "themes"))) {
+      indicators.push("themes/");
+      framework = "drupal";
+      confidence = "high";
+      return createResult(
+        framework,
+        confidence,
+        indicators,
+        null,
+        projectConfig,
+      );
     }
   }
 
   // Joomla (reuses hasFileAndDirectory)
-  if (hasFileAndDirectory(projectPath, 'configuration.php', 'administrator')) {
-    indicators.push('configuration.php (Joomla)', 'administrator/')
-    framework = 'joomla'
-    confidence = 'high'
-    return createResult(framework, confidence, indicators, null, projectConfig)
+  if (hasFileAndDirectory(projectPath, "configuration.php", "administrator")) {
+    indicators.push("configuration.php (Joomla)", "administrator/");
+    framework = "joomla";
+    confidence = "high";
+    return createResult(framework, confidence, indicators, null, projectConfig);
   }
 
   // Shopify (détection via fichiers de thème - avant composer.json pour éviter conflits)
-  if (existsSync(join(projectPath, 'theme.liquid')) || existsSync(join(projectPath, 'config', 'settings_schema.json'))) {
-    indicators.push('theme.liquid or config/settings_schema.json (Shopify)')
-    framework = 'shopify'
-    confidence = 'high'
-    return createResult(framework, confidence, indicators, null, projectConfig)
+  if (
+    existsSync(join(projectPath, "theme.liquid")) ||
+    existsSync(join(projectPath, "config", "settings_schema.json"))
+  ) {
+    indicators.push("theme.liquid or config/settings_schema.json (Shopify)");
+    framework = "shopify";
+    confidence = "high";
+    return createResult(framework, confidence, indicators, null, projectConfig);
   }
 
   // PHP frameworks & CMS via composer.json
-  const composerPath = join(projectPath, 'composer.json')
+  const composerPath = join(projectPath, "composer.json");
   if (existsSync(composerPath)) {
     try {
-      const composerContent = JSON.parse(readFileSync(composerPath, 'utf-8')) as {
-        require?: Record<string, string>
-        'require-dev'?: Record<string, string>
-      }
+      const composerContent = JSON.parse(
+        readFileSync(composerPath, "utf-8"),
+      ) as {
+        require?: Record<string, string>;
+        "require-dev"?: Record<string, string>;
+      };
       const dependencies = {
         ...(composerContent.require ?? {}),
-        ...(composerContent['require-dev'] ?? {}),
-      }
+        ...(composerContent["require-dev"] ?? {}),
+      };
 
       // Magento (priorité haute car e-commerce spécifique)
-      if (dependencies['magento/product-community-edition'] || dependencies['magento/product-enterprise-edition']) {
-        indicators.push('composer.json: magento/*')
-        if (existsSync(join(projectPath, 'app')) && existsSync(join(projectPath, 'pub'))) {
-          indicators.push('app/ and pub/')
-          framework = 'magento'
-          confidence = 'high'
-          return createResult(framework, confidence, indicators, null, projectConfig)
+      if (
+        dependencies["magento/product-community-edition"] ||
+        dependencies["magento/product-enterprise-edition"]
+      ) {
+        indicators.push("composer.json: magento/*");
+        if (
+          existsSync(join(projectPath, "app")) &&
+          existsSync(join(projectPath, "pub"))
+        ) {
+          indicators.push("app/ and pub/");
+          framework = "magento";
+          confidence = "high";
+          return createResult(
+            framework,
+            confidence,
+            indicators,
+            null,
+            projectConfig,
+          );
         }
       }
 
       // PrestaShop (priorité haute car e-commerce spécifique)
-      if (dependencies['prestashop/prestashop']) {
-        indicators.push('composer.json: prestashop/prestashop')
-        if (existsSync(join(projectPath, 'config')) && existsSync(join(projectPath, 'themes'))) {
-          indicators.push('config/ and themes/')
-          framework = 'prestashop'
-          confidence = 'high'
-          return createResult(framework, confidence, indicators, null, projectConfig)
+      if (dependencies["prestashop/prestashop"]) {
+        indicators.push("composer.json: prestashop/prestashop");
+        if (
+          existsSync(join(projectPath, "config")) &&
+          existsSync(join(projectPath, "themes"))
+        ) {
+          indicators.push("config/ and themes/");
+          framework = "prestashop";
+          confidence = "high";
+          return createResult(
+            framework,
+            confidence,
+            indicators,
+            null,
+            projectConfig,
+          );
         }
       }
 
       // Symfony
-      if (dependencies['symfony/symfony'] || dependencies['symfony/framework-bundle']) {
-        indicators.push('composer.json: symfony/*')
-        if (existsSync(join(projectPath, 'public'))) {
-          indicators.push('public/')
-          framework = 'symfony'
-          confidence = 'high'
-          return createResult(framework, confidence, indicators, null, projectConfig)
+      if (
+        dependencies["symfony/symfony"] ||
+        dependencies["symfony/framework-bundle"]
+      ) {
+        indicators.push("composer.json: symfony/*");
+        if (existsSync(join(projectPath, "public"))) {
+          indicators.push("public/");
+          framework = "symfony";
+          confidence = "high";
+          return createResult(
+            framework,
+            confidence,
+            indicators,
+            null,
+            projectConfig,
+          );
         }
       }
 
       // Laravel
-      if (dependencies['laravel/framework']) {
-        indicators.push('composer.json: laravel/framework')
-        if (existsSync(join(projectPath, 'public'))) {
-          indicators.push('public/')
-          framework = 'laravel'
-          confidence = 'high'
-          return createResult(framework, confidence, indicators, null, projectConfig)
+      if (dependencies["laravel/framework"]) {
+        indicators.push("composer.json: laravel/framework");
+        if (existsSync(join(projectPath, "public"))) {
+          indicators.push("public/");
+          framework = "laravel";
+          confidence = "high";
+          return createResult(
+            framework,
+            confidence,
+            indicators,
+            null,
+            projectConfig,
+          );
         }
       }
 
       // CodeIgniter
-      if (dependencies['codeigniter4/framework']) {
-        indicators.push('composer.json: codeigniter4/framework')
-        if (existsSync(join(projectPath, 'public'))) {
-          indicators.push('public/')
-          framework = 'codeigniter'
-          confidence = 'high'
-          return createResult(framework, confidence, indicators, null, projectConfig)
+      if (dependencies["codeigniter4/framework"]) {
+        indicators.push("composer.json: codeigniter4/framework");
+        if (existsSync(join(projectPath, "public"))) {
+          indicators.push("public/");
+          framework = "codeigniter";
+          confidence = "high";
+          return createResult(
+            framework,
+            confidence,
+            indicators,
+            null,
+            projectConfig,
+          );
         }
       }
 
       // CakePHP
-      if (dependencies['cakephp/cakephp']) {
-        indicators.push('composer.json: cakephp/cakephp')
-        if (existsSync(join(projectPath, 'webroot')) || existsSync(join(projectPath, 'public'))) {
-          indicators.push('webroot/ or public/')
-          framework = 'cakephp'
-          confidence = 'high'
-          return createResult(framework, confidence, indicators, null, projectConfig)
+      if (dependencies["cakephp/cakephp"]) {
+        indicators.push("composer.json: cakephp/cakephp");
+        if (
+          existsSync(join(projectPath, "webroot")) ||
+          existsSync(join(projectPath, "public"))
+        ) {
+          indicators.push("webroot/ or public/");
+          framework = "cakephp";
+          confidence = "high";
+          return createResult(
+            framework,
+            confidence,
+            indicators,
+            null,
+            projectConfig,
+          );
         }
       }
 
       // Yii
-      if (dependencies['yiisoft/yii2'] || dependencies['yiisoft/yii']) {
-        indicators.push('composer.json: yiisoft/*')
-        if (existsSync(join(projectPath, 'web')) || existsSync(join(projectPath, 'public'))) {
-          indicators.push('web/ or public/')
-          framework = 'yii'
-          confidence = 'high'
-          return createResult(framework, confidence, indicators, null, projectConfig)
+      if (dependencies["yiisoft/yii2"] || dependencies["yiisoft/yii"]) {
+        indicators.push("composer.json: yiisoft/*");
+        if (
+          existsSync(join(projectPath, "web")) ||
+          existsSync(join(projectPath, "public"))
+        ) {
+          indicators.push("web/ or public/");
+          framework = "yii";
+          confidence = "high";
+          return createResult(
+            framework,
+            confidence,
+            indicators,
+            null,
+            projectConfig,
+          );
         }
       }
 
       // Laminas (anciennement Zend Framework)
-      if (dependencies['laminas/laminas-mvc'] || dependencies['laminas/laminas-component-installer']) {
-        indicators.push('composer.json: laminas/*')
-        if (existsSync(join(projectPath, 'public'))) {
-          indicators.push('public/')
-          framework = 'laminas'
-          confidence = 'high'
-          return createResult(framework, confidence, indicators, null, projectConfig)
+      if (
+        dependencies["laminas/laminas-mvc"] ||
+        dependencies["laminas/laminas-component-installer"]
+      ) {
+        indicators.push("composer.json: laminas/*");
+        if (existsSync(join(projectPath, "public"))) {
+          indicators.push("public/");
+          framework = "laminas";
+          confidence = "high";
+          return createResult(
+            framework,
+            confidence,
+            indicators,
+            null,
+            projectConfig,
+          );
         }
       }
     } catch {
@@ -486,125 +600,190 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
   }
 
   // React/Vue/Angular/Next/Nuxt
-  const packageJsonPath = join(projectPath, 'package.json')
+  const packageJsonPath = join(projectPath, "package.json");
   if (existsSync(packageJsonPath)) {
     try {
-      const packageContent = JSON.parse(readFileSync(packageJsonPath, 'utf-8')) as {
-        dependencies?: Record<string, string>
-        devDependencies?: Record<string, string>
-      }
+      const packageContent = JSON.parse(
+        readFileSync(packageJsonPath, "utf-8"),
+      ) as {
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+      };
       const dependencies = {
         ...(packageContent.dependencies ?? {}),
         ...(packageContent.devDependencies ?? {}),
-      }
+      };
 
       // Next.js
       if (dependencies.next) {
-        indicators.push('package.json: next')
-        if (existsSync(join(projectPath, '.next'))) {
-          indicators.push('.next/')
-          framework = 'nextjs'
-          confidence = 'high'
-          return createResult(framework, confidence, indicators, null, projectConfig)
+        indicators.push("package.json: next");
+
+        // Check for App Router structure (src/app/layout.tsx or app/layout.tsx)
+        const appLayoutPaths = [
+          join(projectPath, "src", "app", "layout.tsx"),
+          join(projectPath, "src", "app", "layout.ts"),
+          join(projectPath, "app", "layout.tsx"),
+          join(projectPath, "app", "layout.ts"),
+        ];
+        const hasAppLayout = appLayoutPaths.some((path) => existsSync(path));
+
+        if (hasAppLayout) {
+          indicators.push("App Router detected (app/layout.tsx)");
+        }
+
+        if (existsSync(join(projectPath, ".next"))) {
+          indicators.push(".next/");
+          framework = "nextjs";
+          confidence = "high";
+          return createResult(
+            framework,
+            confidence,
+            indicators,
+            null,
+            projectConfig,
+          );
+        }
+
+        // Even without .next folder, if we found app layout, it's Next.js
+        if (hasAppLayout) {
+          framework = "nextjs";
+          confidence = "high";
+          return createResult(
+            framework,
+            confidence,
+            indicators,
+            null,
+            projectConfig,
+          );
         }
       }
 
       // Nuxt
       if (dependencies.nuxt) {
-        indicators.push('package.json: nuxt')
-        if (existsSync(join(projectPath, '.nuxt'))) {
-          indicators.push('.nuxt/')
-          framework = 'nuxt'
-          confidence = 'high'
-          return createResult(framework, confidence, indicators, null, projectConfig)
+        indicators.push("package.json: nuxt");
+        if (existsSync(join(projectPath, ".nuxt"))) {
+          indicators.push(".nuxt/");
+          framework = "nuxt";
+          confidence = "high";
+          return createResult(
+            framework,
+            confidence,
+            indicators,
+            null,
+            projectConfig,
+          );
         }
       }
 
       // React
       if (dependencies.react) {
-        indicators.push('package.json: react')
-        framework = 'react'
-        confidence = framework ? 'high' : 'medium'
-        const version = detectFrameworkVersion('react', dependencies)
+        indicators.push("package.json: react");
+        framework = "react";
+        confidence = framework ? "high" : "medium";
+        const version = detectFrameworkVersion("react", dependencies);
         if (version) {
-          indicators.push(`React version: ${version.major}.${version.minor ?? 'x'}.${version.patch ?? 'x'}`)
+          indicators.push(
+            `React version: ${version.major}.${version.minor ?? "x"}.${version.patch ?? "x"}`,
+          );
         }
       }
 
       // Vue
       if (dependencies.vue) {
-        indicators.push('package.json: vue')
+        indicators.push("package.json: vue");
         if (!framework) {
-          framework = 'vue'
-          confidence = 'high'
-          const version = detectFrameworkVersion('vue', dependencies)
+          framework = "vue";
+          confidence = "high";
+          const version = detectFrameworkVersion("vue", dependencies);
           if (version) {
-            indicators.push(`Vue version: ${version.major}.${version.minor ?? 'x'}.${version.patch ?? 'x'}`)
+            indicators.push(
+              `Vue version: ${version.major}.${version.minor ?? "x"}.${version.patch ?? "x"}`,
+            );
           }
         }
       }
 
       // Angular
-      if (dependencies['@angular/core']) {
-        indicators.push('package.json: @angular/core')
+      if (dependencies["@angular/core"]) {
+        indicators.push("package.json: @angular/core");
         if (!framework) {
-          framework = 'angular'
-          confidence = 'high'
-          const version = detectFrameworkVersion('angular', dependencies)
+          framework = "angular";
+          confidence = "high";
+          const version = detectFrameworkVersion("angular", dependencies);
           if (version) {
-            indicators.push(`Angular version: ${version.major}.${version.minor ?? 'x'}.${version.patch ?? 'x'}`)
+            indicators.push(
+              `Angular version: ${version.major}.${version.minor ?? "x"}.${version.patch ?? "x"}`,
+            );
           }
         }
       }
 
       // SvelteKit (priorité sur Svelte car framework complet)
-      if (dependencies['@sveltejs/kit']) {
-        indicators.push('package.json: @sveltejs/kit')
-        if (existsSync(join(projectPath, '.svelte-kit'))) {
-          indicators.push('.svelte-kit/')
-          framework = 'sveltekit'
-          confidence = 'high'
-          return createResult(framework, confidence, indicators, null, projectConfig)
+      if (dependencies["@sveltejs/kit"]) {
+        indicators.push("package.json: @sveltejs/kit");
+        if (existsSync(join(projectPath, ".svelte-kit"))) {
+          indicators.push(".svelte-kit/");
+          framework = "sveltekit";
+          confidence = "high";
+          return createResult(
+            framework,
+            confidence,
+            indicators,
+            null,
+            projectConfig,
+          );
         }
       }
 
       // Svelte (standalone, sans SvelteKit)
-      if (dependencies.svelte && !dependencies['@sveltejs/kit']) {
-        indicators.push('package.json: svelte')
+      if (dependencies.svelte && !dependencies["@sveltejs/kit"]) {
+        indicators.push("package.json: svelte");
         if (!framework) {
-          framework = 'svelte'
-          confidence = 'high'
+          framework = "svelte";
+          confidence = "high";
         }
       }
 
       // Remix
-      if (dependencies['@remix-run/node'] || dependencies['@remix-run/react']) {
-        indicators.push('package.json: @remix-run/*')
-        if (existsSync(join(projectPath, 'app'))) {
-          indicators.push('app/')
-          framework = 'remix'
-          confidence = 'high'
-          return createResult(framework, confidence, indicators, null, projectConfig)
+      if (dependencies["@remix-run/node"] || dependencies["@remix-run/react"]) {
+        indicators.push("package.json: @remix-run/*");
+        if (existsSync(join(projectPath, "app"))) {
+          indicators.push("app/");
+          framework = "remix";
+          confidence = "high";
+          return createResult(
+            framework,
+            confidence,
+            indicators,
+            null,
+            projectConfig,
+          );
         }
       }
 
       // Astro
       if (dependencies.astro) {
-        indicators.push('package.json: astro')
-        if (existsSync(join(projectPath, '.astro'))) {
-          indicators.push('.astro/')
-          framework = 'astro'
-          confidence = 'high'
-          return createResult(framework, confidence, indicators, null, projectConfig)
+        indicators.push("package.json: astro");
+        if (existsSync(join(projectPath, ".astro"))) {
+          indicators.push(".astro/");
+          framework = "astro";
+          confidence = "high";
+          return createResult(
+            framework,
+            confidence,
+            indicators,
+            null,
+            projectConfig,
+          );
         }
       }
 
       // SolidJS
-      if (dependencies['solid-js']) {
-        indicators.push('package.json: solid-js')
+      if (dependencies["solid-js"]) {
+        indicators.push("package.json: solid-js");
         if (!framework) {
-          framework = 'solidjs'
-          confidence = 'high'
+          framework = "solidjs";
+          confidence = "high";
         }
       }
     } catch {
@@ -615,40 +794,79 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
   // Python frameworks
   if (!framework) {
     // Django
-    if (existsSync(join(projectPath, 'manage.py')) && existsSync(join(projectPath, 'settings.py'))) {
-      indicators.push('manage.py and settings.py (Django)')
-      framework = 'django'
-      confidence = 'high'
-      return createResult(framework, confidence, indicators, null, projectConfig)
+    if (
+      existsSync(join(projectPath, "manage.py")) &&
+      existsSync(join(projectPath, "settings.py"))
+    ) {
+      indicators.push("manage.py and settings.py (Django)");
+      framework = "django";
+      confidence = "high";
+      return createResult(
+        framework,
+        confidence,
+        indicators,
+        null,
+        projectConfig,
+      );
     }
     // Django alternative: check for django/ directory
-    if (existsSync(join(projectPath, 'manage.py')) && existsSync(join(projectPath, 'django'))) {
-      indicators.push('manage.py and django/ (Django)')
-      framework = 'django'
-      confidence = 'high'
-      return createResult(framework, confidence, indicators, null, projectConfig)
+    if (
+      existsSync(join(projectPath, "manage.py")) &&
+      existsSync(join(projectPath, "django"))
+    ) {
+      indicators.push("manage.py and django/ (Django)");
+      framework = "django";
+      confidence = "high";
+      return createResult(
+        framework,
+        confidence,
+        indicators,
+        null,
+        projectConfig,
+      );
     }
 
     // Flask
-    const requirementsPath = join(projectPath, 'requirements.txt')
+    const requirementsPath = join(projectPath, "requirements.txt");
     if (existsSync(requirementsPath)) {
       try {
-        const requirementsContent = readFileSync(requirementsPath, 'utf-8')
-        if (requirementsContent.includes('Flask') || requirementsContent.includes('flask')) {
-          indicators.push('requirements.txt: Flask')
-          if (existsSync(join(projectPath, 'app.py')) || existsSync(join(projectPath, 'application.py'))) {
-            indicators.push('app.py or application.py')
-            framework = 'flask'
-            confidence = 'high'
-            return createResult(framework, confidence, indicators, null, projectConfig)
+        const requirementsContent = readFileSync(requirementsPath, "utf-8");
+        if (
+          requirementsContent.includes("Flask") ||
+          requirementsContent.includes("flask")
+        ) {
+          indicators.push("requirements.txt: Flask");
+          if (
+            existsSync(join(projectPath, "app.py")) ||
+            existsSync(join(projectPath, "application.py"))
+          ) {
+            indicators.push("app.py or application.py");
+            framework = "flask";
+            confidence = "high";
+            return createResult(
+              framework,
+              confidence,
+              indicators,
+              null,
+              projectConfig,
+            );
           }
         }
         // FastAPI
-        if (requirementsContent.includes('fastapi') || requirementsContent.includes('FastAPI')) {
-          indicators.push('requirements.txt: FastAPI')
-          framework = 'fastapi'
-          confidence = 'high'
-          return createResult(framework, confidence, indicators, null, projectConfig)
+        if (
+          requirementsContent.includes("fastapi") ||
+          requirementsContent.includes("FastAPI")
+        ) {
+          indicators.push("requirements.txt: FastAPI");
+          framework = "fastapi";
+          confidence = "high";
+          return createResult(
+            framework,
+            confidence,
+            indicators,
+            null,
+            projectConfig,
+          );
         }
       } catch {
         // Ignore read errors
@@ -658,28 +876,52 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
 
   // Ruby frameworks
   if (!framework) {
-    const gemfilePath = join(projectPath, 'Gemfile')
+    const gemfilePath = join(projectPath, "Gemfile");
     if (existsSync(gemfilePath)) {
       try {
-        const gemfileContent = readFileSync(gemfilePath, 'utf-8')
+        const gemfileContent = readFileSync(gemfilePath, "utf-8");
         // Rails
-        if (gemfileContent.includes("gem 'rails'") || gemfileContent.includes('gem "rails"')) {
-          indicators.push('Gemfile: rails')
-          if (existsSync(join(projectPath, 'config', 'application.rb')) || existsSync(join(projectPath, 'config', 'routes.rb'))) {
-            indicators.push('config/application.rb or config/routes.rb')
-            framework = 'rails'
-            confidence = 'high'
-            return createResult(framework, confidence, indicators, null, projectConfig)
+        if (
+          gemfileContent.includes("gem 'rails'") ||
+          gemfileContent.includes('gem "rails"')
+        ) {
+          indicators.push("Gemfile: rails");
+          if (
+            existsSync(join(projectPath, "config", "application.rb")) ||
+            existsSync(join(projectPath, "config", "routes.rb"))
+          ) {
+            indicators.push("config/application.rb or config/routes.rb");
+            framework = "rails";
+            confidence = "high";
+            return createResult(
+              framework,
+              confidence,
+              indicators,
+              null,
+              projectConfig,
+            );
           }
         }
         // Sinatra
-        if (gemfileContent.includes("gem 'sinatra'") || gemfileContent.includes('gem "sinatra"')) {
-          indicators.push('Gemfile: sinatra')
-          if (existsSync(join(projectPath, 'app.rb')) || existsSync(join(projectPath, 'main.rb'))) {
-            indicators.push('app.rb or main.rb')
-            framework = 'sinatra'
-            confidence = 'high'
-            return createResult(framework, confidence, indicators, null, projectConfig)
+        if (
+          gemfileContent.includes("gem 'sinatra'") ||
+          gemfileContent.includes('gem "sinatra"')
+        ) {
+          indicators.push("Gemfile: sinatra");
+          if (
+            existsSync(join(projectPath, "app.rb")) ||
+            existsSync(join(projectPath, "main.rb"))
+          ) {
+            indicators.push("app.rb or main.rb");
+            framework = "sinatra";
+            confidence = "high";
+            return createResult(
+              framework,
+              confidence,
+              indicators,
+              null,
+              projectConfig,
+            );
           }
         }
       } catch {
@@ -690,40 +932,58 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
 
   // Go
   if (!framework) {
-    if (existsSync(join(projectPath, 'go.mod'))) {
+    if (existsSync(join(projectPath, "go.mod"))) {
       try {
-        const goModContent = readFileSync(join(projectPath, 'go.mod'), 'utf-8')
+        const goModContent = readFileSync(join(projectPath, "go.mod"), "utf-8");
         // Check if it's a web project (has HTTP server dependencies)
         if (
-          goModContent.includes('net/http') ||
-          existsSync(join(projectPath, 'main.go')) ||
-          existsSync(join(projectPath, 'server.go'))
+          goModContent.includes("net/http") ||
+          existsSync(join(projectPath, "main.go")) ||
+          existsSync(join(projectPath, "server.go"))
         ) {
           // Check main.go for HTTP server patterns
-          const mainGoPath = join(projectPath, 'main.go')
+          const mainGoPath = join(projectPath, "main.go");
           if (existsSync(mainGoPath)) {
             try {
-              const mainGoContent = readFileSync(mainGoPath, 'utf-8')
-              if (mainGoContent.includes('http.ListenAndServe') || mainGoContent.includes('http.Server')) {
-                indicators.push('go.mod and main.go with HTTP server')
-                framework = 'go'
-                confidence = 'high'
-                return createResult(framework, confidence, indicators, null, projectConfig)
+              const mainGoContent = readFileSync(mainGoPath, "utf-8");
+              if (
+                mainGoContent.includes("http.ListenAndServe") ||
+                mainGoContent.includes("http.Server")
+              ) {
+                indicators.push("go.mod and main.go with HTTP server");
+                framework = "go";
+                confidence = "high";
+                return createResult(
+                  framework,
+                  confidence,
+                  indicators,
+                  null,
+                  projectConfig,
+                );
               }
             } catch {
               // Ignore read errors
             }
           }
           // Also check server.go
-          const serverGoPath = join(projectPath, 'server.go')
+          const serverGoPath = join(projectPath, "server.go");
           if (existsSync(serverGoPath)) {
             try {
-              const serverGoContent = readFileSync(serverGoPath, 'utf-8')
-              if (serverGoContent.includes('http.ListenAndServe') || serverGoContent.includes('http.Server')) {
-                indicators.push('go.mod and server.go with HTTP server')
-                framework = 'go'
-                confidence = 'high'
-                return createResult(framework, confidence, indicators, null, projectConfig)
+              const serverGoContent = readFileSync(serverGoPath, "utf-8");
+              if (
+                serverGoContent.includes("http.ListenAndServe") ||
+                serverGoContent.includes("http.Server")
+              ) {
+                indicators.push("go.mod and server.go with HTTP server");
+                framework = "go";
+                confidence = "high";
+                return createResult(
+                  framework,
+                  confidence,
+                  indicators,
+                  null,
+                  projectConfig,
+                );
               }
             } catch {
               // Ignore read errors
@@ -738,17 +998,26 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
 
   // Java - Spring Boot
   if (!framework) {
-    const pomXmlPath = join(projectPath, 'pom.xml')
-    const buildGradlePath = join(projectPath, 'build.gradle')
-    
+    const pomXmlPath = join(projectPath, "pom.xml");
+    const buildGradlePath = join(projectPath, "build.gradle");
+
     if (existsSync(pomXmlPath)) {
       try {
-        const pomContent = readFileSync(pomXmlPath, 'utf-8')
-        if (pomContent.includes('spring-boot-starter') || pomContent.includes('org.springframework.boot')) {
-          indicators.push('pom.xml: spring-boot')
-          framework = 'spring'
-          confidence = 'high'
-          return createResult(framework, confidence, indicators, null, projectConfig)
+        const pomContent = readFileSync(pomXmlPath, "utf-8");
+        if (
+          pomContent.includes("spring-boot-starter") ||
+          pomContent.includes("org.springframework.boot")
+        ) {
+          indicators.push("pom.xml: spring-boot");
+          framework = "spring";
+          confidence = "high";
+          return createResult(
+            framework,
+            confidence,
+            indicators,
+            null,
+            projectConfig,
+          );
         }
       } catch {
         // Ignore read errors
@@ -757,12 +1026,21 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
 
     if (existsSync(buildGradlePath)) {
       try {
-        const gradleContent = readFileSync(buildGradlePath, 'utf-8')
-        if (gradleContent.includes('spring-boot') || gradleContent.includes('org.springframework.boot')) {
-          indicators.push('build.gradle: spring-boot')
-          framework = 'spring'
-          confidence = 'high'
-          return createResult(framework, confidence, indicators, null, projectConfig)
+        const gradleContent = readFileSync(buildGradlePath, "utf-8");
+        if (
+          gradleContent.includes("spring-boot") ||
+          gradleContent.includes("org.springframework.boot")
+        ) {
+          indicators.push("build.gradle: spring-boot");
+          framework = "spring";
+          confidence = "high";
+          return createResult(
+            framework,
+            confidence,
+            indicators,
+            null,
+            projectConfig,
+          );
         }
       } catch {
         // Ignore read errors
@@ -774,20 +1052,35 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
   if (!framework) {
     // Look for .csproj files
     try {
-      const csprojMatches = globSync('*.csproj', { cwd: projectPath, absolute: false })
+      const csprojMatches = globSync("*.csproj", {
+        cwd: projectPath,
+        absolute: false,
+      });
       if (csprojMatches.length > 0) {
         // Check for ASP.NET Core patterns
-        const firstCsproj = join(projectPath, csprojMatches[0])
+        const firstCsproj = join(projectPath, csprojMatches[0]);
         try {
-          const csprojContent = readFileSync(firstCsproj, 'utf-8')
-          if (csprojContent.includes('Microsoft.AspNetCore') || csprojContent.includes('Microsoft.NET.Sdk.Web')) {
-            indicators.push(`${csprojMatches[0]}: ASP.NET Core`)
+          const csprojContent = readFileSync(firstCsproj, "utf-8");
+          if (
+            csprojContent.includes("Microsoft.AspNetCore") ||
+            csprojContent.includes("Microsoft.NET.Sdk.Web")
+          ) {
+            indicators.push(`${csprojMatches[0]}: ASP.NET Core`);
             // Check for Program.cs or Startup.cs
-            if (existsSync(join(projectPath, 'Program.cs')) || existsSync(join(projectPath, 'Startup.cs'))) {
-              indicators.push('Program.cs or Startup.cs')
-              framework = 'aspnet'
-              confidence = 'high'
-              return createResult(framework, confidence, indicators, null, projectConfig)
+            if (
+              existsSync(join(projectPath, "Program.cs")) ||
+              existsSync(join(projectPath, "Startup.cs"))
+            ) {
+              indicators.push("Program.cs or Startup.cs");
+              framework = "aspnet";
+              confidence = "high";
+              return createResult(
+                framework,
+                confidence,
+                indicators,
+                null,
+                projectConfig,
+              );
             }
           }
         } catch {
@@ -802,112 +1095,210 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
   // Static Site Generators (SSG) - check before generic static
   if (!framework) {
     // Jekyll
-    if (existsSync(join(projectPath, '_config.yml'))) {
-      indicators.push('_config.yml (Jekyll)')
-      if (existsSync(join(projectPath, '_posts'))) {
-        indicators.push('_posts/')
-        framework = 'jekyll'
-        confidence = 'high'
-        return createResult(framework, confidence, indicators, null, projectConfig)
+    if (existsSync(join(projectPath, "_config.yml"))) {
+      indicators.push("_config.yml (Jekyll)");
+      if (existsSync(join(projectPath, "_posts"))) {
+        indicators.push("_posts/");
+        framework = "jekyll";
+        confidence = "high";
+        return createResult(
+          framework,
+          confidence,
+          indicators,
+          null,
+          projectConfig,
+        );
       }
-      framework = 'jekyll'
-      confidence = 'medium'
-      return createResult(framework, confidence, indicators, null, projectConfig)
+      framework = "jekyll";
+      confidence = "medium";
+      return createResult(
+        framework,
+        confidence,
+        indicators,
+        null,
+        projectConfig,
+      );
     }
 
     // Hugo
-    const hugoConfigFiles = ['config.toml', 'config.yaml', 'config.yml', 'hugo.toml', 'hugo.yaml', 'hugo.yml']
-    const hasHugoConfig = hugoConfigFiles.some((file) => existsSync(join(projectPath, file)))
+    const hugoConfigFiles = [
+      "config.toml",
+      "config.yaml",
+      "config.yml",
+      "hugo.toml",
+      "hugo.yaml",
+      "hugo.yml",
+    ];
+    const hasHugoConfig = hugoConfigFiles.some((file) =>
+      existsSync(join(projectPath, file)),
+    );
     if (hasHugoConfig) {
-      indicators.push('Hugo config file found')
-      if (existsSync(join(projectPath, 'content')) && existsSync(join(projectPath, 'layouts'))) {
-        indicators.push('content/ and layouts/')
-        framework = 'hugo'
-        confidence = 'high'
-        return createResult(framework, confidence, indicators, null, projectConfig)
+      indicators.push("Hugo config file found");
+      if (
+        existsSync(join(projectPath, "content")) &&
+        existsSync(join(projectPath, "layouts"))
+      ) {
+        indicators.push("content/ and layouts/");
+        framework = "hugo";
+        confidence = "high";
+        return createResult(
+          framework,
+          confidence,
+          indicators,
+          null,
+          projectConfig,
+        );
       }
-      if (existsSync(join(projectPath, 'content'))) {
-        indicators.push('content/')
-        framework = 'hugo'
-        confidence = 'high'
-        return createResult(framework, confidence, indicators, null, projectConfig)
+      if (existsSync(join(projectPath, "content"))) {
+        indicators.push("content/");
+        framework = "hugo";
+        confidence = "high";
+        return createResult(
+          framework,
+          confidence,
+          indicators,
+          null,
+          projectConfig,
+        );
       }
     }
 
     // Gatsby
-    if (existsSync(join(projectPath, 'gatsby-config.js')) || existsSync(join(projectPath, 'gatsby-config.ts'))) {
-      indicators.push('gatsby-config.js/ts (Gatsby)')
-      framework = 'gatsby'
-      confidence = 'high'
-      return createResult(framework, confidence, indicators, null, projectConfig)
+    if (
+      existsSync(join(projectPath, "gatsby-config.js")) ||
+      existsSync(join(projectPath, "gatsby-config.ts"))
+    ) {
+      indicators.push("gatsby-config.js/ts (Gatsby)");
+      framework = "gatsby";
+      confidence = "high";
+      return createResult(
+        framework,
+        confidence,
+        indicators,
+        null,
+        projectConfig,
+      );
     }
 
     // 11ty (Eleventy)
-    const eleventyFiles = ['.eleventy.js', '.eleventy.cjs', 'eleventy.config.js', 'eleventy.config.cjs']
-    const hasEleventyConfig = eleventyFiles.some((file) => existsSync(join(projectPath, file)))
+    const eleventyFiles = [
+      ".eleventy.js",
+      ".eleventy.cjs",
+      "eleventy.config.js",
+      "eleventy.config.cjs",
+    ];
+    const hasEleventyConfig = eleventyFiles.some((file) =>
+      existsSync(join(projectPath, file)),
+    );
     if (hasEleventyConfig) {
-      indicators.push('Eleventy config file found')
-      if (existsSync(join(projectPath, '_data'))) {
-        indicators.push('_data/')
-        framework = 'eleventy'
-        confidence = 'high'
-        return createResult(framework, confidence, indicators, null, projectConfig)
+      indicators.push("Eleventy config file found");
+      if (existsSync(join(projectPath, "_data"))) {
+        indicators.push("_data/");
+        framework = "eleventy";
+        confidence = "high";
+        return createResult(
+          framework,
+          confidence,
+          indicators,
+          null,
+          projectConfig,
+        );
       }
-      framework = 'eleventy'
-      confidence = 'high'
-      return createResult(framework, confidence, indicators, null, projectConfig)
+      framework = "eleventy";
+      confidence = "high";
+      return createResult(
+        framework,
+        confidence,
+        indicators,
+        null,
+        projectConfig,
+      );
     }
 
     // VitePress
-    if (existsSync(join(projectPath, 'vitepress.config.js')) || existsSync(join(projectPath, 'vitepress.config.ts'))) {
-      indicators.push('vitepress.config.js/ts (VitePress)')
-      framework = 'vitepress'
-      confidence = 'high'
-      return createResult(framework, confidence, indicators, null, projectConfig)
+    if (
+      existsSync(join(projectPath, "vitepress.config.js")) ||
+      existsSync(join(projectPath, "vitepress.config.ts"))
+    ) {
+      indicators.push("vitepress.config.js/ts (VitePress)");
+      framework = "vitepress";
+      confidence = "high";
+      return createResult(
+        framework,
+        confidence,
+        indicators,
+        null,
+        projectConfig,
+      );
     }
     // VitePress in docs directory
-    if (existsSync(join(projectPath, 'docs', '.vitepress', 'config.js')) || existsSync(join(projectPath, 'docs', '.vitepress', 'config.ts'))) {
-      indicators.push('docs/.vitepress/config.js/ts (VitePress)')
-      framework = 'vitepress'
-      confidence = 'high'
-      return createResult(framework, confidence, indicators, null, projectConfig)
+    if (
+      existsSync(join(projectPath, "docs", ".vitepress", "config.js")) ||
+      existsSync(join(projectPath, "docs", ".vitepress", "config.ts"))
+    ) {
+      indicators.push("docs/.vitepress/config.js/ts (VitePress)");
+      framework = "vitepress";
+      confidence = "high";
+      return createResult(
+        framework,
+        confidence,
+        indicators,
+        null,
+        projectConfig,
+      );
     }
 
     // Docusaurus
-    if (existsSync(join(projectPath, 'docusaurus.config.js')) || existsSync(join(projectPath, 'docusaurus.config.ts'))) {
-      indicators.push('docusaurus.config.js/ts (Docusaurus)')
-      framework = 'docusaurus'
-      confidence = 'high'
-      return createResult(framework, confidence, indicators, null, projectConfig)
+    if (
+      existsSync(join(projectPath, "docusaurus.config.js")) ||
+      existsSync(join(projectPath, "docusaurus.config.ts"))
+    ) {
+      indicators.push("docusaurus.config.js/ts (Docusaurus)");
+      framework = "docusaurus";
+      confidence = "high";
+      return createResult(
+        framework,
+        confidence,
+        indicators,
+        null,
+        projectConfig,
+      );
     }
   }
 
   // Static (if no framework detected and HTML files present)
   if (!framework) {
-    const htmlFiles = ['index.html', 'index.htm']
-    const hasHtml = htmlFiles.some((file) => existsSync(join(projectPath, file)))
+    const htmlFiles = ["index.html", "index.htm"];
+    const hasHtml = htmlFiles.some((file) =>
+      existsSync(join(projectPath, file)),
+    );
     if (hasHtml) {
-      indicators.push('HTML files present')
-      framework = 'static'
-      confidence = 'medium'
+      indicators.push("HTML files present");
+      framework = "static";
+      confidence = "medium";
     }
   }
 
   // Détecter la version si c'est React, Vue ou Angular et que package.json existe
-  let detectedVersion: FrameworkVersion | null = null
-  if (framework && (framework === 'react' || framework === 'vue' || framework === 'angular')) {
-    const packageJsonPath = join(projectPath, 'package.json')
+  let detectedVersion: FrameworkVersion | null = null;
+  if (
+    framework &&
+    (framework === "react" || framework === "vue" || framework === "angular")
+  ) {
+    const packageJsonPath = join(projectPath, "package.json");
     if (existsSync(packageJsonPath)) {
       try {
-        const packageContent = JSON.parse(readFileSync(packageJsonPath, 'utf-8')) as {
-          dependencies?: Record<string, string>
-          devDependencies?: Record<string, string>
-        }
+        const packageContent = JSON.parse(
+          readFileSync(packageJsonPath, "utf-8"),
+        ) as {
+          dependencies?: Record<string, string>;
+          devDependencies?: Record<string, string>;
+        };
         const dependencies = {
           ...(packageContent.dependencies ?? {}),
           ...(packageContent.devDependencies ?? {}),
-        }
-        detectedVersion = detectFrameworkVersion(framework, dependencies)
+        };
+        detectedVersion = detectFrameworkVersion(framework, dependencies);
       } catch {
         // Ignore JSON parse errors
       }
@@ -915,19 +1306,26 @@ export function detectFramework(projectPath: string): FrameworkDetectionResult {
   }
 
   // Ajouter les configurations aux indicateurs
-  if (projectConfig.language === 'typescript') {
-    indicators.push('TypeScript detected')
+  if (projectConfig.language === "typescript") {
+    indicators.push("TypeScript detected");
   }
   if (projectConfig.cssInJs.length > 0) {
-    indicators.push(`CSS-in-JS: ${projectConfig.cssInJs.join(', ')}`)
+    indicators.push(`CSS-in-JS: ${projectConfig.cssInJs.join(", ")}`);
   }
   if (projectConfig.stateManagement.length > 0) {
-    indicators.push(`State Management: ${projectConfig.stateManagement.join(', ')}`)
+    indicators.push(
+      `State Management: ${projectConfig.stateManagement.join(", ")}`,
+    );
   }
   if (projectConfig.buildTool) {
-    indicators.push(`Build Tool: ${projectConfig.buildTool}`)
+    indicators.push(`Build Tool: ${projectConfig.buildTool}`);
   }
 
-  return createResult(framework, confidence, indicators, detectedVersion, projectConfig)
+  return createResult(
+    framework,
+    confidence,
+    indicators,
+    detectedVersion,
+    projectConfig,
+  );
 }
-

@@ -12,6 +12,7 @@ import {
 } from "@julien-lin/universal-pwa-core";
 import {
   injectMetaTagsInFile,
+  injectNextJsMetadataInFile,
   processInParallel,
 } from "@julien-lin/universal-pwa-core";
 import { checkProjectHttps } from "@julien-lin/universal-pwa-core";
@@ -244,7 +245,9 @@ export async function initCommand(
     finalBasePath = normalizeBasePath(effectiveBasePath);
     if (finalBasePath !== "/") {
       console.log(
-        chalk.gray(`  Base path: ${finalBasePath}${rawBasePath ? "" : " (auto)"}`),
+        chalk.gray(
+          `  Base path: ${finalBasePath}${rawBasePath ? "" : " (auto)"}`,
+        ),
       );
     }
   } catch (error) {
@@ -391,13 +394,8 @@ export async function initCommand(
     // Detect backend once for manifest merge and service worker
     const factory = getBackendFactory();
     let backendIntegration: unknown = null;
-    if (
-      factory &&
-      typeof factory === "object" &&
-      "detectBackend" in factory
-    ) {
-      backendIntegration =
-        factory.detectBackend(result.projectPath) ?? null;
+    if (factory && typeof factory === "object" && "detectBackend" in factory) {
+      backendIntegration = factory.detectBackend(result.projectPath) ?? null;
     }
     if (
       !backendIntegration &&
@@ -582,12 +580,18 @@ export async function initCommand(
       backendIntegration &&
       typeof backendIntegration === "object" &&
       "generateManifestVariables" in backendIntegration &&
-      typeof (backendIntegration as { generateManifestVariables: () => Record<string, string | number> })
-        .generateManifestVariables === "function"
+      typeof (
+        backendIntegration as {
+          generateManifestVariables: () => Record<string, string | number>;
+        }
+      ).generateManifestVariables === "function"
         ? mapBackendManifestVarsToOptions(
             (
               backendIntegration as {
-                generateManifestVariables: () => Record<string, string | number>;
+                generateManifestVariables: () => Record<
+                  string,
+                  string | number
+                >;
               }
             ).generateManifestVariables(),
           )
@@ -608,7 +612,9 @@ export async function initCommand(
           themeColor:
             themeColor ?? backendManifestDefaults.themeColor ?? "#ffffff",
           backgroundColor:
-            backgroundColor ?? backendManifestDefaults.backgroundColor ?? "#000000",
+            backgroundColor ??
+            backendManifestDefaults.backgroundColor ??
+            "#000000",
           icons: iconPaths.map((src) => ({
             src,
             sizes: src.match(/(\d+)x(\d+)/)?.[0] ?? "192x192",
@@ -658,7 +664,9 @@ export async function initCommand(
           themeColor:
             themeColor ?? backendManifestDefaults.themeColor ?? "#ffffff",
           backgroundColor:
-            backgroundColor ?? backendManifestDefaults.backgroundColor ?? "#000000",
+            backgroundColor ??
+            backendManifestDefaults.backgroundColor ??
+            "#000000",
           icons: [
             {
               src: "/icon-192x192.png", // Placeholder - user must add a real icon
@@ -944,8 +952,7 @@ export async function initCommand(
           ).length;
           const wpThemeCount = useWordPressRestricted
             ? htmlFiles.filter(
-                (f) =>
-                  f.endsWith("header.php") || f.endsWith("footer.php"),
+                (f) => f.endsWith("header.php") || f.endsWith("footer.php"),
               ).length
             : 0;
           const fileTypes = [];
@@ -1259,6 +1266,104 @@ export async function initCommand(
           transaction.rollback();
         }
         return result;
+      }
+
+      // Inject metadata into Next.js layout files (if Next.js project)
+      if (result.framework === "nextjs") {
+        try {
+          console.log(
+            chalk.blue("💉 Injecting metadata into Next.js layout files..."),
+          );
+
+          // Find Next.js layout files
+          const layoutFiles = await glob(
+            ["**/app/layout.{ts,tsx}", "**/src/app/layout.{ts,tsx}"],
+            {
+              cwd: result.projectPath,
+              ignore: ["**/node_modules/**", "**/dist/**", "**/.next/**"],
+              absolute: true,
+            },
+          );
+
+          if (layoutFiles.length > 0) {
+            console.log(
+              chalk.gray(
+                `  Found ${layoutFiles.length} Next.js layout file(s)`,
+              ),
+            );
+
+            // Backup layout files
+            for (const layoutFile of layoutFiles) {
+              const layoutRelativePath = relative(
+                result.projectPath,
+                layoutFile,
+              );
+              if (layoutRelativePath && !layoutRelativePath.startsWith("..")) {
+                transaction.backupFile(layoutRelativePath);
+              }
+            }
+
+            // Process layout files
+            let nextJsInjectedCount = 0;
+            for (const layoutFile of layoutFiles) {
+              try {
+                const injectionResult = injectNextJsMetadataInFile(layoutFile, {
+                  manifestPath: result.manifestPath || "/manifest.json",
+                  basePath: finalBasePath,
+                });
+
+                if (injectionResult.modified) {
+                  nextJsInjectedCount++;
+                  const relativePath = relative(result.projectPath, layoutFile);
+                  console.log(
+                    chalk.gray(`    ✓ ${relativePath}: metadata injected`),
+                  );
+                } else if (injectionResult.skipped.length > 0) {
+                  const relativePath = relative(result.projectPath, layoutFile);
+                  console.log(
+                    chalk.gray(
+                      `    ⊘ ${relativePath}: manifest already present`,
+                    ),
+                  );
+                } else {
+                  const relativePath = relative(result.projectPath, layoutFile);
+                  console.log(
+                    chalk.yellow(
+                      `    ⚠ ${relativePath}: could not inject metadata`,
+                    ),
+                  );
+                  if (injectionResult.warnings.length > 0) {
+                    injectionResult.warnings.forEach((warning) => {
+                      result.warnings.push(`${relativePath}: ${warning}`);
+                    });
+                  }
+                }
+              } catch (error) {
+                const relativePath = relative(result.projectPath, layoutFile);
+                const errorMsg =
+                  error instanceof Error ? error.message : String(error);
+                result.warnings.push(
+                  `${relativePath}: Failed to process - ${errorMsg}`,
+                );
+              }
+            }
+
+            if (nextJsInjectedCount > 0) {
+              result.htmlFilesInjected += nextJsInjectedCount;
+              console.log(
+                chalk.green(
+                  `✓ Injected metadata in ${nextJsInjectedCount} Next.js layout file(s)`,
+                ),
+              );
+            }
+          }
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          result.warnings.push(
+            `Next.js layout injection failed: ${errorMessage}`,
+          );
+        }
       }
     }
 
